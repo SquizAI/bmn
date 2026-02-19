@@ -1,0 +1,217 @@
+// server/src/workers/mockup-generation.js
+
+import { Worker } from 'bullmq';
+import { redis } from '../lib/redis.js';
+import { QUEUE_CONFIGS } from '../queues/index.js';
+import { supabaseAdmin } from '../lib/supabase.js';
+import { dispatchJob } from '../queues/dispatch.js';
+import { createJobLogger } from './job-logger.js';
+import { logger } from '../lib/logger.js';
+
+/**
+ * @returns {import('ioredis').RedisOptions}
+ */
+function getBullRedisConfig() {
+  return {
+    host: redis.options.host,
+    port: redis.options.port,
+    password: redis.options.password,
+    db: redis.options.db,
+    maxRetriesPerRequest: null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// STUB: OpenAI GPT Image 1.5 API -- replace with real implementation
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a product mockup image via OpenAI GPT Image 1.5.
+ * STUB: Returns a placeholder URL for pipeline testing.
+ *
+ * @param {string} prompt - Generation prompt
+ * @returns {Promise<string>} Image URL
+ */
+async function generateMockupImage(prompt) {
+  // TODO: Replace with real OpenAI API call
+  // const openai = new OpenAI();
+  // const result = await openai.images.generate({
+  //   model: 'gpt-image-1.5',
+  //   prompt,
+  //   n: 1,
+  //   size: '1024x1024',
+  //   quality: 'high',
+  // });
+  // return result.data[0].url;
+
+  logger.debug({ prompt: prompt.slice(0, 100) }, 'STUB: OpenAI mockup generation');
+  await new Promise((resolve) => setTimeout(resolve, 1500 + Math.random() * 1000));
+  return `https://placeholder.openai.com/stub/mockup-${Date.now()}.png`;
+}
+
+/**
+ * Compose a mockup generation prompt.
+ * @param {Object} params
+ * @returns {string}
+ */
+function composeMockupPrompt({ productName, productCategory, colorPalette, mockupInstructions }) {
+  let prompt = `Professional product mockup of a ${productCategory} product called "${productName}". `;
+  prompt += `Brand colors: ${colorPalette.join(', ')}. `;
+  prompt += 'Clean studio photography style, white or neutral background, photorealistic, high detail. ';
+  prompt += 'The logo should be clearly visible on the product. Professional e-commerce product shot.';
+
+  if (mockupInstructions) {
+    prompt += ` Additional instructions: ${mockupInstructions}`;
+  }
+
+  return prompt;
+}
+
+/**
+ * Mockup Generation worker -- generates product mockups via GPT Image 1.5.
+ *
+ * @param {import('socket.io').Server} io
+ * @returns {Worker}
+ */
+export function initMockupGenerationWorker(io) {
+  const queueConfig = QUEUE_CONFIGS['mockup-generation'];
+
+  const worker = new Worker(
+    'mockup-generation',
+    async (job) => {
+      const {
+        userId, brandId, productId, productName, productCategory,
+        logoUrl, colorPalette, mockupTemplateUrl, mockupInstructions,
+      } = job.data;
+
+      const jobLog = createJobLogger(job, 'mockup-generation');
+      const room = `brand:${brandId}`;
+      const jobRoom = `job:${job.id}`;
+
+      jobLog.info({ productName }, 'Mockup generation started');
+
+      try {
+        // Step 1: Compose prompt (10%)
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+          jobId: job.id, brandId, status: 'composing',
+          progress: 10, message: `Designing ${productName} mockup...`, timestamp: Date.now(),
+        });
+        await job.updateProgress(10);
+
+        const prompt = composeMockupPrompt({
+          productName, productCategory, logoUrl, colorPalette,
+          mockupTemplateUrl, mockupInstructions,
+        });
+
+        // Step 2: Generate via GPT Image 1.5 (10-70%)
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+          jobId: job.id, brandId, status: 'generating',
+          progress: 30, message: `Generating ${productName} mockup...`, timestamp: Date.now(),
+        });
+        await job.updateProgress(30);
+
+        const imageUrl = await generateMockupImage(prompt);
+
+        // Step 3: Queue upload (70-90%)
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+          jobId: job.id, brandId, status: 'uploading',
+          progress: 70, message: `Uploading ${productName} mockup...`, timestamp: Date.now(),
+        });
+        await job.updateProgress(70);
+
+        const uploadResult = await dispatchJob('image-upload', {
+          userId, brandId,
+          assetType: 'mockup',
+          sourceUrl: imageUrl,
+          fileName: `mockup-${brandId}-${productId}-${Date.now()}.png`,
+          mimeType: 'image/png',
+          metadata: { productId, productName, productCategory, prompt },
+        });
+
+        // Step 4: Save to brand_assets (90%)
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+          jobId: job.id, brandId, status: 'saving',
+          progress: 90, message: 'Saving mockup...', timestamp: Date.now(),
+        });
+        await job.updateProgress(90);
+
+        const { data: savedAsset, error: saveError } = await supabaseAdmin
+          .from('brand_assets')
+          .insert({
+            brand_id: brandId,
+            asset_type: 'mockup',
+            url: imageUrl,
+            metadata: {
+              product_id: productId,
+              product_name: productName,
+              product_category: productCategory,
+              prompt,
+              upload_job_id: uploadResult.jobId,
+            },
+            is_selected: false,
+          })
+          .select()
+          .single();
+
+        if (saveError) {
+          throw new Error(`Failed to save mockup asset: ${saveError.message}`);
+        }
+
+        // Step 5: Update generation_jobs (100%)
+        await supabaseAdmin.from('generation_jobs').update({
+          status: 'complete',
+          result: { mockup: savedAsset },
+          progress: 100,
+          completed_at: new Date().toISOString(),
+        }).eq('bullmq_job_id', job.id);
+
+        await job.updateProgress(100);
+
+        io.of('/wizard').to(jobRoom).to(room).emit('job:complete', {
+          jobId: job.id,
+          brandId,
+          status: 'complete',
+          progress: 100,
+          message: `${productName} mockup generated!`,
+          result: { mockup: savedAsset },
+          timestamp: Date.now(),
+        });
+
+        jobLog.info('Mockup generation complete');
+        return { mockup: savedAsset };
+      } catch (error) {
+        jobLog.error({ err: error }, 'Mockup generation failed');
+
+        await supabaseAdmin.from('generation_jobs').update({
+          status: 'failed',
+          error: error.message,
+        }).eq('bullmq_job_id', job.id).catch((dbErr) => {
+          jobLog.error({ err: dbErr }, 'Failed to update generation_jobs on failure');
+        });
+
+        io.of('/wizard').to(jobRoom).to(room).emit('job:failed', {
+          jobId: job.id, brandId,
+          error: error.message,
+          retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),
+          timestamp: Date.now(),
+        });
+
+        throw error;
+      }
+    },
+    {
+      connection: getBullRedisConfig(),
+      concurrency: queueConfig.concurrency,
+    }
+  );
+
+  worker.on('failed', (job, err) => {
+    logger.error({ jobId: job?.id, err }, 'Mockup generation worker: job failed');
+  });
+
+  worker.on('error', (err) => {
+    logger.error({ err }, 'Mockup generation worker: error');
+  });
+
+  return worker;
+}

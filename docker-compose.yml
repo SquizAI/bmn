@@ -29,6 +29,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: build
+    container_name: bmn-server
+    ports:
+      - "4847:4847"
+    volumes:
+      - ./server/src:/app/src:ro
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["node", "--watch", "src/index.js"]
+    restart: unless-stopped
+
 volumes:
   bmn-redis-data:
     driver: local
