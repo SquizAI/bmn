@@ -1,0 +1,25 @@
+{
+  "name": "brand-me-now-v2",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "web",
+    "marketing",
+    "shared"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=server",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:marketing": "npm run dev --workspace=marketing",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:server": "npm run test --workspace=server"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

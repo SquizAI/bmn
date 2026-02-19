@@ -1,0 +1,12 @@
+{
+  "name": "@bmn/shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schemas/*": "./schemas/*.js"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  }
+}

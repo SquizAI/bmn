@@ -1,0 +1,65 @@
+TCPA and Opt-In Compliance Policy for Brand Me Now
+
+Last Updated: January 29, 2026
+
+1. Introduction
+
+This TCPA and Opt-In Compliance Policy (“Policy”) outlines the procedures and requirements that Vault IQ, LLC and its affiliate, Brand Me Now (collectively, “we,” “us,” or “our”), adhere to when communicating with individuals via text message (SMS) and other electronic means. This Policy is designed to ensure compliance with the Telephone Consumer Protection Act (TCPA) and other applicable laws and regulations.
+
+2. Consent for Communications
+
+We are committed to ensuring that all communications are sent with the recipient’s prior express written consent. We will obtain this consent through clear and conspicuous disclosures on our website, at the point of data collection, and in our communications.
+
+Obtaining Consent
+
+Clear and Conspicuous Notice: Before or at the point of collecting a phone number, we will provide a clear and conspicuous disclosure that the individual is consenting to receive automated marketing messages from Brand Me Now.
+
+Affirmative Action: Consent will be obtained through an affirmative action by the individual, such as checking a box or replying to a confirmation text.
+
+No Condition of Purchase: We will not require consent to receive marketing messages as a condition of purchasing any goods or services.
+
+Content of Consent Disclosure
+
+The consent disclosure will include the following information:
+
+The name of the company (Brand Me Now).
+
+The types of messages that will be sent (e.g., promotional, transactional).
+
+The frequency of the messages.
+
+A statement that message and data rates may apply.
+
+Instructions on how to opt out of future messages.
+
+3. Opt-Out Mechanism
+
+We will provide a clear and easy-to-use mechanism for individuals to opt out of receiving future communications. All marketing text messages will include instructions on how to opt out, such as by replying “STOP.”
+
+Processing Opt-Out Requests: We will process all opt-out requests within 10 business days.
+
+Confirmation Message: We may send a single confirmation message to confirm that the individual has been unsubscribed. This message will not contain any promotional content.
+
+4. Time of Day Restrictions
+
+We will not send text messages before 8:00 AM or after 9:00 PM in the recipient’s local time zone.
+
+5. Record Keeping
+
+We will maintain records of all consent obtained, including the date, time, and method of consent. These records will be maintained for a minimum of four years and will be made available upon request to regulatory authorities.
+
+6. Do-Not-Call (DNC) Compliance
+
+We will scrub all contact lists against the National Do-Not-Call Registry and any applicable state DNC registries before sending any marketing communications.
+
+7. Use of Reassigned Number Database (RND)
+
+We will use the Reassigned Number Database (RND) to check for reassigned phone numbers before sending any text messages to ensure that we are not sending messages to individuals who have not provided consent.
+
+8. Training and Compliance
+
+All employees and agents involved in marketing and communications will be trained on this Policy and the requirements of the TCPA. We will conduct regular audits to ensure compliance with this Policy.
+
+9. Contact Us
+
+If you have any questions about this Policy or our compliance with the TCPA, please contact us at legal@brandmenow.com.

@@ -1,0 +1,29 @@
+-- =============================================================================
+-- 41_seed_subscriptions.sql — Subscription tier definitions (reference data)
+-- =============================================================================
+
+-- Subscription tiers are NOT stored as a database table.
+-- They are defined as application config and referenced by:
+--   1. The refill_credits() function (Section 4.4)
+--   2. The Stripe product/price setup
+--   3. The CHECK constraint on profiles.subscription_tier
+--
+-- This file documents the tier definitions for reference.
+
+-- ┌──────────┬──────────┬────────┬──────────────┬────────────────┬──────────────────────────┐
+-- │ Tier     │ Price/mo │ Brands │ Logo Credits │ Mockup Credits │ Stripe Price ID          │
+-- ├──────────┼──────────┼────────┼──────────────┼────────────────┼──────────────────────────┤
+-- │ free     │ $0       │ 1      │ 4            │ 4              │ (no Stripe price)        │
+-- │ starter  │ $29      │ 3      │ 20           │ 30             │ price_REPLACE_starter    │
+-- │ pro      │ $79      │ 10     │ 50           │ 100            │ price_REPLACE_pro        │
+-- │ agency   │ $199     │ Unlim  │ 200          │ 500            │ price_REPLACE_agency     │
+-- └──────────┴──────────┴────────┴──────────────┴────────────────┴──────────────────────────┘
+--
+-- IMPORTANT: Replace price_REPLACE_* with actual Stripe price IDs after creating
+-- products in the Stripe Dashboard.
+--
+-- Credits refresh monthly. Unused credits do NOT roll over. Overage at per-unit rates.
+--
+-- After user signup, call:
+--   SELECT public.refill_credits('<user-uuid>', 'free');
+-- to provision the initial free-tier credits.

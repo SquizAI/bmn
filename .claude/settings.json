@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(git:*)",
+      "Bash(redis-cli:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(sort:*)",
+      "Bash(wc:*)",
+      "Bash(supabase:*)",
+      "Bash(cd:*)",
+      "Read(//Users/mattysquarzoni/BMN_New_Matty/**)",
+      "WebFetch(domain:code.claude.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:supabase.com)",
+      "WebFetch(domain:expressjs.com)",
+      "WebFetch(domain:bullmq.io)",
+      "WebFetch(domain:socket.io)",
+      "WebFetch(domain:stripe.com)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:tailwindcss.com)",
+      "WebFetch(domain:zod.dev)",
+      "WebFetch(domain:api.bfl.ml)",
+      "WebFetch(domain:docs.ideogram.ai)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:ai.google.dev)"
+    ]
+  },
+  "mcpServers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+-- =============================================================================
+-- seed.sql — Combined seed data reference
+-- =============================================================================
+-- This file references the seed migrations that are run as part of the
+-- migration sequence. Seed data is included in the migration files for
+-- deterministic ordering:
+--
+--   supabase/migrations/20260219000040_seed_products.sql   — 24 products across 5 categories
+--   supabase/migrations/20260219000041_seed_subscriptions.sql — Subscription tier reference (comments only)
+--   supabase/migrations/20260219000042_seed_admin.sql      — Admin user promotion + credits
+--
+-- To re-seed independently of migrations, you can run:
+--   psql $DATABASE_URL -f supabase/migrations/20260219000040_seed_products.sql
+--
+-- Or use supabase db reset to drop + recreate everything from scratch.

@@ -1,0 +1,11 @@
+{
+  "name": "@bmn/marketing",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Marketing site - placeholder'",
+    "build": "echo 'Marketing site build - placeholder'"
+  },
+  "dependencies": {}
+}
