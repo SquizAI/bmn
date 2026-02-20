@@ -1,7 +1,8 @@
 # Brand Me Now v2 -- Production Docker Compose
 #
-# Usage:
-#   docker compose -f docker-compose.prod.yml up -d
+# Usage (with Caddy for HTTPS):
+#   set -a && source .env.production && set +a
+#   docker compose -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d --build
 #
 # Required: .env.production file with all secrets
 # See deploy/env.example for template
@@ -68,9 +69,10 @@ services:
         VITE_POSTHOG_HOST: ${POSTHOG_HOST:-https://us.posthog.com}
         VITE_SENTRY_DSN: ${SENTRY_DSN}
     container_name: bmn-client
-    ports:
-      - "80:80"
-      - "443:443"
+    # Ports exposed to Caddy via Docker network (no host binding)
+    # Caddy handles HTTPS termination on ports 80/443
+    expose:
+      - "80"
     depends_on:
       - server
     restart: always

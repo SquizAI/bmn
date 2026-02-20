@@ -1,0 +1,14 @@
+# Brand Me Now -- Caddy Reverse Proxy
+# Automatic HTTPS via Let's Encrypt
+
+app.prznl.com {
+    reverse_proxy client:80
+}
+
+api.prznl.com {
+    reverse_proxy server:4847
+}
+
+prznl.com {
+    redir https://app.prznl.com{uri} permanent
+}
