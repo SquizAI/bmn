@@ -335,8 +335,8 @@
   --bmn-color-border-hover: #404040;
   --bmn-color-border-focus: #fafafa;
   --bmn-color-text: #fafafa;
-  --bmn-color-text-secondary: #a3a3a3;
-  --bmn-color-text-muted: #737373;
+  --bmn-color-text-secondary: #d4d4d4;
+  --bmn-color-text-muted: #a3a3a3;
   --bmn-color-text-inverse: #0a0a0a;
   --bmn-color-text-link: #fafafa;
   --bmn-color-text-link-hover: #ffffff;
@@ -388,8 +388,8 @@
   --color-border-hover: #404040;
   --color-border-focus: #fafafa;
   --color-text: #fafafa;
-  --color-text-secondary: #a3a3a3;
-  --color-text-muted: #737373;
+  --color-text-secondary: #d4d4d4;
+  --color-text-muted: #a3a3a3;
   --color-text-inverse: #0a0a0a;
   --color-text-link: #fafafa;
   --color-error: #f87171;

@@ -39,7 +39,9 @@ export default function WizardLayout() {
       {/* Minimal header with phase indicators */}
       <header className="flex items-center justify-between px-6 py-4 md:px-10">
         <div>
-          <span className="text-sm font-bold tracking-tight text-text">PRZNL</span>
+          <span className="text-sm font-bold tracking-tight text-text">brand</span>
+          <span className="text-sm font-light tracking-tight text-text-muted">me</span>
+          <span className="text-sm font-bold tracking-tight text-text">now</span>
         </div>
 
         {/* Phase indicators */}

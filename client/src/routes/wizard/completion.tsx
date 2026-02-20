@@ -209,7 +209,7 @@ export default function CompletionPage() {
               onClick={() => {
                 if (navigator.share) {
                   navigator.share({
-                    title: `${brand.name} - PRZNL`,
+                    title: `${brand.name} - Brand Me Now`,
                     url: `${window.location.origin}/dashboard/brands/${brandId}`,
                   });
                 } else {

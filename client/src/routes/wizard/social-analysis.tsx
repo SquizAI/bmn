@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useSocialScrape } from '@/hooks/use-social-scrape';
 import { useDossier } from '@/hooks/use-dossier';
+import { apiClient } from '@/lib/api';
 import { ROUTES } from '@/lib/constants';
 import DossierLoadingSequence from '@/components/dossier/DossierLoadingSequence';
 
@@ -105,6 +106,7 @@ export default function SocialAnalysisPage() {
   const setBrand = useWizardStore((s) => s.setBrand);
   const setDesign = useWizardStore((s) => s.setDesign);
   const setStep = useWizardStore((s) => s.setStep);
+  const setMeta = useWizardStore((s) => s.setMeta);
 
   const dispatchScrape = useSocialScrape();
   const { dossier, phase, progress, message, isComplete, isError, error } =
@@ -126,9 +128,20 @@ export default function SocialAnalysisPage() {
   });
 
   const onSubmit = async (data: SocialHandlesForm) => {
-    if (!brandId) return;
+    let id = brandId;
+
+    // Auto-create a draft brand if one doesn't exist yet
+    if (!id) {
+      const result = await apiClient.post<{ brandId: string }>(
+        '/api/v1/wizard/start',
+        { brand_name: 'Untitled Brand' },
+      );
+      id = result.brandId;
+      setMeta({ brandId: id });
+    }
+
     await dispatchScrape.mutateAsync({
-      brandId,
+      brandId: id,
       handles: {
         instagram: data.instagram || undefined,
         tiktok: data.tiktok || undefined,

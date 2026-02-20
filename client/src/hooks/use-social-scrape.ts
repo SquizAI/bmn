@@ -5,6 +5,7 @@ import type { SocialHandlesInput } from '@/lib/dossier-types';
 
 interface DispatchJobResponse {
   jobId: string;
+  brandId: string;
 }
 
 interface DispatchPayload {
@@ -21,7 +22,10 @@ export function useSocialScrape() {
 
   return useMutation({
     mutationFn: (payload: DispatchPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/social-analysis', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/wizard/${payload.brandId}/analyze-social`,
+        payload.handles,
+      ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
