@@ -31,6 +31,9 @@ COPY src/ ./src/
 # ============================================
 FROM node:22-alpine AS production
 
+# Install dumb-init for proper PID 1 signal handling
+RUN apk add --no-cache dumb-init
+
 # Security: run as non-root user
 RUN addgroup -g 1001 -S bmn && \
     adduser -S bmn -u 1001 -G bmn
@@ -56,6 +59,7 @@ EXPOSE 4847
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4847/health || exit 1
 
-# Start the server
+# Start the server with dumb-init for proper signal handling
 ENV NODE_ENV=production
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "src/index.js"]

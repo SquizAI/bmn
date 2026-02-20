@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSocket } from '@/hooks/use-socket';
 import { supabase } from '@/lib/supabase';
+import { initTheme } from '@/lib/theme';
 
 /**
  * Root layout wrapping all routes.
@@ -15,6 +16,11 @@ export default function RootLayout() {
   const setUser = useAuthStore((s) => s.setUser);
   const setSession = useAuthStore((s) => s.setSession);
   const setLoading = useAuthStore((s) => s.setLoading);
+
+  // Initialize theme (dark mode default)
+  useEffect(() => {
+    return initTheme();
+  }, []);
 
   // Connect socket when authenticated
   useSocket();

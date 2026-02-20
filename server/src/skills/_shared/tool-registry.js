@@ -99,7 +99,7 @@ const STEP_TO_SKILLS = {
   'brand-identity': ['brand-generator', 'name-generator'],
   'logo-generation': ['logo-creator'],
   'logo-refinement': ['logo-creator'],
-  'product-selection': [],
+  'product-selection': ['product-recommender'],
   'mockup-generation': ['mockup-renderer'],
   'bundle-composition': ['mockup-renderer'],
   'profit-projection': ['profit-calculator'],

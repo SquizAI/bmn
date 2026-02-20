@@ -528,4 +528,98 @@ Return ONLY a valid JSON object with this exact shape:
       }
     },
   },
+
+  /**
+   * checkSocialHandles
+   *
+   * Check social media handle availability across Instagram, TikTok, and YouTube.
+   * Uses HTTP HEAD/GET requests to platform profile pages.
+   * A 404 or redirect suggests the handle may be available.
+   *
+   * Cost estimate: Free (HTTP requests to public endpoints)
+   */
+  checkSocialHandles: {
+    name: 'checkSocialHandles',
+    description: 'Check if a brand name is available as a social media handle on Instagram, TikTok, and YouTube. Uses HTTP requests to profile pages -- 404 means likely available.',
+    inputSchema: z.object({
+      handle: z
+        .string()
+        .min(1)
+        .max(30)
+        .describe('Handle to check (without @ prefix)'),
+      platforms: z
+        .array(z.enum(['instagram', 'tiktok', 'youtube']))
+        .default(['instagram', 'tiktok', 'youtube'])
+        .describe('Platforms to check'),
+    }),
+
+    /**
+     * @param {{ handle: string, platforms: string[] }} input
+     * @returns {Promise<{ success: boolean, data: Object }>}
+     */
+    async execute({ handle, platforms = ['instagram', 'tiktok', 'youtube'] }) {
+      const cleanHandle = handle
+        .toLowerCase()
+        .replace(/[^a-z0-9_.]/g, '')
+        .substring(0, 30);
+
+      if (!cleanHandle) {
+        return { success: false, error: 'Handle could not be cleaned to a valid format.' };
+      }
+
+      logger.info({ msg: 'Checking social handle availability', handle: cleanHandle, platforms });
+
+      const platformUrls = {
+        instagram: `https://www.instagram.com/${cleanHandle}/`,
+        tiktok: `https://www.tiktok.com/@${cleanHandle}`,
+        youtube: `https://www.youtube.com/@${cleanHandle}`,
+      };
+
+      const results = {};
+
+      for (const platform of platforms) {
+        const url = platformUrls[platform];
+        if (!url) continue;
+
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+
+          const response = await fetch(url, {
+            method: 'HEAD',
+            signal: controller.signal,
+            redirect: 'manual',
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; BrandMeNow/2.0)',
+            },
+          });
+
+          clearTimeout(timeout);
+
+          // 404 = likely available, 200 = likely taken, 3xx = redirect (platform-dependent)
+          if (response.status === 404) {
+            results[platform] = { available: true, status: 'likely-available' };
+          } else if (response.status >= 200 && response.status < 300) {
+            results[platform] = { available: false, status: 'likely-taken' };
+          } else if (response.status >= 300 && response.status < 400) {
+            // Redirects on some platforms mean the handle doesn't exist
+            results[platform] = { available: null, status: 'unknown' };
+          } else {
+            results[platform] = { available: null, status: 'unknown' };
+          }
+        } catch {
+          results[platform] = { available: null, status: 'unchecked', note: 'Request failed or timed out.' };
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          handle: cleanHandle,
+          results,
+          note: 'Social handle availability is heuristic-based. Verify by attempting to register on each platform.',
+        },
+      };
+    },
+  },
 };

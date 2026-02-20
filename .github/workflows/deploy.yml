@@ -1,0 +1,48 @@
+# Brand Me Now v2 -- Deploy Pipeline
+#
+# Deploys to DigitalOcean droplet on push to main
+# (only after CI passes)
+#
+# Required GitHub Secrets:
+#   DO_SSH_KEY         - Private SSH key for the deploy user
+#   DO_HOST            - Droplet IP address or hostname
+#   DO_USERNAME        - SSH username (default: deploy)
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME || 'deploy' }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd /opt/bmn
+            echo "=== Pulling latest code ==="
+            git pull origin main
+
+            echo "=== Building and deploying ==="
+            bash deploy/deploy.sh
+
+            echo "=== Deploy complete ==="
+            echo "Commit: $(git log --oneline -1)"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deployment to DigitalOcean failed!"
+          echo "Check the deploy logs on the server: ssh ${{ secrets.DO_USERNAME || 'deploy' }}@${{ secrets.DO_HOST }}"

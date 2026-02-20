@@ -1,0 +1,106 @@
+# Brand Me Now v2 -- Production Docker Compose
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Required: .env.production file with all secrets
+# See deploy/env.example for template
+
+services:
+  # ── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: bmn-redis
+    volumes:
+      - bmn-redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-changeme}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - bmn-internal
+
+  # ── API Server ─────────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: production
+    container_name: bmn-server
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - bmn-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+
+  # ── Client SPA ─────────────────────────────────────────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${API_URL:-https://api.brandmenow.com}
+        VITE_WS_URL: ${WS_URL:-wss://api.brandmenow.com}
+        VITE_SUPABASE_URL: ${SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+        VITE_POSTHOG_KEY: ${POSTHOG_API_KEY}
+        VITE_POSTHOG_HOST: ${POSTHOG_HOST:-https://us.posthog.com}
+        VITE_SENTRY_DSN: ${SENTRY_DSN}
+    container_name: bmn-client
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - server
+    restart: always
+    networks:
+      - bmn-internal
+      - bmn-external
+
+  # ── Redis Commander (disabled in prod by default) ──────────
+  # Uncomment to enable Redis admin UI on port 8381
+  # redis-commander:
+  #   image: rediscommander/redis-commander:latest
+  #   container_name: bmn-redis-commander
+  #   environment:
+  #     REDIS_HOSTS: local:redis:6379
+  #     REDIS_PASSWORD: ${REDIS_PASSWORD:-changeme}
+  #   ports:
+  #     - "8381:8081"
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+  #   networks:
+  #     - bmn-internal
+
+volumes:
+  bmn-redis-data:
+    driver: local
+
+networks:
+  bmn-internal:
+    driver: bridge
+  bmn-external:
+    driver: bridge

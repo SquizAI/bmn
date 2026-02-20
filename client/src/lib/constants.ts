@@ -51,6 +51,25 @@ export const WIZARD_STEPS = [
 
 export type WizardStepKey = (typeof WIZARD_STEPS)[number]['key'];
 
+// ------ Wizard Phases ------
+export const WIZARD_PHASES = [
+  {
+    id: 'discover',
+    label: 'Discover',
+    steps: ['onboarding', 'social-analysis'],
+  },
+  {
+    id: 'design',
+    label: 'Design',
+    steps: ['brand-identity', 'customization', 'logo-generation', 'logo-refinement'],
+  },
+  {
+    id: 'launch',
+    label: 'Launch',
+    steps: ['product-selection', 'mockup-review', 'bundle-builder', 'profit-calculator', 'checkout', 'complete'],
+  },
+] as const;
+
 // ------ Socket Events ------
 export const SOCKET_EVENTS = {
   // Generation events

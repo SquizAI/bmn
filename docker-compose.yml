@@ -50,6 +50,21 @@ services:
     command: ["node", "--watch", "src/index.js"]
     restart: unless-stopped
 
+  # Client is typically run via `npm run dev` outside Docker for HMR,
+  # but this service is available for full-stack Docker testing.
+  # Usage: docker compose --profile full up -d
+  client:
+    profiles: ["full"]
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: bmn-client
+    ports:
+      - "4848:80"
+    depends_on:
+      - server
+    restart: unless-stopped
+
 volumes:
   bmn-redis-data:
     driver: local

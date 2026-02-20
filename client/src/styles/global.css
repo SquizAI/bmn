@@ -73,6 +73,7 @@
   --shadow-md: var(--bmn-shadow-md);
   --shadow-lg: var(--bmn-shadow-lg);
   --shadow-xl: var(--bmn-shadow-xl);
+  --shadow-glow-accent: var(--bmn-shadow-glow-accent);
 
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-fade-out: fade-out 0.2s ease-in;

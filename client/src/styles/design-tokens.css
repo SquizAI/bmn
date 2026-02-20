@@ -151,6 +151,7 @@
   --bmn-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
   --bmn-shadow-glow-primary: 0 0 0 1px rgba(17, 17, 17, 0.1);
   --bmn-shadow-glow-success: 0 0 0 1px rgba(22, 163, 74, 0.2);
+  --bmn-shadow-glow-accent: 0 0 20px rgba(184, 149, 106, 0.1);
 
   /* ========================================================
      TRANSITIONS

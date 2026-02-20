@@ -1,10 +1,12 @@
 import { Link } from 'react-router';
-import { Menu, LogOut, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Menu, LogOut, Settings, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { toggleTheme, getResolvedTheme } from '@/lib/theme';
 
 interface HeaderProps {
   className?: string;
@@ -13,6 +15,21 @@ interface HeaderProps {
 function Header({ className }: HeaderProps) {
   const { user, isAuthenticated, signOut } = useAuth();
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const [isDark, setIsDark] = useState(() => getResolvedTheme() === 'dark');
+
+  const handleToggleTheme = () => {
+    toggleTheme();
+    setIsDark(getResolvedTheme() === 'dark');
+  };
+
+  // Sync on mount in case it changed externally
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <header
@@ -44,6 +61,14 @@ function Header({ className }: HeaderProps) {
 
       {/* Right: User actions */}
       <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleTheme}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
         {isAuthenticated ? (
           <>
             <Link to={ROUTES.DASHBOARD_SETTINGS}>

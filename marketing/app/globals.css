@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "../styles/design-tokens.css";
+
+/* Base reset & typography */
+body {
+  font-family: var(--bmn-font-primary);
+  color: var(--bmn-color-text);
+  background-color: var(--bmn-color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--bmn-font-secondary);
+  letter-spacing: -0.025em;
+}
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--bmn-color-accent);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--bmn-color-accent);
+  color: var(--bmn-color-accent-foreground);
+}

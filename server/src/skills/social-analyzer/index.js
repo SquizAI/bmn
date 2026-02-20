@@ -7,8 +7,10 @@ import { tools } from './tools.js';
 /**
  * Social Analyzer skill module.
  *
- * Scrapes Instagram/TikTok via Apify, analyzes visual aesthetics via Gemini Flash,
- * and synthesizes structured brand DNA JSON for downstream skills.
+ * Scrapes Instagram, TikTok, YouTube, X/Twitter, and Facebook via Apify,
+ * analyzes visual aesthetics and feed palette via Gemini Flash,
+ * detects niches, calculates brand readiness, and synthesizes
+ * a structured Creator Dossier JSON for downstream skills.
  *
  * @type {import('../_shared/types.js').Skill}
  */

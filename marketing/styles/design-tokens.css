@@ -1,0 +1,143 @@
+/* marketing/styles/design-tokens.css
+   Replicated from client/src/styles/design-tokens.css to keep sites visually consistent.
+   The marketing site does NOT import from client — it maintains its own copy. */
+
+:root {
+  /* Primary — Near-black, sophisticated */
+  --bmn-color-primary: #111111;
+  --bmn-color-primary-hover: #000000;
+  --bmn-color-primary-active: #000000;
+  --bmn-color-primary-light: #f5f5f5;
+  --bmn-color-primary-foreground: #ffffff;
+
+  /* Secondary — Neutral gray */
+  --bmn-color-secondary: #525252;
+  --bmn-color-secondary-hover: #404040;
+  --bmn-color-secondary-active: #262626;
+  --bmn-color-secondary-light: #f5f5f5;
+  --bmn-color-secondary-foreground: #ffffff;
+
+  /* Accent — Warm champagne gold */
+  --bmn-color-accent: #B8956A;
+  --bmn-color-accent-hover: #A6825A;
+  --bmn-color-accent-active: #94704B;
+  --bmn-color-accent-light: #FAF6F1;
+  --bmn-color-accent-foreground: #ffffff;
+
+  /* Background & Surface */
+  --bmn-color-background: #fafafa;
+  --bmn-color-surface: #ffffff;
+  --bmn-color-surface-elevated: #ffffff;
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.4);
+  --bmn-color-surface-hover: #f5f5f5;
+
+  /* Border */
+  --bmn-color-border: #e5e5e5;
+  --bmn-color-border-hover: #d4d4d4;
+  --bmn-color-border-focus: #111111;
+
+  /* Text */
+  --bmn-color-text: #111111;
+  --bmn-color-text-secondary: #525252;
+  --bmn-color-text-muted: #a3a3a3;
+  --bmn-color-text-inverse: #ffffff;
+  --bmn-color-text-link: #111111;
+  --bmn-color-text-link-hover: #000000;
+
+  /* Semantic */
+  --bmn-color-error: #dc2626;
+  --bmn-color-success: #16a34a;
+  --bmn-color-success-bg: #f0fdf4;
+  --bmn-color-warning: #d97706;
+  --bmn-color-info: #2563eb;
+
+  /* Typography */
+  --bmn-font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+  --bmn-font-secondary: 'Space Grotesk', system-ui, sans-serif;
+  --bmn-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font sizes */
+  --bmn-text-xs: 0.75rem;
+  --bmn-text-sm: 0.875rem;
+  --bmn-text-base: 1rem;
+  --bmn-text-lg: 1.125rem;
+  --bmn-text-xl: 1.25rem;
+  --bmn-text-2xl: 1.5rem;
+  --bmn-text-3xl: 1.875rem;
+  --bmn-text-4xl: 2.25rem;
+  --bmn-text-5xl: 3rem;
+  --bmn-text-6xl: 3.75rem;
+
+  /* Border Radius */
+  --bmn-radius-sm: 0.25rem;
+  --bmn-radius-md: 0.375rem;
+  --bmn-radius-lg: 0.5rem;
+  --bmn-radius-xl: 0.75rem;
+  --bmn-radius-2xl: 1rem;
+  --bmn-radius-full: 9999px;
+
+  /* Shadows */
+  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --bmn-shadow-glow-accent: 0 0 20px rgba(184, 149, 106, 0.1);
+
+  /* Transitions */
+  --bmn-transition-fast: 100ms ease;
+  --bmn-transition-base: 200ms ease;
+  --bmn-transition-slow: 300ms ease;
+
+  /* Layout */
+  --bmn-max-width-content: 1280px;
+  --bmn-header-height: 64px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bmn-color-background: #0a0a0a;
+    --bmn-color-surface: #141414;
+    --bmn-color-surface-elevated: #1c1c1c;
+    --bmn-color-surface-overlay: rgba(0, 0, 0, 0.6);
+    --bmn-color-surface-hover: #1c1c1c;
+
+    --bmn-color-primary: #fafafa;
+    --bmn-color-primary-hover: #ffffff;
+    --bmn-color-primary-active: #e5e5e5;
+    --bmn-color-primary-light: #1c1c1c;
+    --bmn-color-primary-foreground: #0a0a0a;
+
+    --bmn-color-secondary: #a3a3a3;
+    --bmn-color-secondary-hover: #d4d4d4;
+    --bmn-color-secondary-light: #1c1c1c;
+    --bmn-color-secondary-foreground: #0a0a0a;
+
+    --bmn-color-accent: #D4A574;
+    --bmn-color-accent-hover: #C9965E;
+    --bmn-color-accent-light: #1a1510;
+
+    --bmn-color-border: #262626;
+    --bmn-color-border-hover: #404040;
+    --bmn-color-border-focus: #fafafa;
+
+    --bmn-color-text: #fafafa;
+    --bmn-color-text-secondary: #a3a3a3;
+    --bmn-color-text-muted: #737373;
+    --bmn-color-text-inverse: #0a0a0a;
+    --bmn-color-text-link: #fafafa;
+    --bmn-color-text-link-hover: #ffffff;
+
+    --bmn-color-error: #f87171;
+    --bmn-color-success: #4ade80;
+    --bmn-color-warning: #fbbf24;
+    --bmn-color-info: #60a5fa;
+
+    --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+    --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    --bmn-shadow-glow-accent: 0 0 20px rgba(212, 165, 116, 0.15);
+  }
+}
