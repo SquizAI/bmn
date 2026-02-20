@@ -63,6 +63,7 @@ const router = createBrowserRouter([
         <RootLayout />
       </SuspenseRoute>
     ),
+    HydrateFallback: LoadingSpinner,
     children: [
       // --- Auth routes (redirect if already logged in) ---
       {
