@@ -47,7 +47,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           aria-invalid={!!error}
           aria-describedby={error ? errorId : helpText ? helpId : undefined}
           className={cn(
-            'h-10 w-full rounded-lg border bg-surface px-3 text-sm text-text transition-all duration-200',
+            'h-9 w-full rounded-md border bg-surface px-3 text-[13px] text-text transition-colors duration-150',
             'placeholder:text-text-muted',
             'hover:border-border-hover',
             'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',

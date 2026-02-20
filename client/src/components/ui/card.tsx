@@ -11,11 +11,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const variantStyles: Record<CardVariant, string> = {
-  default: 'bg-surface border border-border shadow-sm',
-  elevated: 'bg-surface-elevated shadow-lg',
+  default: 'bg-surface border border-border',
+  elevated: 'bg-surface-elevated shadow-sm',
   outlined: 'bg-transparent border border-border',
   interactive:
-    'bg-surface border border-border shadow-sm hover:shadow-md hover:border-border-hover transition-all duration-200 cursor-pointer',
+    'bg-surface border border-border hover:border-border-hover transition-colors duration-150 cursor-pointer',
 };
 
 const paddingStyles: Record<CardPadding, string> = {
@@ -34,7 +34,7 @@ function Card({
 }: CardProps) {
   return (
     <div
-      className={cn('rounded-xl', variantStyles[variant], paddingStyles[padding], className)}
+      className={cn('rounded-lg', variantStyles[variant], paddingStyles[padding], className)}
       {...props}
     >
       {children}

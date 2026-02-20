@@ -12,17 +12,17 @@ interface NavItem {
 }
 
 const dashboardNav: NavItem[] = [
-  { label: 'My Brands', path: ROUTES.DASHBOARD_BRANDS, icon: <LayoutDashboard className="h-5 w-5" /> },
-  { label: 'Create Brand', path: ROUTES.WIZARD, icon: <Palette className="h-5 w-5" /> },
-  { label: 'Settings', path: ROUTES.DASHBOARD_SETTINGS, icon: <Settings className="h-5 w-5" /> },
+  { label: 'My Brands', path: ROUTES.DASHBOARD_BRANDS, icon: <LayoutDashboard className="h-4 w-4" /> },
+  { label: 'Create Brand', path: ROUTES.WIZARD, icon: <Palette className="h-4 w-4" /> },
+  { label: 'Settings', path: ROUTES.DASHBOARD_SETTINGS, icon: <Settings className="h-4 w-4" /> },
 ];
 
 const adminNav: NavItem[] = [
-  { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <Users className="h-5 w-5" /> },
-  { label: 'Products', path: ROUTES.ADMIN_PRODUCTS, icon: <Package className="h-5 w-5" /> },
-  { label: 'Jobs', path: ROUTES.ADMIN_JOBS, icon: <Activity className="h-5 w-5" /> },
-  { label: 'Moderation', path: ROUTES.ADMIN_MODERATION, icon: <Eye className="h-5 w-5" /> },
-  { label: 'Health', path: ROUTES.ADMIN_HEALTH, icon: <ShieldCheck className="h-5 w-5" /> },
+  { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <Users className="h-4 w-4" /> },
+  { label: 'Products', path: ROUTES.ADMIN_PRODUCTS, icon: <Package className="h-4 w-4" /> },
+  { label: 'Jobs', path: ROUTES.ADMIN_JOBS, icon: <Activity className="h-4 w-4" /> },
+  { label: 'Moderation', path: ROUTES.ADMIN_MODERATION, icon: <Eye className="h-4 w-4" /> },
+  { label: 'Health', path: ROUTES.ADMIN_HEALTH, icon: <ShieldCheck className="h-4 w-4" /> },
 ];
 
 function Sidebar() {
@@ -36,14 +36,14 @@ function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-[var(--bmn-header-height)] z-[var(--bmn-z-sticky)] h-[calc(100dvh-var(--bmn-header-height))]',
-        'w-[var(--bmn-sidebar-width)] border-r border-border bg-surface transition-transform duration-300',
+        'fixed left-0 top-(--bmn-header-height) z-(--bmn-z-sticky) h-[calc(100dvh-var(--bmn-header-height))]',
+        'w-(--bmn-sidebar-width) border-r border-border bg-surface transition-transform duration-300',
         'md:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
       )}
     >
-      <nav className="flex flex-col gap-1 p-4">
-        <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+      <nav className="flex flex-col gap-0.5 p-3">
+        <div className="mb-3 px-3 text-[11px] font-medium uppercase tracking-widest text-text-muted">
           {isAdminSection ? 'Admin' : 'Navigation'}
         </div>
         {navItems.map((item) => (
@@ -53,9 +53,9 @@ function Sidebar() {
             end={item.path === ROUTES.DASHBOARD_BRANDS}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
                 isActive
-                  ? 'bg-primary-light text-primary'
+                  ? 'bg-primary text-primary-foreground'
                   : 'text-text-secondary hover:bg-surface-hover hover:text-text',
               )
             }
@@ -69,21 +69,21 @@ function Sidebar() {
         {isAdmin && !isAdminSection && (
           <>
             <div className="my-3 border-t border-border" />
-            <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted">
+            <div className="mb-3 px-3 text-[11px] font-medium uppercase tracking-widest text-text-muted">
               Admin
             </div>
             <NavLink
               to={ROUTES.ADMIN}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
                   isActive
-                    ? 'bg-primary-light text-primary'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-text-secondary hover:bg-surface-hover hover:text-text',
                 )
               }
             >
-              <ShieldCheck className="h-5 w-5" />
+              <ShieldCheck className="h-4 w-4" />
               <span>Admin Panel</span>
             </NavLink>
           </>

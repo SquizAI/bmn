@@ -108,7 +108,7 @@ export default function SocialAnalysisPage() {
       </div>
 
       {/* Form */}
-      {!isAnalyzing && !generation.isComplete && (
+      {!isAnalyzing && !generation.isComplete ? (
         <Card variant="outlined" padding="lg">
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
@@ -149,7 +149,7 @@ export default function SocialAnalysisPage() {
             </form>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       {/* Progress */}
       {(isAnalyzing || generation.isError) && (
@@ -162,7 +162,7 @@ export default function SocialAnalysisPage() {
       )}
 
       {/* Results preview */}
-      {generation.isComplete && generation.result && (
+      {generation.isComplete && generation.result != null ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -223,7 +223,7 @@ export default function SocialAnalysisPage() {
             Continue to Brand Identity
           </Button>
         </motion.div>
-      )}
+      ) : null}
     </motion.div>
   );
 }

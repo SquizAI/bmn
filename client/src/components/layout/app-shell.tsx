@@ -22,7 +22,7 @@ function AppShell({ showSidebar = true }: AppShellProps) {
       {showSidebar && <Sidebar />}
       <main
         className={cn(
-          'pt-0 transition-[margin] duration-300',
+          'pt-(--bmn-header-height) transition-[margin] duration-300',
           showSidebar && sidebarOpen
             ? 'md:ml-[var(--bmn-sidebar-width)]'
             : 'ml-0',

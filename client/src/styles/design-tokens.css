@@ -3,82 +3,83 @@
 :root {
   /* ========================================================
      COLORS — Light Mode (Default)
+     Premium monochromatic palette with warm gold accent.
      ======================================================== */
 
-  /* Primary — Brand purple */
-  --bmn-color-primary: #7c3aed;
-  --bmn-color-primary-hover: #6d28d9;
-  --bmn-color-primary-active: #5b21b6;
-  --bmn-color-primary-light: #ede9fe;
+  /* Primary — Near-black, sophisticated */
+  --bmn-color-primary: #111111;
+  --bmn-color-primary-hover: #000000;
+  --bmn-color-primary-active: #000000;
+  --bmn-color-primary-light: #f5f5f5;
   --bmn-color-primary-foreground: #ffffff;
 
-  /* Secondary — Slate blue */
-  --bmn-color-secondary: #475569;
-  --bmn-color-secondary-hover: #334155;
-  --bmn-color-secondary-active: #1e293b;
-  --bmn-color-secondary-light: #f1f5f9;
+  /* Secondary — Neutral gray */
+  --bmn-color-secondary: #525252;
+  --bmn-color-secondary-hover: #404040;
+  --bmn-color-secondary-active: #262626;
+  --bmn-color-secondary-light: #f5f5f5;
   --bmn-color-secondary-foreground: #ffffff;
 
-  /* Accent — Vibrant teal */
-  --bmn-color-accent: #14b8a6;
-  --bmn-color-accent-hover: #0d9488;
-  --bmn-color-accent-active: #0f766e;
-  --bmn-color-accent-light: #ccfbf1;
+  /* Accent — Warm champagne gold */
+  --bmn-color-accent: #B8956A;
+  --bmn-color-accent-hover: #A6825A;
+  --bmn-color-accent-active: #94704B;
+  --bmn-color-accent-light: #FAF6F1;
   --bmn-color-accent-foreground: #ffffff;
 
   /* Background & Surface */
   --bmn-color-background: #fafafa;
   --bmn-color-surface: #ffffff;
   --bmn-color-surface-elevated: #ffffff;
-  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.5);
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.4);
   --bmn-color-surface-hover: #f5f5f5;
 
-  /* Border */
-  --bmn-color-border: #e2e8f0;
-  --bmn-color-border-hover: #cbd5e1;
-  --bmn-color-border-focus: #7c3aed;
+  /* Border — Barely visible, clean */
+  --bmn-color-border: #e5e5e5;
+  --bmn-color-border-hover: #d4d4d4;
+  --bmn-color-border-focus: #111111;
 
   /* Text */
-  --bmn-color-text: #0f172a;
-  --bmn-color-text-secondary: #475569;
-  --bmn-color-text-muted: #94a3b8;
+  --bmn-color-text: #111111;
+  --bmn-color-text-secondary: #525252;
+  --bmn-color-text-muted: #a3a3a3;
   --bmn-color-text-inverse: #ffffff;
-  --bmn-color-text-link: #7c3aed;
-  --bmn-color-text-link-hover: #6d28d9;
+  --bmn-color-text-link: #111111;
+  --bmn-color-text-link-hover: #000000;
 
   /* Semantic — Error */
-  --bmn-color-error: #ef4444;
-  --bmn-color-error-hover: #dc2626;
+  --bmn-color-error: #dc2626;
+  --bmn-color-error-hover: #b91c1c;
   --bmn-color-error-bg: #fef2f2;
   --bmn-color-error-border: #fecaca;
   --bmn-color-error-foreground: #ffffff;
 
   /* Semantic — Success */
-  --bmn-color-success: #22c55e;
-  --bmn-color-success-hover: #16a34a;
+  --bmn-color-success: #16a34a;
+  --bmn-color-success-hover: #15803d;
   --bmn-color-success-bg: #f0fdf4;
   --bmn-color-success-border: #bbf7d0;
   --bmn-color-success-foreground: #ffffff;
 
   /* Semantic — Warning */
-  --bmn-color-warning: #f59e0b;
-  --bmn-color-warning-hover: #d97706;
+  --bmn-color-warning: #d97706;
+  --bmn-color-warning-hover: #b45309;
   --bmn-color-warning-bg: #fffbeb;
   --bmn-color-warning-border: #fde68a;
   --bmn-color-warning-foreground: #000000;
 
   /* Semantic — Info */
-  --bmn-color-info: #3b82f6;
-  --bmn-color-info-hover: #2563eb;
+  --bmn-color-info: #2563eb;
+  --bmn-color-info-hover: #1d4ed8;
   --bmn-color-info-bg: #eff6ff;
   --bmn-color-info-border: #bfdbfe;
   --bmn-color-info-foreground: #ffffff;
 
   /* Wizard-specific */
-  --bmn-color-wizard-bg: #f8fafc;
-  --bmn-color-wizard-step-active: #7c3aed;
-  --bmn-color-wizard-step-complete: #22c55e;
-  --bmn-color-wizard-step-upcoming: #e2e8f0;
+  --bmn-color-wizard-bg: #fafafa;
+  --bmn-color-wizard-step-active: #111111;
+  --bmn-color-wizard-step-complete: #16a34a;
+  --bmn-color-wizard-step-upcoming: #e5e5e5;
   --bmn-color-wizard-step-text: #ffffff;
 
   /* ========================================================
@@ -119,31 +120,37 @@
   --bmn-font-bold: 700;
   --bmn-font-extrabold: 800;
 
+  /* Letter spacing — tighter for headings, wider for labels */
+  --bmn-tracking-tight: -0.025em;
+  --bmn-tracking-normal: 0;
+  --bmn-tracking-wide: 0.05em;
+  --bmn-tracking-wider: 0.1em;
+
   /* ========================================================
      BORDER RADIUS
      ======================================================== */
 
   --bmn-radius-none: 0;
   --bmn-radius-sm: 0.25rem;
-  --bmn-radius-md: 0.5rem;
-  --bmn-radius-lg: 0.75rem;
-  --bmn-radius-xl: 1rem;
-  --bmn-radius-2xl: 1.5rem;
+  --bmn-radius-md: 0.375rem;
+  --bmn-radius-lg: 0.5rem;
+  --bmn-radius-xl: 0.75rem;
+  --bmn-radius-2xl: 1rem;
   --bmn-radius-full: 9999px;
 
   /* ========================================================
-     SHADOWS
+     SHADOWS — Subtle, refined
      ======================================================== */
 
-  --bmn-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  --bmn-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  --bmn-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
-  --bmn-shadow-glow-primary: 0 0 20px rgba(124, 58, 237, 0.3);
-  --bmn-shadow-glow-success: 0 0 20px rgba(34, 197, 94, 0.3);
+  --bmn-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  --bmn-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+  --bmn-shadow-glow-primary: 0 0 0 1px rgba(17, 17, 17, 0.1);
+  --bmn-shadow-glow-success: 0 0 0 1px rgba(22, 163, 74, 0.2);
 
   /* ========================================================
      TRANSITIONS
@@ -175,56 +182,55 @@
   --bmn-max-width-content: 1280px;
   --bmn-max-width-wizard: 960px;
   --bmn-max-width-form: 640px;
-  --bmn-sidebar-width: 280px;
-  --bmn-header-height: 64px;
-  --bmn-wizard-progress-height: 4px;
+  --bmn-sidebar-width: 260px;
+  --bmn-header-height: 56px;
+  --bmn-wizard-progress-height: 2px;
 }
 
 /* ========================================================
    DARK MODE
-   Swaps CSS variable values. Applied via class on <html>.
    ======================================================== */
 
-:root.dark {
+[data-theme="dark"] {
   /* Background & Surface */
-  --bmn-color-background: #0a0a0f;
-  --bmn-color-surface: #18181b;
-  --bmn-color-surface-elevated: #27272a;
-  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.7);
-  --bmn-color-surface-hover: #27272a;
+  --bmn-color-background: #0a0a0a;
+  --bmn-color-surface: #141414;
+  --bmn-color-surface-elevated: #1c1c1c;
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.6);
+  --bmn-color-surface-hover: #1c1c1c;
 
   /* Primary — Lighter for dark bg */
-  --bmn-color-primary: #a78bfa;
-  --bmn-color-primary-hover: #8b5cf6;
-  --bmn-color-primary-active: #7c3aed;
-  --bmn-color-primary-light: #1e1b4b;
-  --bmn-color-primary-foreground: #000000;
+  --bmn-color-primary: #fafafa;
+  --bmn-color-primary-hover: #ffffff;
+  --bmn-color-primary-active: #e5e5e5;
+  --bmn-color-primary-light: #1c1c1c;
+  --bmn-color-primary-foreground: #0a0a0a;
 
   /* Secondary */
-  --bmn-color-secondary: #94a3b8;
-  --bmn-color-secondary-hover: #cbd5e1;
-  --bmn-color-secondary-active: #e2e8f0;
-  --bmn-color-secondary-light: #1e293b;
-  --bmn-color-secondary-foreground: #000000;
+  --bmn-color-secondary: #a3a3a3;
+  --bmn-color-secondary-hover: #d4d4d4;
+  --bmn-color-secondary-active: #e5e5e5;
+  --bmn-color-secondary-light: #1c1c1c;
+  --bmn-color-secondary-foreground: #0a0a0a;
 
-  /* Accent */
-  --bmn-color-accent: #2dd4bf;
-  --bmn-color-accent-hover: #14b8a6;
-  --bmn-color-accent-active: #0d9488;
-  --bmn-color-accent-light: #042f2e;
+  /* Accent — Gold, slightly brighter for dark mode */
+  --bmn-color-accent: #D4A574;
+  --bmn-color-accent-hover: #C9965E;
+  --bmn-color-accent-active: #B8856E;
+  --bmn-color-accent-light: #1a1510;
 
   /* Border */
-  --bmn-color-border: #3f3f46;
-  --bmn-color-border-hover: #52525b;
-  --bmn-color-border-focus: #a78bfa;
+  --bmn-color-border: #262626;
+  --bmn-color-border-hover: #404040;
+  --bmn-color-border-focus: #fafafa;
 
   /* Text */
   --bmn-color-text: #fafafa;
-  --bmn-color-text-secondary: #a1a1aa;
-  --bmn-color-text-muted: #71717a;
-  --bmn-color-text-inverse: #0a0a0f;
-  --bmn-color-text-link: #a78bfa;
-  --bmn-color-text-link-hover: #c4b5fd;
+  --bmn-color-text-secondary: #a3a3a3;
+  --bmn-color-text-muted: #737373;
+  --bmn-color-text-inverse: #0a0a0a;
+  --bmn-color-text-link: #fafafa;
+  --bmn-color-text-link-hover: #ffffff;
 
   /* Semantic */
   --bmn-color-error: #f87171;
@@ -241,16 +247,17 @@
   --bmn-color-info-border: #1e40af;
 
   /* Wizard */
-  --bmn-color-wizard-bg: #0f0f14;
-  --bmn-color-wizard-step-active: #a78bfa;
+  --bmn-color-wizard-bg: #0a0a0a;
+  --bmn-color-wizard-step-active: #fafafa;
   --bmn-color-wizard-step-complete: #4ade80;
-  --bmn-color-wizard-step-upcoming: #3f3f46;
+  --bmn-color-wizard-step-upcoming: #262626;
 
-  /* Shadows — darker for dark mode */
+  /* Shadows */
   --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
   --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
   --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-  --bmn-shadow-glow-primary: 0 0 20px rgba(167, 139, 250, 0.3);
-  --bmn-shadow-glow-success: 0 0 20px rgba(74, 222, 128, 0.3);
+  --bmn-shadow-glow-primary: 0 0 0 1px rgba(250, 250, 250, 0.1);
+  --bmn-shadow-glow-success: 0 0 0 1px rgba(74, 222, 128, 0.2);
+  --bmn-shadow-glow-accent: 0 0 20px rgba(212, 165, 116, 0.15);
 }

@@ -14,7 +14,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Confetti } from '@/components/confetti';
 import { useWizardStore } from '@/stores/wizard-store';
 import { ROUTES } from '@/lib/constants';

@@ -35,7 +35,7 @@ async function cleanExpiredJobs(jobLog) {
     .from('generation_jobs')
     .update({ status: 'failed', error: 'Job timed out (stuck in processing)' })
     .eq('status', 'processing')
-    .lt('updated_at', thirtyMinutesAgo)
+    .lt('created_at', thirtyMinutesAgo)
     .select('id');
 
   if (error) {

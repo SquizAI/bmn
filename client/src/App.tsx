@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouterProvider } from 'react-router';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/lib/query-client';
@@ -242,14 +242,16 @@ const router = createBrowserRouter([
         ],
       },
 
+      // --- Root redirect ---
+      {
+        index: true,
+        element: <Navigate to="/dashboard" replace />,
+      },
+
       // --- Catch-all: redirect to dashboard ---
       {
         path: '*',
-        element: (
-          <SuspenseRoute>
-            <BrandsPage />
-          </SuspenseRoute>
-        ),
+        element: <Navigate to="/dashboard" replace />,
       },
     ],
   },

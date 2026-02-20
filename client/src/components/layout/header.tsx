@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Menu, LogOut, Settings, User, Sparkles } from 'lucide-react';
+import { Menu, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ function Header({ className }: HeaderProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-[var(--bmn-z-sticky)] flex h-[var(--bmn-header-height)] items-center justify-between',
-        'border-b border-border bg-surface px-4 md:px-6',
+        'sticky top-0 z-(--bmn-z-sticky) flex h-(--bmn-header-height) items-center justify-between',
+        'border-b border-border bg-surface/80 backdrop-blur-lg px-5 md:px-8',
         className,
       )}
     >
@@ -32,36 +32,39 @@ function Header({ className }: HeaderProps) {
             aria-label="Toggle sidebar"
             className="md:hidden"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </Button>
         )}
-        <Link to={ROUTES.DASHBOARD} className="flex items-center gap-2 text-lg font-bold text-text">
-          <Sparkles className="h-6 w-6 text-primary" />
-          <span className="hidden sm:inline">Brand Me Now</span>
+        <Link to={ROUTES.DASHBOARD} className="flex items-center gap-0">
+          <span className="text-base font-bold tracking-tight text-text">brand</span>
+          <span className="text-base font-light tracking-tight text-text-muted">me</span>
+          <span className="text-base font-bold tracking-tight text-text">now</span>
         </Link>
       </div>
 
       {/* Right: User actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {isAuthenticated ? (
           <>
             <Link to={ROUTES.DASHBOARD_SETTINGS}>
               <Button variant="ghost" size="icon" aria-label="Settings">
-                <Settings className="h-5 w-5" />
+                <Settings className="h-4 w-4" />
               </Button>
             </Link>
-            <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5">
-              <User className="h-4 w-4 text-text-muted" />
+            <div className="ml-1 flex items-center gap-2 rounded-md px-3 py-1.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                {user?.email?.charAt(0).toUpperCase() ?? 'U'}
+              </div>
               <span className="hidden text-sm text-text-secondary md:inline">
                 {user?.email}
               </span>
             </div>
             <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
             </Button>
           </>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Link to={ROUTES.LOGIN}>
               <Button variant="ghost" size="sm">
                 Log in
