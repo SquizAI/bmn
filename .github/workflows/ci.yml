@@ -1,7 +1,7 @@
 # Brand Me Now v2 -- CI Pipeline
 #
 # Runs on every push and PR to main:
-#   1. Lint server code
+#   1. Install from monorepo root (npm workspaces)
 #   2. Run server tests (Vitest)
 #   3. Build client (Vite)
 #   4. Build Docker images
@@ -42,13 +42,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install server dependencies
-        working-directory: server
-        run: npm ci
+      - name: Install dependencies (monorepo root)
+        run: npm ci --legacy-peer-deps
 
-      - name: Run tests
+      - name: Run server tests
         working-directory: server
         run: npm test
         env:
