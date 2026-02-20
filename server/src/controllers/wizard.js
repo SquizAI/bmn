@@ -262,6 +262,152 @@ export async function generateIdentity(req, res, next) {
 }
 
 /**
+ * POST /api/v1/wizard/:brandId/generate-names
+ * Queue brand name generation.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function generateNames(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('id, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const sessionId = await sessionManager.get(brandId);
+
+    const { jobId } = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'brand-names',
+      sessionId: sessionId || undefined,
+      input: {
+        brandIdentity: brand.wizard_state?.['brand-identity'] || {},
+        userPreferences: req.body,
+      },
+    });
+
+    logger.info({ jobId, brandId, userId }, 'Name generation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId, brandId, step: 'brand-names' },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/wizard/:brandId/recommend-products
+ * Get AI product recommendations.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function recommendProducts(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('id, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const sessionId = await sessionManager.get(brandId);
+
+    const { jobId } = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'product-recommendations',
+      sessionId: sessionId || undefined,
+      input: {
+        brandIdentity: brand.wizard_state?.['brand-identity'] || {},
+        socialAnalysis: brand.wizard_state?.['social-analysis'] || {},
+        userPreferences: req.body,
+      },
+    });
+
+    logger.info({ jobId, brandId, userId }, 'Product recommendation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId, brandId, step: 'product-recommendations' },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/wizard/:brandId/generate-mockups
+ * Queue mockup generation.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function generateMockups(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('id, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const sessionId = await sessionManager.get(brandId);
+
+    const { jobId } = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'mockup-generation',
+      sessionId: sessionId || undefined,
+      input: {
+        brandIdentity: brand.wizard_state?.['brand-identity'] || {},
+        selectedProducts: brand.wizard_state?.['product-selection'] || {},
+        userPreferences: req.body,
+      },
+    });
+
+    logger.info({ jobId, brandId, userId }, 'Mockup generation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId, brandId, step: 'mockup-generation' },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * POST /api/v1/wizard/resume
  * Resume a wizard session from an HMAC-signed token.
  *
