@@ -193,6 +193,7 @@
    ======================================================== */
 
 [data-theme="light"] {
+  /* Base design token vars */
   --bmn-color-primary: #111111;
   --bmn-color-primary-hover: #000000;
   --bmn-color-primary-active: #000000;
@@ -248,6 +249,61 @@
   --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
   --bmn-shadow-glow-primary: 0 0 0 1px rgba(17, 17, 17, 0.1);
   --bmn-shadow-glow-accent: 0 0 20px rgba(184, 149, 106, 0.1);
+
+  /* Tailwind @theme vars — must also override these because @theme resolves
+     var(--bmn-*) at :root level, so child [data-theme] can't re-resolve them. */
+  --color-primary: #111111;
+  --color-primary-hover: #000000;
+  --color-primary-active: #000000;
+  --color-primary-light: #f5f5f5;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #525252;
+  --color-secondary-hover: #404040;
+  --color-secondary-active: #262626;
+  --color-secondary-light: #f5f5f5;
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #B8956A;
+  --color-accent-hover: #A6825A;
+  --color-accent-active: #94704B;
+  --color-accent-light: #FAF6F1;
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-overlay: rgba(0, 0, 0, 0.4);
+  --color-surface-hover: #f5f5f5;
+  --color-border: #e5e5e5;
+  --color-border-hover: #d4d4d4;
+  --color-border-focus: #111111;
+  --color-text: #111111;
+  --color-text-secondary: #525252;
+  --color-text-muted: #a3a3a3;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #111111;
+  --color-error: #dc2626;
+  --color-error-hover: #b91c1c;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-error-foreground: #ffffff;
+  --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-hover: #b45309;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-foreground: #000000;
+  --color-info: #2563eb;
+  --color-info-hover: #1d4ed8;
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+  --color-info-foreground: #ffffff;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-glow-accent: 0 0 20px rgba(184, 149, 106, 0.1);
 }
 
 /* ========================================================
@@ -255,47 +311,35 @@
    ======================================================== */
 
 [data-theme="dark"] {
-  /* Background & Surface */
+  /* Base design token vars */
   --bmn-color-background: #0a0a0a;
   --bmn-color-surface: #141414;
   --bmn-color-surface-elevated: #1c1c1c;
   --bmn-color-surface-overlay: rgba(0, 0, 0, 0.6);
   --bmn-color-surface-hover: #1c1c1c;
-
-  /* Primary — Lighter for dark bg */
   --bmn-color-primary: #fafafa;
   --bmn-color-primary-hover: #ffffff;
   --bmn-color-primary-active: #e5e5e5;
   --bmn-color-primary-light: #1c1c1c;
   --bmn-color-primary-foreground: #0a0a0a;
-
-  /* Secondary */
   --bmn-color-secondary: #a3a3a3;
   --bmn-color-secondary-hover: #d4d4d4;
   --bmn-color-secondary-active: #e5e5e5;
   --bmn-color-secondary-light: #1c1c1c;
   --bmn-color-secondary-foreground: #0a0a0a;
-
-  /* Accent — Gold, slightly brighter for dark mode */
   --bmn-color-accent: #D4A574;
   --bmn-color-accent-hover: #C9965E;
   --bmn-color-accent-active: #B8856E;
   --bmn-color-accent-light: #1a1510;
-
-  /* Border */
   --bmn-color-border: #262626;
   --bmn-color-border-hover: #404040;
   --bmn-color-border-focus: #fafafa;
-
-  /* Text */
   --bmn-color-text: #fafafa;
   --bmn-color-text-secondary: #a3a3a3;
   --bmn-color-text-muted: #737373;
   --bmn-color-text-inverse: #0a0a0a;
   --bmn-color-text-link: #fafafa;
   --bmn-color-text-link-hover: #ffffff;
-
-  /* Semantic */
   --bmn-color-error: #f87171;
   --bmn-color-error-bg: #1c0a0a;
   --bmn-color-error-border: #7f1d1d;
@@ -308,14 +352,10 @@
   --bmn-color-info: #60a5fa;
   --bmn-color-info-bg: #0a1628;
   --bmn-color-info-border: #1e40af;
-
-  /* Wizard */
   --bmn-color-wizard-bg: #0a0a0a;
   --bmn-color-wizard-step-active: #fafafa;
   --bmn-color-wizard-step-complete: #4ade80;
   --bmn-color-wizard-step-upcoming: #262626;
-
-  /* Shadows */
   --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
   --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
   --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
@@ -323,4 +363,54 @@
   --bmn-shadow-glow-primary: 0 0 0 1px rgba(250, 250, 250, 0.1);
   --bmn-shadow-glow-success: 0 0 0 1px rgba(74, 222, 128, 0.2);
   --bmn-shadow-glow-accent: 0 0 20px rgba(212, 165, 116, 0.15);
+
+  /* Tailwind @theme vars — override resolved values for scoped dark containers */
+  --color-primary: #fafafa;
+  --color-primary-hover: #ffffff;
+  --color-primary-active: #e5e5e5;
+  --color-primary-light: #1c1c1c;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #a3a3a3;
+  --color-secondary-hover: #d4d4d4;
+  --color-secondary-active: #e5e5e5;
+  --color-secondary-light: #1c1c1c;
+  --color-secondary-foreground: #0a0a0a;
+  --color-accent: #D4A574;
+  --color-accent-hover: #C9965E;
+  --color-accent-active: #B8856E;
+  --color-accent-light: #1a1510;
+  --color-background: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-elevated: #1c1c1c;
+  --color-surface-overlay: rgba(0, 0, 0, 0.6);
+  --color-surface-hover: #1c1c1c;
+  --color-border: #262626;
+  --color-border-hover: #404040;
+  --color-border-focus: #fafafa;
+  --color-text: #fafafa;
+  --color-text-secondary: #a3a3a3;
+  --color-text-muted: #737373;
+  --color-text-inverse: #0a0a0a;
+  --color-text-link: #fafafa;
+  --color-error: #f87171;
+  --color-error-bg: #1c0a0a;
+  --color-error-border: #7f1d1d;
+  --color-success: #4ade80;
+  --color-success-bg: #052e16;
+  --color-success-border: #166534;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #1c1305;
+  --color-warning-border: #854d0e;
+  --color-info: #60a5fa;
+  --color-info-bg: #0a1628;
+  --color-info-border: #1e40af;
+  --color-wizard-bg: #0a0a0a;
+  --color-wizard-step-active: #fafafa;
+  --color-wizard-step-complete: #4ade80;
+  --color-wizard-step-upcoming: #262626;
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-glow-accent: 0 0 20px rgba(212, 165, 116, 0.15);
 }
