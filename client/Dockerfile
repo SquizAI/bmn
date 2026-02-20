@@ -18,11 +18,13 @@ COPY client/package.json client/package-lock.json* ./
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
 
-# Copy shared schemas (referenced via @shared alias)
-COPY shared/ /shared/
-
 # Copy client source code
 COPY client/ .
+
+# Copy shared schemas into ../shared (Vite @shared alias resolves to ../shared)
+# Symlink node_modules so shared schemas can resolve zod
+COPY shared/ ../shared/
+RUN ln -s /app/node_modules /shared/node_modules
 
 # Build the production bundle
 ARG VITE_API_URL=http://localhost:4847
