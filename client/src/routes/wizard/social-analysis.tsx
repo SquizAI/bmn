@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +22,7 @@ import { useDossier } from '@/hooks/use-dossier';
 import { apiClient } from '@/lib/api';
 import { ROUTES } from '@/lib/constants';
 import DossierLoadingSequence from '@/components/dossier/DossierLoadingSequence';
+import DossierPdfExport from '@/components/dossier/DossierPdfExport';
 import { SocialHandlesInputSchema } from '@shared/schemas/social-analysis.js';
 import type { CreatorDossier } from '@/lib/dossier-types';
 
@@ -215,8 +216,21 @@ export default function SocialAnalysisPage() {
   const setMeta = useWizardStore((s) => s.setMeta);
 
   const dispatchScrape = useSocialScrape();
-  const { dossier, phase, progress, message, isComplete, isError, error } =
+  const { dossier: socketDossier, phase: socketPhase, progress: socketProgress, message: socketMessage, isComplete: socketIsComplete, isError: socketIsError, error: socketError } =
     useDossier(activeJobId);
+
+  // Direct dossier state (when server returns dossier synchronously, bypassing Socket.io)
+  const [directDossier, setDirectDossier] = useState<Partial<CreatorDossier> | null>(null);
+  const [directComplete, setDirectComplete] = useState(false);
+
+  // Merge: prefer direct dossier over socket dossier
+  const dossier = directDossier || socketDossier;
+  const isComplete = directComplete || socketIsComplete;
+  const isError = socketIsError;
+  const error = socketError;
+  const phase = directComplete ? 'complete' as const : socketPhase;
+  const progress = directComplete ? 100 : socketProgress;
+  const message = directComplete ? 'Your Creator Dossier is ready!' : socketMessage;
 
   // Track whether we've already persisted this dossier to avoid re-running
   const persistedRef = useRef(false);
@@ -258,8 +272,10 @@ export default function SocialAnalysisPage() {
   }, [isComplete, dossier, setDossierStore, setBrand]);
 
   const onSubmit = async (data: SocialHandlesForm) => {
-    // Reset persistence flag for new analysis
+    // Reset state for new analysis
     persistedRef.current = false;
+    setDirectDossier(null);
+    setDirectComplete(false);
 
     let id = brandId;
 
@@ -273,7 +289,7 @@ export default function SocialAnalysisPage() {
       setMeta({ brandId: id });
     }
 
-    await dispatchScrape.mutateAsync({
+    const response = await dispatchScrape.mutateAsync({
       brandId: id,
       handles: {
         instagram: data.instagram || undefined,
@@ -284,6 +300,12 @@ export default function SocialAnalysisPage() {
         websiteUrl: data.websiteUrl || undefined,
       },
     });
+
+    // If the server returned the dossier directly (no BullMQ), use it immediately
+    if (response?.dossier) {
+      setDirectDossier(response.dossier as Partial<CreatorDossier>);
+      setDirectComplete(true);
+    }
   };
 
   const handleContinue = () => {
@@ -309,7 +331,7 @@ export default function SocialAnalysisPage() {
     navigate(ROUTES.WIZARD_BRAND_NAME);
   };
 
-  const isAnalyzing = phase !== 'idle' && phase !== 'complete' && phase !== 'error';
+  const isAnalyzing = dispatchScrape.isPending || (phase !== 'idle' && phase !== 'complete' && phase !== 'error');
   const showForm = !isAnalyzing && !isComplete;
 
   return (
@@ -473,6 +495,28 @@ export default function SocialAnalysisPage() {
                 Enter at least one handle. More platforms = richer brand insights.
               </motion.p>
 
+              {/* Brand Personality Quiz alternative */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.92 }}
+                className="flex items-center justify-center gap-2 pt-1"
+              >
+                <span className="text-xs text-[var(--bmn-color-text-muted)]">
+                  Don't have social media?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('social-analysis');
+                    navigate(ROUTES.WIZARD_BRAND_QUIZ);
+                  }}
+                  className="text-xs font-medium text-[var(--bmn-color-accent)] underline underline-offset-2 transition-colors hover:text-[var(--bmn-color-primary)]"
+                >
+                  Take our Brand Personality Quiz instead
+                </button>
+              </motion.div>
+
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -551,12 +595,19 @@ export default function SocialAnalysisPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
+              className="flex flex-col gap-3 sm:flex-row"
             >
+              {/* PDF Export */}
+              {dossier.profile && dossier.readinessScore && dossier.personality && (
+                <DossierPdfExport
+                  dossier={dossier as CreatorDossier}
+                />
+              )}
               <Button
                 size="lg"
                 onClick={handleContinue}
                 rightIcon={<ArrowRight className="h-5 w-5" />}
-                fullWidth
+                className="flex-1"
               >
                 Continue to Brand Identity
               </Button>

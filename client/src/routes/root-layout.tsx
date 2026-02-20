@@ -57,7 +57,9 @@ export default function RootLayout() {
           <div className="h-full animate-[progress-indeterminate_1.5s_ease-in-out_infinite] w-1/4 bg-primary" />
         </div>
       )}
-      <Outlet />
+      <div id="main-content">
+        <Outlet />
+      </div>
     </>
   );
 }

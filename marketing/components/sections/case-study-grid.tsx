@@ -2,89 +2,84 @@
 
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
-import { TrendingUp, Clock, ShoppingBag, Users } from 'lucide-react';
+import { Clock, Sparkles, CheckCircle } from 'lucide-react';
 
-interface CaseStudy {
-  name: string;
-  handle: string;
+interface DemoShowcase {
+  label: string;
+  audienceSize: string;
   niche: string;
   avatar: string;
-  followers: string;
   brandName: string;
-  before: string;
-  after: string;
+  challenge: string;
+  experience: string;
   timeline: string;
-  metrics: {
-    revenue: string;
-    productsSold: string;
-    customers: string;
-  };
-  quote: string;
+  whatYouGet: string[];
+  platformQuote: string;
   brandColors: string[];
 }
 
-const caseStudies: CaseStudy[] = [
+const demoShowcases: DemoShowcase[] = [
   {
-    name: 'Maya Rodriguez',
-    handle: '@mayafitlife',
+    label: 'Fitness Creator',
+    audienceSize: '300K followers',
     niche: 'Fitness & Wellness',
-    avatar: 'MR',
-    followers: '342K',
+    avatar: 'FC',
     brandName: 'APEX FIT',
-    before:
-      'Maya was posting workout content and supplement recommendations to her 342K Instagram followers. She had tried to start a brand twice before — once with a freelance designer ($3,000 for a logo she never used) and once with a DIY tool that produced generic results.',
-    after:
-      'In one 12-minute session, Brand Me Now analyzed her content, identified her high-energy motivational niche, and generated a full brand identity with 4 logos, branded supplement mockups, and apparel designs. She launched her first product drop within a week.',
-    timeline: '12 minutes to brand, 7 days to first sale',
-    metrics: {
-      revenue: '$12,400/mo',
-      productsSold: '3,200+',
-      customers: '1,800+',
-    },
-    quote:
-      'I spent $3K on a designer and got nothing. Brand Me Now gave me a complete brand in minutes — and my audience actually loved it.',
+    challenge:
+      'A fitness creator with 300K Instagram followers and a 3.2% engagement rate. Posts workout content and supplement recommendations. Has tried freelance designers and DIY tools but ended up with generic results that didn\'t match their content aesthetic.',
+    experience:
+      'In one session, Brand Me Now analyzes their content, identifies their high-energy motivational niche, and generates a full brand identity with logos, branded supplement mockups, and apparel designs — all reflecting their actual content style and audience demographics.',
+    timeline: '~12 minutes from start to finish',
+    whatYouGet: [
+      'Complete brand identity with 3 unique directions',
+      'Logo variations tailored to fitness aesthetic',
+      'Supplement & apparel product mockups',
+      'Revenue estimates based on real audience data',
+    ],
+    platformQuote:
+      'The AI analyzes content style, audience demographics, and engagement patterns to generate a brand identity that feels like a natural extension of the creator\'s existing presence.',
     brandColors: ['#1a1a2e', '#e94560', '#0f3460'],
   },
   {
-    name: 'James Chen',
-    handle: '@jchenbeauty',
+    label: 'Beauty Creator',
+    audienceSize: '500K followers',
     niche: 'Beauty & Skincare',
-    avatar: 'JC',
-    followers: '512K',
+    avatar: 'BC',
     brandName: 'Glow Theory',
-    before:
-      'James was reviewing beauty products on TikTok but had no brand of his own. Every attempt to create a brand felt disconnected from his content style. He wanted something that matched the clean, scientific aesthetic of his videos.',
-    after:
-      'The AI analyzed his TikTok profile and immediately identified his "science meets beauty" angle. It generated a clinical-yet-approachable brand identity with a muted pink and deep purple palette. The skincare product mockups looked professional enough to sell on day one.',
-    timeline: '15 minutes to brand, 14 days to first sale',
-    metrics: {
-      revenue: '$8,700/mo',
-      productsSold: '2,100+',
-      customers: '1,200+',
-    },
-    quote:
-      'The AI pulled my vibe straight from my content. My audience immediately connected with the products because they looked like a natural extension of my brand.',
+    challenge:
+      'A beauty creator reviewing skincare products on TikTok with 500K followers. Every attempt to create a personal brand felt disconnected from their content style. They wanted something that matched their clean, scientific aesthetic.',
+    experience:
+      'The AI analyzes their TikTok profile and identifies their "science meets beauty" angle. It generates a clinical-yet-approachable brand identity with a muted pink and deep purple palette. Skincare product mockups are designed to look retail-ready from day one.',
+    timeline: '~15 minutes from start to finish',
+    whatYouGet: [
+      'Brand archetype matched to content voice',
+      'Color palette derived from actual content',
+      'Skincare product line mockups',
+      'Typography & visual identity system',
+    ],
+    platformQuote:
+      'Brand Me Now doesn\'t just pick random colors — it studies the visual patterns in your content and builds a palette that your existing audience will immediately recognize as yours.',
     brandColors: ['#fce4ec', '#ec407a', '#4a148c'],
   },
   {
-    name: 'Priya Sharma',
-    handle: '@priyacooks',
+    label: 'Food Creator',
+    audienceSize: '170K followers',
     niche: 'Food & Cooking',
-    avatar: 'PS',
-    followers: '167K',
+    avatar: 'FK',
     brandName: 'Plate & Pour',
-    before:
-      'Priya shared Indian-fusion recipes on Instagram and had a loyal following, but no way to monetize beyond sponsorships. She had considered spice blends and cooking gear but felt overwhelmed by the branding process.',
-    after:
-      'Brand Me Now detected her warm, inviting food photography style and generated a brand with rich, earthy tones. The AI recommended spice blends, cooking aprons, and recipe journals — products that matched her audience perfectly. Her custom spice blend mockups looked ready for retail shelves.',
-    timeline: '10 minutes to brand, 10 days to first sale',
-    metrics: {
-      revenue: '$5,200/mo',
-      productsSold: '890+',
-      customers: '650+',
-    },
-    quote:
-      'I tried designing my own brand for months. Brand Me Now did it in one session and it looked 10x more professional than anything I came up with.',
+    challenge:
+      'A food creator sharing fusion recipes on Instagram with 170K loyal followers. Has considered spice blends and cooking gear but felt overwhelmed by the branding process — didn\'t know where to start or how to make products feel authentic.',
+    experience:
+      'Brand Me Now detects their warm, inviting food photography style and generates a brand with rich, earthy tones. The AI recommends spice blends, cooking aprons, and recipe journals — products matched to the audience\'s interests and purchase behavior.',
+    timeline: '~10 minutes from start to finish',
+    whatYouGet: [
+      'Warm, niche-appropriate brand identity',
+      'Product recommendations based on audience fit',
+      'Branded spice blend & apron mockups',
+      'Audience-aware pricing suggestions',
+    ],
+    platformQuote:
+      'Product recommendations aren\'t random — they\'re selected based on the creator\'s niche, audience demographics, and the types of products that perform best in their category.',
     brandColors: ['#fff8e1', '#e65100', '#3e2723'],
   },
 ];
@@ -96,9 +91,9 @@ export function CaseStudyGrid() {
   return (
     <section ref={ref} className="py-12">
       <div className="mx-auto max-w-5xl space-y-12 px-4 sm:px-6 lg:px-8">
-        {caseStudies.map((study, i) => (
+        {demoShowcases.map((demo, i) => (
           <motion.article
-            key={study.name}
+            key={demo.label}
             initial={{ opacity: 0, y: 50 }}
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.15 * i, duration: 0.6 }}
@@ -107,27 +102,29 @@ export function CaseStudyGrid() {
             {/* Brand banner */}
             <div
               className="flex items-center justify-between px-6 py-4"
-              style={{ backgroundColor: study.brandColors[0] }}
+              style={{ backgroundColor: demo.brandColors[0] }}
             >
               <div className="flex items-center gap-3">
                 <div
                   className="flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold"
                   style={{
-                    backgroundColor: study.brandColors[1],
+                    backgroundColor: demo.brandColors[1],
                     color: '#ffffff',
                   }}
                 >
-                  {study.avatar}
+                  {demo.avatar}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">{study.name}</p>
+                  <p className="text-sm font-bold text-white">
+                    Demo: {demo.label}
+                  </p>
                   <p className="text-xs text-white/60">
-                    {study.handle} &middot; {study.followers} followers
+                    {demo.audienceSize}
                   </p>
                 </div>
               </div>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white">
-                {study.niche}
+                {demo.niche}
               </span>
             </div>
 
@@ -137,12 +134,12 @@ export function CaseStudyGrid() {
                 className="mb-4 text-xl font-bold"
                 style={{ fontFamily: 'var(--bmn-font-secondary)' }}
               >
-                Brand: {study.brandName}
+                Generated Brand: {demo.brandName}
               </h3>
 
               {/* Color palette */}
               <div className="mb-6 flex gap-1.5">
-                {study.brandColors.map((color, j) => (
+                {demo.brandColors.map((color, j) => (
                   <div
                     key={j}
                     className="h-5 w-5 rounded-full border border-[var(--bmn-color-border)]"
@@ -151,74 +148,72 @@ export function CaseStudyGrid() {
                 ))}
               </div>
 
-              {/* Before / After */}
+              {/* Challenge / Experience */}
               <div className="mb-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded-xl border border-[var(--bmn-color-border)] p-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--bmn-color-text-muted)]">
-                    Before
+                    The Challenge
                   </p>
                   <p className="text-sm leading-relaxed text-[var(--bmn-color-text-secondary)]">
-                    {study.before}
+                    {demo.challenge}
                   </p>
                 </div>
                 <div className="rounded-xl border border-[var(--bmn-color-accent)]/30 bg-[var(--bmn-color-accent-light)] p-4">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[var(--bmn-color-accent)]">
-                    After
+                    The Brand Me Now Experience
                   </p>
                   <p className="text-sm leading-relaxed text-[var(--bmn-color-text-secondary)]">
-                    {study.after}
+                    {demo.experience}
                   </p>
                 </div>
               </div>
 
               {/* Quote */}
               <blockquote className="mb-6 border-l-2 border-[var(--bmn-color-accent)] pl-4 text-sm italic text-[var(--bmn-color-text-secondary)]">
-                &ldquo;{study.quote}&rdquo;
+                &ldquo;{demo.platformQuote}&rdquo;
+                <span className="mt-1 block text-xs not-italic text-[var(--bmn-color-text-muted)]">
+                  — How the AI works
+                </span>
               </blockquote>
 
-              {/* Metrics */}
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-xl border border-[var(--bmn-color-border)] p-3 text-center">
-                  <TrendingUp
-                    size={16}
-                    className="mx-auto mb-1 text-[var(--bmn-color-accent)]"
-                  />
-                  <p className="text-sm font-bold">{study.metrics.revenue}</p>
-                  <p className="text-xs text-[var(--bmn-color-text-muted)]">
-                    Monthly Revenue
-                  </p>
+              {/* What You'd Get + Timeline */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--bmn-color-border)] p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Sparkles
+                      size={16}
+                      className="text-[var(--bmn-color-accent)]"
+                    />
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--bmn-color-text-muted)]">
+                      What You&apos;d Get
+                    </p>
+                  </div>
+                  <ul className="space-y-2">
+                    {demo.whatYouGet.map((item, j) => (
+                      <li
+                        key={j}
+                        className="flex items-start gap-2 text-sm text-[var(--bmn-color-text-secondary)]"
+                      >
+                        <CheckCircle
+                          size={14}
+                          className="mt-0.5 shrink-0 text-[var(--bmn-color-accent)]"
+                        />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="rounded-xl border border-[var(--bmn-color-border)] p-3 text-center">
-                  <ShoppingBag
-                    size={16}
-                    className="mx-auto mb-1 text-[var(--bmn-color-accent)]"
-                  />
-                  <p className="text-sm font-bold">
-                    {study.metrics.productsSold}
-                  </p>
-                  <p className="text-xs text-[var(--bmn-color-text-muted)]">
-                    Products Sold
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[var(--bmn-color-border)] p-3 text-center">
-                  <Users
-                    size={16}
-                    className="mx-auto mb-1 text-[var(--bmn-color-accent)]"
-                  />
-                  <p className="text-sm font-bold">{study.metrics.customers}</p>
-                  <p className="text-xs text-[var(--bmn-color-text-muted)]">
-                    Customers
-                  </p>
-                </div>
-                <div className="rounded-xl border border-[var(--bmn-color-border)] p-3 text-center">
-                  <Clock
-                    size={16}
-                    className="mx-auto mb-1 text-[var(--bmn-color-accent)]"
-                  />
-                  <p className="text-sm font-bold">{study.timeline.split(',')[0]}</p>
-                  <p className="text-xs text-[var(--bmn-color-text-muted)]">
-                    Time to Brand
-                  </p>
+                <div className="flex items-center justify-center rounded-xl border border-[var(--bmn-color-border)] p-4 text-center">
+                  <div>
+                    <Clock
+                      size={24}
+                      className="mx-auto mb-2 text-[var(--bmn-color-accent)]"
+                    />
+                    <p className="text-sm font-bold">{demo.timeline}</p>
+                    <p className="text-xs text-[var(--bmn-color-text-muted)]">
+                      Estimated session time
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

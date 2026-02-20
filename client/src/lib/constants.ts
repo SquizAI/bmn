@@ -41,9 +41,11 @@ export const ROUTES = {
 } as const;
 
 // ------ Wizard Steps ------
+// Note: 'onboarding' auto-redirects to 'social-analysis' which is the real first step.
+// It is kept as an entry point for URL compatibility.
 export const WIZARD_STEPS = [
   { key: 'onboarding', label: 'Welcome', path: 'onboarding' },
-  { key: 'social-analysis', label: 'Social Analysis', path: 'social-analysis' },
+  { key: 'social-analysis', label: 'Brand Discovery', path: 'social-analysis' },
   { key: 'brand-name', label: 'Brand Name', path: 'brand-name' },
   { key: 'brand-identity', label: 'Brand Identity', path: 'brand-identity' },
   { key: 'logo-generation', label: 'Logo Generation', path: 'logo-generation' },
@@ -109,6 +111,22 @@ export const SUBSCRIPTION_TIERS = {
   PRO: { key: 'pro', name: 'Pro', price: 79, brands: 10, logoGens: 50, mockupGens: 100 },
   AGENCY: { key: 'agency', name: 'Agency', price: 199, brands: -1, logoGens: 200, mockupGens: 500 },
 } as const;
+
+// ------ Brand Tips (Educational Loading States) ------
+export const BRAND_TIPS = [
+  'Did you know? Brands with consistent color palettes are 80% more recognizable.',
+  'Fun fact: 90% of snap judgments about products are based on color alone.',
+  'Tip: The best brand names are 1-3 syllables and easy to spell.',
+  'Creator brands with a clear niche earn 3x more than generalists.',
+  'Products that match your audience\'s lifestyle convert 2.5x better.',
+  'Consistent brand presentation across platforms increases revenue by up to 23%.',
+  'It takes 5-7 impressions before someone remembers your brand.',
+  'Brands that tell a story are 22x more memorable than facts alone.',
+  'Typography accounts for 95% of web design — your font choice matters.',
+  'The most trusted brands use no more than 2-3 primary colors.',
+  'Brands with a strong archetype build emotional connections 4x faster.',
+  'Your brand voice should be recognizable even without your logo.',
+] as const;
 
 // ------ Query Keys ------
 export const QUERY_KEYS = {

@@ -1,4 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import { getAllPosts } from '@/lib/blog';
+import { BlogCard } from '@/components/blog/blog-card';
+import { TagFilter } from '@/components/blog/tag-filter';
 
 export const metadata: Metadata = {
   title: 'Blog',
@@ -13,9 +17,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogPage() {
+interface BlogPageProps {
+  searchParams: Promise<{ tag?: string }>;
+}
+
+export default async function BlogPage({ searchParams }: BlogPageProps) {
+  const { tag: activeTag } = await searchParams;
+  const allPosts = getAllPosts();
+
+  // Collect unique tags across all posts
+  const allTags = Array.from(
+    new Set(allPosts.flatMap((p) => p.tags)),
+  ).sort();
+
+  // Filter posts by active tag (if any)
+  const filteredPosts = activeTag
+    ? allPosts.filter((p) => p.tags.includes(activeTag))
+    : allPosts;
+
   return (
     <div className="min-h-screen">
+      {/* Page Header */}
       <section className="py-16 text-center">
         <div className="mx-auto max-w-3xl px-4">
           <p className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--bmn-color-accent)]">
@@ -33,57 +55,28 @@ export default function BlogPage() {
         </div>
       </section>
 
+      {/* Tag Filter + Posts */}
       <section className="pb-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: 'How AI Logo Generation Actually Works',
-                excerpt:
-                  'A behind-the-scenes look at the multi-model AI approach powering Brand Me Now.',
-                date: 'Feb 20, 2026',
-                tag: 'Technology',
-              },
-              {
-                title: '5 Steps to Turn Your Following Into a Brand',
-                excerpt:
-                  'A practical guide for creators ready to monetize their audience with branded products.',
-                date: 'Feb 18, 2026',
-                tag: 'Strategy',
-              },
-              {
-                title: 'Why Your Brand Colors Matter More Than You Think',
-                excerpt:
-                  'Color psychology, brand recognition, and how AI chooses the perfect palette for your niche.',
-                date: 'Feb 15, 2026',
-                tag: 'Design',
-              },
-            ].map((post) => (
-              <article
-                key={post.title}
-                className="flex flex-col rounded-2xl border border-[var(--bmn-color-border)] p-5 transition-shadow hover:shadow-lg"
-              >
-                {/* Placeholder image */}
-                <div className="mb-4 aspect-[16/9] rounded-xl bg-gradient-to-br from-[var(--bmn-color-surface-hover)] to-[var(--bmn-color-border)]" />
+          {/* Tag filter (client component for interactivity) */}
+          <Suspense fallback={null}>
+            <TagFilter tags={allTags} activeTag={activeTag ?? null} />
+          </Suspense>
 
-                <span className="mb-2 self-start rounded-full bg-[var(--bmn-color-accent-light)] px-2.5 py-0.5 text-xs font-medium text-[var(--bmn-color-accent)]">
-                  {post.tag}
-                </span>
-
-                <h2 className="flex-1 text-lg font-semibold leading-snug" style={{ fontFamily: 'var(--bmn-font-secondary)' }}>
-                  {post.title}
-                </h2>
-
-                <p className="mt-2 text-sm text-[var(--bmn-color-text-secondary)]">
-                  {post.excerpt}
-                </p>
-
-                <p className="mt-4 text-xs text-[var(--bmn-color-text-muted)]">
-                  {post.date}
-                </p>
-              </article>
-            ))}
-          </div>
+          {/* Post grid */}
+          {filteredPosts.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredPosts.map((post) => (
+                <BlogCard key={post.slug} post={post} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-16 text-center">
+              <p className="text-lg text-[var(--bmn-color-text-muted)]">
+                No posts found for this tag.
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </div>

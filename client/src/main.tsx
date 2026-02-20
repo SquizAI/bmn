@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 import posthog from 'posthog-js';
 import { App } from '@/App';
+import { registerServiceWorker } from '@/lib/register-sw';
 import '@/styles/global.css';
 
 // ── Sentry Error Tracking ───────────────────────────────────────
@@ -39,3 +40,6 @@ createRoot(rootElement).render(
     <App />
   </StrictMode>,
 );
+
+// Register service worker for offline resilience (production only)
+registerServiceWorker();

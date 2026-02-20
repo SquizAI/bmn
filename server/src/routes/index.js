@@ -12,7 +12,12 @@ import { healthRoute } from './health.js';
 import { dashboardRoutes } from './api/v1/dashboard/index.js';
 import { analyticsRoutes } from './analytics.js';
 import { integrationRoutes } from './integrations.js';
+import { chatRoutes } from './chat.js';
+import { userWebhookRoutes } from './api/v1/webhooks-user.js';
+import { apiKeyRoutes } from './api/v1/api-keys.js';
+import { publicApiRoutes } from './api/v1/public-api.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { apiKeyAuth } from '../middleware/api-key-auth.js';
 import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
 
 /**
@@ -27,6 +32,10 @@ import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
  * - /api/v1/products  -- Authenticated (product catalog)
  * - /api/v1/billing   -- Authenticated (subscription management, credits) [canonical]
  * - /api/v1/payments  -- Authenticated (legacy alias for billing)
+ * - /api/v1/chat      -- Authenticated (AI brand assistant chat)
+ * - /api/v1/user-webhooks -- Authenticated (user webhook management)
+ * - /api/v1/api-keys  -- Authenticated (API key management, Agency tier)
+ * - /api/v1/public    -- API key auth (programmatic API access)
  * - /api/v1/admin     -- Authenticated + admin role
  *
  * @param {import('express').Express} app
@@ -44,6 +53,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/billing', requireAuth, billingRoutes);
   app.use('/api/v1/payments', requireAuth, paymentRoutes);
 
+  // -- Chat routes (AI brand assistant) --
+  app.use('/api/v1/chat', requireAuth, chatRoutes);
+
   // -- Dashboard routes --
   app.use('/api/v1/dashboard', requireAuth, dashboardRoutes);
 
@@ -52,6 +64,15 @@ export function registerRoutes(app) {
 
   // -- Integrations routes --
   app.use('/api/v1/integrations', requireAuth, integrationRoutes);
+
+  // -- User webhook management (requires session auth) --
+  app.use('/api/v1/user-webhooks', requireAuth, userWebhookRoutes);
+
+  // -- API key management (requires session auth) --
+  app.use('/api/v1/api-keys', requireAuth, apiKeyRoutes);
+
+  // -- Public API (requires API key auth) --
+  app.use('/api/v1/public', apiKeyAuth, publicApiRoutes);
 
   // -- Admin routes (auth + admin role) --
   app.use('/api/v1/admin', requireAuth, requireAdmin, adminRoutes);

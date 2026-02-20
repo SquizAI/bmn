@@ -4,6 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from '@/lib/query-client';
 import { LoadingSpinner } from '@/components/ui/spinner';
+import { SkipLink } from '@/components/ui/skip-link';
+import { OfflineIndicator } from '@/components/ui/offline-indicator';
 import { requireAuth, requireAdmin, redirectIfAuthed } from '@/lib/route-guards';
 
 // --- Lazy route imports (code-split per route) ---
@@ -30,6 +32,7 @@ const ProductSelection = lazy(() => import('@/routes/wizard/product-selection'))
 const MockupReview = lazy(() => import('@/routes/wizard/mockup-review'));
 const BundleBuilder = lazy(() => import('@/routes/wizard/bundle-builder'));
 const ProfitProjection = lazy(() => import('@/routes/wizard/profit-projection'));
+const BrandQuiz = lazy(() => import('@/routes/wizard/brand-quiz'));
 const Completion = lazy(() => import('@/routes/wizard/completion'));
 
 // Dashboard
@@ -131,6 +134,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <SocialAnalysis />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'brand-quiz',
+            element: (
+              <SuspenseRoute>
+                <BrandQuiz />
               </SuspenseRoute>
             ),
           },
@@ -341,6 +352,8 @@ const router = createBrowserRouter([
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <OfflineIndicator />
+      <SkipLink />
       <Suspense fallback={<LoadingSpinner fullPage />}>
         <RouterProvider router={router} />
       </Suspense>

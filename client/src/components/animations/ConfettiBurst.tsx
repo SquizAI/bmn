@@ -45,6 +45,9 @@ function ConfettiBurst({
   className = '',
   colors = DEFAULT_COLORS,
 }: ConfettiBurstProps) {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReducedMotion) return null;
+
   const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
 
   useEffect(() => {

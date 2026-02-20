@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 
 // ------ Types ------
@@ -69,6 +69,54 @@ export interface IntegrationStatus {
   errorMessage: string | null;
 }
 
+export interface RestockAlert {
+  type: 'top-seller' | 'complement' | 'trending';
+  productName: string;
+  sku: string;
+  message: string;
+  metric: string;
+  suggestion: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface ABTest {
+  id: string;
+  productSku: string;
+  productName: string;
+  variantAPrice: number;
+  variantBPrice: number;
+  status: 'active' | 'completed' | 'paused';
+  durationDays: number;
+  startDate: string;
+  endDate: string | null;
+  impressions: number;
+  conversionsA: number;
+  conversionsB: number;
+  winner: 'A' | 'B' | null;
+  createdAt: string;
+}
+
+export interface ABTestSummary {
+  active: number;
+  completed: number;
+  totalTests: number;
+}
+
+export interface BrandEvolutionSuggestion {
+  type: 'expand' | 'refresh' | 'optimize';
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  actionLabel: string;
+}
+
+export interface BrandEvolutionData {
+  brandAge: { months: number; label: string };
+  maturityStage: 'launch' | 'growth' | 'established';
+  suggestions: BrandEvolutionSuggestion[];
+  seasonalTip: { season: string; suggestion: string };
+}
+
 // ------ Query Keys ------
 
 export const DASHBOARD_QUERY_KEYS = {
@@ -78,6 +126,9 @@ export const DASHBOARD_QUERY_KEYS = {
   referralStats: () => ['dashboard', 'referral-stats'] as const,
   referralLeaderboard: () => ['dashboard', 'referral-leaderboard'] as const,
   integrations: () => ['dashboard', 'integrations'] as const,
+  restockAlerts: () => ['dashboard', 'restock-alerts'] as const,
+  abTests: () => ['dashboard', 'ab-tests'] as const,
+  brandEvolution: (brandId?: string) => ['dashboard', 'brand-evolution', brandId] as const,
 };
 
 // ------ Hooks ------
@@ -134,5 +185,50 @@ export function useIntegrations() {
     queryKey: DASHBOARD_QUERY_KEYS.integrations(),
     queryFn: () =>
       apiClient.get<{ items: IntegrationStatus[] }>('/api/v1/dashboard/integrations'),
+  });
+}
+
+export function useRestockAlerts() {
+  return useQuery({
+    queryKey: DASHBOARD_QUERY_KEYS.restockAlerts(),
+    queryFn: () =>
+      apiClient.get<{ alerts: RestockAlert[] }>('/api/v1/dashboard/restock-alerts'),
+  });
+}
+
+export function useABTests() {
+  return useQuery({
+    queryKey: DASHBOARD_QUERY_KEYS.abTests(),
+    queryFn: () =>
+      apiClient.get<{ tests: ABTest[]; summary: ABTestSummary }>(
+        '/api/v1/dashboard/ab-tests'
+      ),
+  });
+}
+
+export function useCreateABTest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: {
+      productSku: string;
+      variantAPrice: number;
+      variantBPrice: number;
+      durationDays: number;
+    }) => apiClient.post<ABTest>('/api/v1/dashboard/ab-tests', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: DASHBOARD_QUERY_KEYS.abTests(),
+      });
+    },
+  });
+}
+
+export function useBrandEvolution(brandId?: string) {
+  return useQuery({
+    queryKey: DASHBOARD_QUERY_KEYS.brandEvolution(brandId),
+    queryFn: () =>
+      apiClient.get<BrandEvolutionData>('/api/v1/dashboard/brand-evolution', {
+        params: { brandId },
+      }),
   });
 }

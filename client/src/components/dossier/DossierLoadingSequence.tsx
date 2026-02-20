@@ -8,6 +8,7 @@ import AudienceDemographics from './AudienceDemographics';
 import FeedColorPalette from './FeedColorPalette';
 import BrandReadinessScore from './BrandReadinessScore';
 import ContentThemeChart from './ContentThemeChart';
+import EnhancedDossierMetrics from './EnhancedDossierMetrics';
 import ShareableProfileCard from './ShareableProfileCard';
 
 interface DossierLoadingSequenceProps {
@@ -185,6 +186,21 @@ export default function DossierLoadingSequence({
             className="rounded-2xl border border-[var(--bmn-color-border)] bg-[var(--bmn-color-surface)] p-5"
           >
             <BrandReadinessScore readiness={dossier.readinessScore} />
+          </motion.div>
+        )}
+
+        {/* Enhanced Metrics — shown when dossier is complete */}
+        {phase === 'complete' && (
+          <motion.div
+            key="enhanced-metrics"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <EnhancedDossierMetrics
+              content={dossier?.content || null}
+              audience={dossier?.audience || null}
+            />
           </motion.div>
         )}
 

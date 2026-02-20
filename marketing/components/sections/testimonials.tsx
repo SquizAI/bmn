@@ -2,41 +2,29 @@
 
 import { useRef } from 'react';
 import { motion, useInView } from 'motion/react';
-import { Star, Instagram, Video } from 'lucide-react';
+import { ScanSearch, Palette, Package } from 'lucide-react';
 
-const testimonials = [
+const features = [
   {
-    name: 'Maya Rodriguez',
-    handle: '@mayafitlife',
-    platform: 'Instagram',
-    followers: '284K',
+    engine: 'The Analysis Engine',
+    icon: ScanSearch,
+    capability: 'Social Analysis',
     quote:
-      'I went from random supplement posts to a fully branded product line in under 20 minutes. The AI nailed my aesthetic perfectly.',
-    niche: 'Fitness & Wellness',
-    revenue: '$12,400/mo',
-    rating: 5,
+      'Paste your Instagram handle and watch AI decode your brand DNA — colors, aesthetic, audience, niche — in under 30 seconds.',
   },
   {
-    name: 'James Chen',
-    handle: '@jchenbeauty',
-    platform: 'TikTok',
-    followers: '512K',
+    engine: 'The Brand Generator',
+    icon: Palette,
+    capability: 'Brand Identity',
     quote:
-      'The brand identity generation was scary accurate. It pulled my vibe straight from my content. My audience immediately connected with the products.',
-    niche: 'Beauty & Skincare',
-    revenue: '$8,700/mo',
-    rating: 5,
+      'Three distinct brand directions, each with a unique archetype, color palette, typography, and voice — all tailored to YOUR content.',
   },
   {
-    name: 'Priya Sharma',
-    handle: '@priyacooks',
-    platform: 'Instagram',
-    followers: '167K',
+    engine: 'The Mockup Engine',
+    icon: Package,
+    capability: 'Product Mockups',
     quote:
-      'I tried designing my own brand for months. Brand Me Now did it in one session and it looked 10x more professional than anything I came up with.',
-    niche: 'Food & Cooking',
-    revenue: '$5,200/mo',
-    rating: 5,
+      'See your logo on real products — supplements, apparel, accessories — with revenue projections based on your actual audience size.',
   },
 ];
 
@@ -53,7 +41,7 @@ export function Testimonials() {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             className="mb-2 text-sm font-semibold uppercase tracking-wider text-[var(--bmn-color-accent)]"
           >
-            Success Stories
+            What to Expect
           </motion.p>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -62,60 +50,41 @@ export function Testimonials() {
             className="text-3xl font-bold tracking-tight sm:text-4xl"
             style={{ fontFamily: 'var(--bmn-font-secondary)' }}
           >
-            Creators love Brand Me Now
+            Built for creators like you
           </motion.h2>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {testimonials.map((t, i) => (
+          {features.map((f, i) => (
             <motion.div
-              key={t.name}
+              key={f.engine}
               initial={{ opacity: 0, y: 40 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.15 * i, duration: 0.5 }}
               className="flex flex-col rounded-2xl border border-[var(--bmn-color-border)] p-6 transition-shadow hover:shadow-lg"
             >
-              {/* Rating */}
-              <div className="mb-4 flex gap-0.5">
-                {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star
-                    key={j}
-                    size={16}
-                    className="fill-[var(--bmn-color-accent)] text-[var(--bmn-color-accent)]"
-                  />
-                ))}
+              {/* Capability badge */}
+              <div className="mb-4">
+                <span className="inline-block rounded-full bg-[var(--bmn-color-accent-light)] px-3 py-1 text-xs font-semibold text-[var(--bmn-color-accent)]">
+                  {f.capability}
+                </span>
               </div>
 
               {/* Quote */}
               <p className="flex-1 text-sm leading-relaxed text-[var(--bmn-color-text-secondary)]">
-                &ldquo;{t.quote}&rdquo;
+                &ldquo;{f.quote}&rdquo;
               </p>
 
-              {/* Author */}
+              {/* Attribution */}
               <div className="mt-6 flex items-center gap-3">
-                {/* Avatar placeholder */}
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--bmn-color-accent)] to-[var(--bmn-color-accent-active)] text-xs font-bold text-white">
-                  {t.name.split(' ').map((n) => n[0]).join('')}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--bmn-color-accent)] to-[var(--bmn-color-accent-active)]">
+                  <f.icon size={18} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <div className="flex items-center gap-2 text-xs text-[var(--bmn-color-text-muted)]">
-                    <span>{t.handle}</span>
-                    <span>&middot;</span>
-                    <span>{t.followers} followers</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="mt-4 flex gap-4 border-t border-[var(--bmn-color-border)] pt-4 text-xs">
-                <div>
-                  <p className="font-semibold text-[var(--bmn-color-accent)]">{t.revenue}</p>
-                  <p className="text-[var(--bmn-color-text-muted)]">Revenue</p>
-                </div>
-                <div>
-                  <p className="font-semibold">{t.niche}</p>
-                  <p className="text-[var(--bmn-color-text-muted)]">Niche</p>
+                  <p className="text-sm font-semibold">{f.engine}</p>
+                  <p className="text-xs text-[var(--bmn-color-text-muted)]">
+                    Powered by AI
+                  </p>
                 </div>
               </div>
             </motion.div>

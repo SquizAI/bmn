@@ -1,11 +1,17 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { useWizardStore } from '@/stores/wizard-store';
-import type { SocialHandlesInput } from '@/lib/dossier-types';
+import type { SocialHandlesInput, CreatorDossier } from '@/lib/dossier-types';
 
-interface DispatchJobResponse {
-  jobId: string;
+interface AnalyzeSocialResponse {
   brandId: string;
+  step: string;
+  /** Present when dossier is returned directly (no BullMQ) */
+  dossier?: Partial<CreatorDossier>;
+  /** Present when job is queued via BullMQ */
+  jobId?: string;
+  cached?: boolean;
+  model?: string;
 }
 
 interface DispatchPayload {
@@ -14,20 +20,25 @@ interface DispatchPayload {
 }
 
 /**
- * Dispatch a social analysis job that supports all 5 platforms.
- * Returns jobId for Socket.io dossier tracking.
+ * Dispatch social analysis — handles both direct Claude response
+ * and async BullMQ job dispatch. Returns the full response so the
+ * caller can check for a direct dossier.
  */
 export function useSocialScrape() {
   const setActiveJob = useWizardStore((s) => s.setActiveJob);
 
   return useMutation({
     mutationFn: (payload: DispatchPayload) =>
-      apiClient.post<DispatchJobResponse>(
+      apiClient.post<AnalyzeSocialResponse>(
         `/api/v1/wizard/${payload.brandId}/analyze-social`,
         payload.handles,
       ),
     onSuccess: (data) => {
-      setActiveJob(data.jobId);
+      // If the server returned a jobId (BullMQ path), track via Socket.io
+      if (data.jobId) {
+        setActiveJob(data.jobId);
+      }
+      // If dossier came back directly, the caller handles it via mutateAsync
     },
   });
 }

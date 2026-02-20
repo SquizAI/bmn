@@ -47,6 +47,9 @@ supabase/.temp/
 .cache/
 .turbo/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Claude Code local
 .claude/debug/
 .claude/file-history/

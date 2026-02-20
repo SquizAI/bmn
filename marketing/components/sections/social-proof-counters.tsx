@@ -60,10 +60,10 @@ function AnimatedCounter({ end, suffix = '', prefix = '', label, duration = 2000
 }
 
 const counters: CounterProps[] = [
-  { end: 12847, suffix: '+', label: 'Brands created' },
-  { end: 4200000, prefix: '$', suffix: '+', label: 'In creator revenue' },
-  { end: 150, suffix: '+', label: 'Products available' },
-  { end: 98, suffix: '%', label: 'Creator satisfaction' },
+  { end: 7, label: 'AI Models Powering Your Brand' },
+  { end: 150, suffix: '+', label: 'Products in Catalog' },
+  { end: 30, label: 'Seconds to Analyze Your Content' },
+  { end: 3, label: 'Unique Brand Directions Per Session' },
 ];
 
 export function SocialProofCounters() {

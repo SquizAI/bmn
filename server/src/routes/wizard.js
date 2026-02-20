@@ -9,6 +9,9 @@ import {
   wizardStepUpdateSchema,
   socialHandlesSchema,
   wizardResumeSchema,
+  scrapeWebsiteSchema,
+  personalityQuizSchema,
+  customProductRequestSchema,
 } from '../validation/wizard.js';
 
 export const wizardRoutes = Router();
@@ -67,6 +70,46 @@ wizardRoutes.post(
   '/resume',
   validate({ body: wizardResumeSchema }),
   wizardController.resumeWizard
+);
+
+// POST /api/v1/wizard/:brandId/analyze-competitors -- Trigger competitor analysis
+wizardRoutes.post(
+  '/:brandId/analyze-competitors',
+  generationLimiter,
+  wizardController.analyzeCompetitors
+);
+
+// POST /api/v1/wizard/:brandId/scrape-website -- Scrape a Linktree/website URL
+wizardRoutes.post(
+  '/:brandId/scrape-website',
+  validate({ body: scrapeWebsiteSchema }),
+  generationLimiter,
+  wizardController.scrapeWebsiteEndpoint
+);
+
+// GET /api/v1/wizard/:brandId/dossier-pdf -- Generate and return dossier report
+wizardRoutes.get('/:brandId/dossier-pdf', wizardController.getDossierPdf);
+
+// POST /api/v1/wizard/:brandId/personality-quiz -- Alternative path without social media
+wizardRoutes.post(
+  '/:brandId/personality-quiz',
+  validate({ body: personalityQuizSchema }),
+  generationLimiter,
+  wizardController.personalityQuiz
+);
+
+// POST /api/v1/wizard/:brandId/generate-taglines -- Generate AI taglines
+wizardRoutes.post(
+  '/:brandId/generate-taglines',
+  generationLimiter,
+  wizardController.generateTaglines
+);
+
+// POST /api/v1/wizard/:brandId/custom-product-request -- Submit custom product request
+wizardRoutes.post(
+  '/:brandId/custom-product-request',
+  validate({ body: customProductRequestSchema }),
+  wizardController.submitCustomProductRequest
 );
 
 // POST /api/v1/wizard/:brandId/complete -- Mark wizard as complete

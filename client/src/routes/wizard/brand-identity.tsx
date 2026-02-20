@@ -29,6 +29,13 @@ import { BrandVoiceSamples } from '@/components/brand/BrandVoiceSamples';
 import { BrandToneSliders, type ToneValues } from '@/components/brand/BrandToneSliders';
 import { FontPairingPreview } from '@/components/brand/FontPairingPreview';
 import { ArchetypeExplainer } from '@/components/brand/ArchetypeExplainer';
+import { TaglineSelector } from '@/components/brand/TaglineSelector';
+import { ColorHarmonyValidator } from '@/components/brand/ColorHarmonyValidator';
+import BrandStyleGuidePdf from '@/components/brand/BrandStyleGuidePdf';
+import { BrandDnaVisualization } from '@/components/brand/BrandDnaVisualization';
+import { LiveBrandPreview } from '@/components/brand/LiveBrandPreview';
+import { ConfettiBurst } from '@/components/animations/ConfettiBurst';
+import { LoadingTip } from '@/components/brand/LoadingTip';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useSaveBrandIdentity } from '@/hooks/use-wizard-actions';
 import {
@@ -119,6 +126,8 @@ export default function BrandIdentityPage() {
   const [selectedDirection, setSelectedDirection] = useState<BrandDirection | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
+  const [selectedTagline, setSelectedTagline] = useState<string>('');
+  const [showCelebration, setShowCelebration] = useState(false);
   const hasDispatchedRef = useRef(false);
 
   // ── Socket.io tracking for real-time generation progress ────
@@ -351,6 +360,8 @@ export default function BrandIdentityPage() {
       });
     }
 
+    setShowCelebration(true);
+    setTimeout(() => setShowCelebration(false), 2000);
     setPhase('review-narrative');
   }, [selectedDirection, brand.name, brand.targetAudience, brandId, resetForm, setBrand, setDesign, selectDirectionMutation]);
 
@@ -417,8 +428,10 @@ export default function BrandIdentityPage() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col gap-8"
+      className="relative flex flex-col gap-8"
     >
+      {showCelebration && <ConfettiBurst active duration={2000} />}
+
       <AnimatePresence mode="wait">
         {/* ─── PHASE 0: Loading / Generating ─────────────────── */}
         {phase === 'loading' && !isError && (
@@ -518,6 +531,9 @@ export default function BrandIdentityPage() {
                 ),
               )}
             </div>
+
+            {/* Educational tips while loading */}
+            <LoadingTip />
           </motion.div>
         )}
 
@@ -660,7 +676,7 @@ export default function BrandIdentityPage() {
             <ArchetypeExplainer archetype={selectedDirection.archetype.name} />
 
             {/* Voice Samples */}
-            <BrandVoiceSamples direction={selectedDirection} brandName={brand.name} />
+            <BrandVoiceSamples direction={selectedDirection} brandName={brand.name} brandId={brandId} />
 
             {/* Tone Sliders */}
             <BrandToneSliders values={toneValues} onChange={setToneValues} />
@@ -882,6 +898,9 @@ export default function BrandIdentityPage() {
                       />
                     )}
                   />
+                  {/* Color Harmony Validation */}
+                  <ColorHarmonyValidator colors={watch('colorPalette') || []} />
+
                   {errors.colorPalette?.message && (
                     <p className="text-xs text-error">{errors.colorPalette.message}</p>
                   )}
@@ -938,6 +957,51 @@ export default function BrandIdentityPage() {
                   />
                 </CardContent>
               </Card>
+
+              {/* Live Brand Preview */}
+              <LiveBrandPreview
+                brandName={watch('name')}
+                archetype={watch('archetype')}
+                primaryColor={watch('colorPalette')?.[0]?.hex || '#6366f1'}
+                accentColor={watch('colorPalette')?.[2]?.hex || '#10b981'}
+                backgroundColor={watch('colorPalette')?.[3]?.hex || '#1e1b4b'}
+                textColor={watch('colorPalette')?.[4]?.hex || '#f8fafc'}
+                headingFont={watch('fontPrimary')}
+                bodyFont={watch('fontSecondary')}
+                values={watch('values')?.filter(Boolean) || []}
+              />
+
+              {/* Tagline Selector */}
+              <TaglineSelector
+                brandName={watch('name')}
+                archetype={watch('archetype')}
+                values={watch('values')?.filter(Boolean) || []}
+                brandId={brandId ?? undefined}
+                selectedTagline={selectedTagline}
+                onSelect={setSelectedTagline}
+              />
+
+              {/* Brand DNA Visualization */}
+              <BrandDnaVisualization
+                archetype={watch('archetype')}
+                values={watch('values')?.filter(Boolean) || []}
+                colorPalette={(watch('colorPalette') || []).map((c) => ({ hex: c.hex, name: c.name, role: c.role }))}
+                targetAudience={watch('targetAudience')}
+                brandName={watch('name')}
+              />
+
+              {/* Brand Style Guide PDF Export */}
+              <BrandStyleGuidePdf
+                brandName={watch('name')}
+                vision={watch('vision')}
+                archetype={watch('archetype')}
+                values={watch('values')?.filter(Boolean)}
+                targetAudience={watch('targetAudience')}
+                voiceTone={selectedDirection?.voice?.tone}
+                taglines={selectedTagline ? [selectedTagline, selectedDirection?.tagline].filter(Boolean) as string[] : selectedDirection?.tagline ? [selectedDirection.tagline] : []}
+                colorPalette={(watch('colorPalette') || []).map((c) => ({ hex: c.hex, name: c.name, role: c.role }))}
+                fonts={{ heading: watch('fontPrimary'), body: watch('fontSecondary') }}
+              />
 
               {/* Actions */}
               <div className="flex gap-3">

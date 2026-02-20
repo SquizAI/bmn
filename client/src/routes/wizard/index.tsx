@@ -1,7 +1,16 @@
+import { lazy, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { useWizardStore } from '@/stores/wizard-store';
+import { useExitIntent } from '@/hooks/use-exit-intent';
 import { WIZARD_STEPS, WIZARD_PHASES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+
+const ChatWindow = lazy(() =>
+  import('@/components/chat/ChatWindow').then((m) => ({ default: m.ChatWindow })),
+);
+const ChatFab = lazy(() =>
+  import('@/components/chat/ChatFab').then((m) => ({ default: m.ChatFab })),
+);
 
 /**
  * Wizard layout shell.
@@ -9,7 +18,11 @@ import { cn } from '@/lib/utils';
  * Dark mode by default for premium AI feel.
  */
 export default function WizardLayout() {
+  useExitIntent();
+
   const currentStep = useWizardStore((s) => s.meta.currentStep);
+  const brandId = useWizardStore((s) => s.meta.brandId);
+  const sessionId = useWizardStore((s) => s.meta.sessionId);
   const location = useLocation();
 
   // Determine current step index from URL path
@@ -101,6 +114,12 @@ export default function WizardLayout() {
       <div className="mx-auto max-w-(--bmn-max-width-wizard) px-6 py-8 md:px-10 md:py-12">
         <Outlet />
       </div>
+
+      {/* Chat overlay — fixed position, outside main content flow */}
+      <Suspense fallback={null}>
+        <ChatFab brandId={brandId} />
+        <ChatWindow brandId={brandId} sessionId={sessionId} />
+      </Suspense>
     </div>
   );
 }

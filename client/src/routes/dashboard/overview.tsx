@@ -6,13 +6,24 @@ import {
   Users,
   TrendingUp,
 } from 'lucide-react';
-import { useDashboardOverview, useTopProducts, useBrandHealthScore } from '@/hooks/use-dashboard';
+import {
+  useDashboardOverview,
+  useTopProducts,
+  useBrandHealthScore,
+  useRestockAlerts,
+  useABTests,
+  useCreateABTest,
+  useBrandEvolution,
+} from '@/hooks/use-dashboard';
 import { useBrands } from '@/hooks/use-brands';
 import { RevenueCard } from '@/components/dashboard/revenue-card';
 import { MetricsGrid, type MetricItem } from '@/components/dashboard/metrics-grid';
 import { TopProductsList } from '@/components/dashboard/top-products-list';
 import { BrandHealthGauge } from '@/components/dashboard/brand-health-gauge';
 import { QuickActions } from '@/components/dashboard/quick-actions';
+import { RestockAlerts } from '@/components/dashboard/restock-alerts';
+import { ABTestCard } from '@/components/dashboard/ab-test-card';
+import { BrandEvolution } from '@/components/dashboard/brand-evolution';
 import { Spinner } from '@/components/ui/spinner';
 
 /**
@@ -25,6 +36,10 @@ export default function DashboardOverview() {
   const { data: brands } = useBrands();
   const firstBrandId = brands?.items?.[0]?.id;
   const { data: healthScore, isLoading: healthLoading } = useBrandHealthScore(firstBrandId);
+  const { data: restockData, isLoading: restockLoading } = useRestockAlerts();
+  const { data: abTestData, isLoading: abTestLoading } = useABTests();
+  const { mutate: createABTest } = useCreateABTest();
+  const { data: evolutionData, isLoading: evolutionLoading } = useBrandEvolution(firstBrandId);
 
   const periods = [
     { value: 'today', label: 'Today' },
@@ -124,6 +139,23 @@ export default function DashboardOverview() {
 
       {/* Quick Actions */}
       <QuickActions />
+
+      {/* Insights Row: Restock Alerts, A/B Tests, Brand Evolution */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <RestockAlerts
+          alerts={restockData?.alerts}
+          loading={restockLoading}
+        />
+        <ABTestCard
+          tests={abTestData?.tests}
+          loading={abTestLoading}
+          onCreateTest={createABTest}
+        />
+        <BrandEvolution
+          data={evolutionData}
+          loading={evolutionLoading}
+        />
+      </div>
     </motion.div>
   );
 }

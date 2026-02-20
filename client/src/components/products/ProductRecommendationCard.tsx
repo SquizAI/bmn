@@ -3,6 +3,8 @@ import { Sparkles, Check, Info, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { RevenueEstimate } from './RevenueEstimate';
+import { SeasonalBadge } from './SeasonalBadge';
+import { SocialProofBadge } from './SocialProofBadge';
 
 interface RevenueTier {
   label: 'conservative' | 'moderate' | 'aggressive';
@@ -31,6 +33,9 @@ export interface RecommendedProduct {
     tiers: RevenueTier[];
   };
   rank: number;
+  selectedByCount?: number;
+  isTopSelling?: boolean;
+  niche?: string;
 }
 
 interface ProductRecommendationCardProps {
@@ -150,7 +155,16 @@ export function ProductRecommendationCard({
           <span className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-text-secondary">
             {Math.round(product.marginPercent)}% margin
           </span>
+          <SeasonalBadge category={product.category} />
         </div>
+
+        {/* Social proof */}
+        <SocialProofBadge
+          productSku={product.sku}
+          selectedByCount={product.selectedByCount}
+          isTopSelling={product.isTopSelling}
+          niche={product.niche}
+        />
 
         {/* Actions */}
         <div className="mt-3 flex gap-2">

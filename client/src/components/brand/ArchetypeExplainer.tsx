@@ -11,77 +11,77 @@ const ARCHETYPE_EXAMPLES: Record<string, {
   traits: string[];
   bestFor: string;
 }> = {
-  'The Creator': {
-    description: 'Creates things of enduring value through imagination and self-expression.',
-    realBrands: ['Apple', 'Adobe', 'LEGO', 'Crayola'],
-    traits: ['creative', 'artistic', 'innovative', 'expressive', 'imaginative'],
-    bestFor: 'Artists, makers, designers, and anyone who builds or crafts.',
-  },
   'The Sage': {
     description: 'Seeks truth and understanding to share wisdom with the world.',
-    realBrands: ['Google', 'TED', 'Harvard', 'The Economist'],
+    realBrands: ['Apple', 'Google', 'BBC'],
     traits: ['knowledgeable', 'analytical', 'wise', 'thoughtful', 'informative'],
     bestFor: 'Educators, consultants, thought leaders, and knowledge creators.',
   },
-  'The Explorer': {
-    description: 'Seeks freedom and fulfillment through discovery and new experiences.',
-    realBrands: ['Patagonia', 'Jeep', 'National Geographic', 'REI'],
-    traits: ['adventurous', 'independent', 'curious', 'ambitious', 'free-spirited'],
-    bestFor: 'Travel creators, outdoor brands, and those who inspire exploration.',
-  },
   'The Hero': {
     description: 'Proves worth through courageous and difficult action.',
-    realBrands: ['Nike', 'FedEx', 'Duracell', 'Under Armour'],
+    realBrands: ['Nike', 'FedEx', 'Red Cross'],
     traits: ['courageous', 'determined', 'strong', 'disciplined', 'inspiring'],
     bestFor: 'Fitness, sports, achievement-oriented brands, and motivational creators.',
   },
-  'The Magician': {
-    description: 'Makes dreams come true through transformation.',
-    realBrands: ['Disney', 'Tesla', 'Dyson', 'MAC Cosmetics'],
-    traits: ['visionary', 'transformative', 'innovative', 'charismatic', 'mystical'],
-    bestFor: 'Tech innovators, beauty transformers, and visionary creators.',
-  },
   'The Outlaw': {
     description: 'Breaks rules and fights the status quo.',
-    realBrands: ['Harley-Davidson', 'Virgin', 'Diesel', 'Liquid Death'],
+    realBrands: ['Harley-Davidson', 'Diesel', 'Virgin'],
     traits: ['rebellious', 'disruptive', 'edgy', 'unconventional', 'provocative'],
     bestFor: 'Disruptors, counterculture brands, and bold creators.',
   },
-  'The Regular Guy/Gal': {
-    description: 'Connects through belonging, authenticity, and shared values.',
-    realBrands: ['IKEA', 'Target', 'Budweiser', "Levi's"],
-    traits: ['relatable', 'down-to-earth', 'authentic', 'friendly', 'practical'],
-    bestFor: 'Lifestyle creators, community builders, and approachable brands.',
+  'The Explorer': {
+    description: 'Seeks freedom and fulfillment through discovery and new experiences.',
+    realBrands: ['Jeep', 'Patagonia', 'The North Face'],
+    traits: ['adventurous', 'independent', 'curious', 'ambitious', 'free-spirited'],
+    bestFor: 'Travel creators, outdoor brands, and those who inspire exploration.',
   },
-  'The Lover': {
-    description: 'Creates relationships and experiences worth having.',
-    realBrands: ['Chanel', 'Godiva', 'Victoria\'s Secret', 'Hallmark'],
-    traits: ['passionate', 'sensual', 'intimate', 'elegant', 'devoted'],
-    bestFor: 'Beauty, fashion, luxury, and relationship-focused brands.',
-  },
-  'The Jester': {
-    description: 'Brings joy and lightheartedness to the world.',
-    realBrands: ['M&Ms', 'Old Spice', 'Dollar Shave Club', 'Ben & Jerry\'s'],
-    traits: ['fun', 'humorous', 'playful', 'irreverent', 'entertaining'],
-    bestFor: 'Entertainment creators, comedy brands, and fun consumer products.',
-  },
-  'The Caregiver': {
-    description: 'Protects and cares for others.',
-    realBrands: ['Johnson & Johnson', 'TOMS', 'Volvo', 'UNICEF'],
-    traits: ['nurturing', 'compassionate', 'generous', 'supportive', 'protective'],
-    bestFor: 'Wellness brands, family products, and mission-driven creators.',
+  'The Creator': {
+    description: 'Creates things of enduring value through imagination and self-expression.',
+    realBrands: ['Adobe', 'Lego', 'Crayola'],
+    traits: ['creative', 'artistic', 'innovative', 'expressive', 'imaginative'],
+    bestFor: 'Artists, makers, designers, and anyone who builds or crafts.',
   },
   'The Ruler': {
     description: 'Exerts control and creates order from chaos.',
-    realBrands: ['Mercedes-Benz', 'Rolex', 'Microsoft', 'American Express'],
+    realBrands: ['Mercedes-Benz', 'Rolex', 'Microsoft'],
     traits: ['authoritative', 'confident', 'powerful', 'prestigious', 'commanding'],
     bestFor: 'Luxury brands, leadership coaching, and premium services.',
   },
+  'The Caregiver': {
+    description: 'Protects and cares for others.',
+    realBrands: ['Johnson & Johnson', 'UNICEF', 'Dove'],
+    traits: ['nurturing', 'compassionate', 'generous', 'supportive', 'protective'],
+    bestFor: 'Wellness brands, family products, and mission-driven creators.',
+  },
   'The Innocent': {
     description: 'Strives for happiness through simplicity and goodness.',
-    realBrands: ['Coca-Cola', 'Dove', 'Whole Foods', 'Nintendo'],
+    realBrands: ['Coca-Cola', 'Dove', 'Nintendo'],
     traits: ['optimistic', 'pure', 'wholesome', 'simple', 'honest'],
     bestFor: 'Clean beauty, organic products, and feel-good brands.',
+  },
+  'The Jester': {
+    description: 'Brings joy and lightheartedness to the world.',
+    realBrands: ['Old Spice', "M&M's", 'Dollar Shave Club'],
+    traits: ['fun', 'humorous', 'playful', 'irreverent', 'entertaining'],
+    bestFor: 'Entertainment creators, comedy brands, and fun consumer products.',
+  },
+  'The Lover': {
+    description: 'Creates relationships and experiences worth having.',
+    realBrands: ["Victoria's Secret", 'Chanel', 'Godiva'],
+    traits: ['passionate', 'sensual', 'intimate', 'elegant', 'devoted'],
+    bestFor: 'Beauty, fashion, luxury, and relationship-focused brands.',
+  },
+  'The Magician': {
+    description: 'Makes dreams come true through transformation.',
+    realBrands: ['Disney', 'Tesla', 'Dyson'],
+    traits: ['visionary', 'transformative', 'innovative', 'charismatic', 'mystical'],
+    bestFor: 'Tech innovators, beauty transformers, and visionary creators.',
+  },
+  'The Regular Guy/Gal': {
+    description: 'Connects through belonging, authenticity, and shared values.',
+    realBrands: ['IKEA', 'Target', 'Budweiser'],
+    traits: ['relatable', 'down-to-earth', 'authentic', 'friendly', 'practical'],
+    bestFor: 'Lifestyle creators, community builders, and approachable brands.',
   },
 };
 
@@ -146,9 +146,16 @@ export function ArchetypeExplainer({ archetype, compact = false, className }: Ar
             >
               <p className="text-xs font-bold text-text">{archetype}</p>
               <p className="mt-1 text-xs text-text-secondary">{data.description}</p>
-              <div className="mt-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Real brands:</p>
-                <p className="text-xs text-text-secondary">{data.realBrands.join(', ')}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-1">
+                <span className="text-[10px] font-medium text-text-muted italic">Think:</span>
+                {data.realBrands.map((brand) => (
+                  <span
+                    key={brand}
+                    className="inline-flex rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+                  >
+                    {brand}
+                  </span>
+                ))}
               </div>
               {/* Arrow */}
               <div className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-border bg-surface-elevated" />
@@ -178,11 +185,16 @@ export function ArchetypeExplainer({ archetype, compact = false, className }: Ar
             ))}
           </div>
 
-          <div className="mt-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
-              Real brand examples
-            </p>
-            <p className="mt-0.5 text-xs text-text-secondary">{data.realBrands.join(' / ')}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-medium text-text-muted italic">Think:</span>
+            {data.realBrands.map((brand) => (
+              <span
+                key={brand}
+                className="inline-flex rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-medium text-text-secondary"
+              >
+                {brand}
+              </span>
+            ))}
           </div>
 
           <p className="mt-2 text-xs text-text-muted italic">{data.bestFor}</p>

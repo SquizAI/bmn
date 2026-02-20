@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -9,11 +9,13 @@ import {
   PenLine,
   Type,
   AlertCircle,
+  BadgeCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { BrandNameCard } from '@/components/brand/BrandNameCard';
+import { ConfettiBurst } from '@/components/animations/ConfettiBurst';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useUIStore } from '@/stores/ui-store';
 import {
@@ -32,16 +34,57 @@ export default function BrandNamePage() {
   const brand = useWizardStore((s) => s.brand);
   const brandId = useWizardStore((s) => s.meta.brandId);
   const activeJobId = useWizardStore((s) => s.meta.activeJobId);
+  const dossier = useWizardStore((s) => s.dossier);
   const setBrand = useWizardStore((s) => s.setBrand);
   const setStep = useWizardStore((s) => s.setStep);
   const setActiveJob = useWizardStore((s) => s.setActiveJob);
   const addToast = useUIStore((s) => s.addToast);
+
+  // Detect brand name from dossier profile (bio or display name)
+  const detectedBrandName = useMemo(() => {
+    const rawDossier = dossier.rawDossier;
+    if (!rawDossier?.profile) return null;
+
+    const displayName = rawDossier.profile.displayName;
+    const bio = rawDossier.profile.bio;
+
+    if (!displayName) return null;
+    const trimmed = displayName.trim();
+    if (!trimmed) return null;
+
+    // Heuristic: detect brand-like names (numbers, special chars, all-caps, trademark symbols)
+    const hasNumbers = /\d/.test(trimmed);
+    const hasSpecialChars = /[_.|&+@#!]/.test(trimmed);
+    const isAllCaps = trimmed.length > 2 && trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed);
+    const hasTrademarkSymbol = /[™®©]/.test(trimmed);
+
+    if (hasNumbers || hasSpecialChars || isAllCaps || hasTrademarkSymbol) {
+      return trimmed;
+    }
+
+    // Check bio for explicit brand mentions
+    if (bio) {
+      const brandPatterns = [
+        /(?:founder|ceo|creator|owner)\s+(?:of|@)\s+(.+?)(?:\s*[|.,!]|$)/i,
+        /(?:brand|company|shop|store):\s*(.+?)(?:\s*[|.,!]|$)/i,
+      ];
+      for (const pattern of brandPatterns) {
+        const match = bio.match(pattern);
+        if (match?.[1]) {
+          return match[1].trim();
+        }
+      }
+    }
+
+    return null;
+  }, [dossier.rawDossier]);
 
   const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
   const [selectedName, setSelectedName] = useState<string | null>(brand.name || null);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customName, setCustomName] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const dispatchMutation = useDispatchNameGeneration();
   const selectMutation = useSelectBrandName();
@@ -186,8 +229,12 @@ export default function BrandNamePage() {
     }
 
     addToast({ type: 'success', title: `"${selectedName}" locked in!` });
-    setStep('brand-identity');
-    navigate(ROUTES.WIZARD_BRAND_IDENTITY);
+    setShowCelebration(true);
+    setTimeout(() => {
+      setShowCelebration(false);
+      setStep('brand-identity');
+      navigate(ROUTES.WIZARD_BRAND_IDENTITY);
+    }, 1200);
   };
 
   const handleBack = () => {
@@ -200,8 +247,10 @@ export default function BrandNamePage() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col gap-8"
+      className="relative flex flex-col gap-8"
     >
+      {showCelebration && <ConfettiBurst active duration={2000} />}
+
       {/* Header */}
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-light">
@@ -212,6 +261,29 @@ export default function BrandNamePage() {
           We generated brand name options based on your social presence and brand personality.
           Select your favorite, or type your own.
         </p>
+
+        {/* Detected brand name indicator */}
+        {detectedBrandName && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-[var(--bmn-color-accent)]/30 bg-[var(--bmn-color-accent)]/10 px-4 py-2"
+          >
+            <BadgeCheck className="h-4 w-4 text-[var(--bmn-color-accent)]" />
+            <span className="text-xs text-text-secondary">
+              We detected{' '}
+              <button
+                type="button"
+                onClick={() => handleSelectName(detectedBrandName)}
+                className="font-semibold text-[var(--bmn-color-accent)] underline underline-offset-2 transition-colors hover:text-[var(--bmn-color-primary)]"
+              >
+                "{detectedBrandName}"
+              </button>
+              {' '}from your profile -- use this or enter a custom name
+            </span>
+          </motion.div>
+        )}
       </div>
 
       {/* Generating state */}

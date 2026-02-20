@@ -3,22 +3,46 @@
 import { useRef, useState, useMemo } from 'react';
 import { motion, useInView } from 'motion/react';
 import { Calculator, TrendingUp } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const categories = [
+  { label: 'Supplements', aov: 45, margin: 0.6 },
+  { label: 'Apparel', aov: 35, margin: 0.6 },
+  { label: 'Accessories', aov: 25, margin: 0.6 },
+  { label: 'Beauty', aov: 55, margin: 0.6 },
+  { label: 'Wellness', aov: 40, margin: 0.6 },
+  { label: 'Digital Products', aov: 20, margin: 0.9 },
+] as const;
+
+const conversionPresets = [
+  { label: 'Conservative', rate: 0.003 },
+  { label: 'Moderate', rate: 0.005 },
+  { label: 'Aggressive', rate: 0.01 },
+] as const;
 
 export function RoiCalculator() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: '-100px' });
   const [followers, setFollowers] = useState(50000);
   const [engagementRate, setEngagementRate] = useState(3);
+  const [categoryIndex, setCategoryIndex] = useState(0);
+  const [conversionIndex, setConversionIndex] = useState(1); // Moderate default
+
+  const category = categories[categoryIndex];
+  const conversionPreset = conversionPresets[conversionIndex];
 
   const projections = useMemo(() => {
-    const conversionRate = 0.005;
-    const avgOrderValue = 45;
+    const conversionRate = conversionPreset.rate;
+    const avgOrderValue = category.aov;
+    const profitMargin = category.margin;
     const engaged = followers * (engagementRate / 100);
     const monthlyCustomers = Math.round(engaged * conversionRate);
     const monthlyRevenue = monthlyCustomers * avgOrderValue;
     const yearlyRevenue = monthlyRevenue * 12;
-    return { monthlyCustomers, monthlyRevenue, yearlyRevenue };
-  }, [followers, engagementRate]);
+    const monthlyProfit = Math.round(monthlyRevenue * profitMargin);
+    const yearlyProfit = monthlyProfit * 12;
+    return { monthlyCustomers, monthlyRevenue, yearlyRevenue, monthlyProfit, yearlyProfit };
+  }, [followers, engagementRate, category, conversionPreset]);
 
   return (
     <section
@@ -53,6 +77,33 @@ export function RoiCalculator() {
         >
           {/* Inputs */}
           <div className="space-y-6 rounded-2xl border border-[var(--bmn-color-border)] bg-[var(--bmn-color-background)] p-6">
+            {/* Product Category */}
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Product category
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {categories.map((cat, i) => (
+                  <button
+                    key={cat.label}
+                    onClick={() => setCategoryIndex(i)}
+                    className={cn(
+                      'rounded-lg px-2 py-1.5 text-xs font-medium transition-all',
+                      categoryIndex === i
+                        ? 'bg-[var(--bmn-color-accent)] text-[var(--bmn-color-accent-foreground)]'
+                        : 'border border-[var(--bmn-color-border)] text-[var(--bmn-color-text-secondary)] hover:border-[var(--bmn-color-border-hover)]',
+                    )}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-[var(--bmn-color-text-muted)]">
+                Avg. order value: ${category.aov} &middot; Margin: {Math.round(category.margin * 100)}%
+              </p>
+            </div>
+
+            {/* Follower count slider */}
             <div>
               <label className="mb-2 flex items-center justify-between text-sm font-medium">
                 <span>Follower count</span>
@@ -75,6 +126,7 @@ export function RoiCalculator() {
               </div>
             </div>
 
+            {/* Engagement rate slider */}
             <div>
               <label className="mb-2 flex items-center justify-between text-sm font-medium">
                 <span>Engagement rate</span>
@@ -97,10 +149,31 @@ export function RoiCalculator() {
               </div>
             </div>
 
-            <p className="text-xs text-[var(--bmn-color-text-muted)]">
-              Based on avg. $45 order value and 0.5% conversion rate from
-              engaged audience.
-            </p>
+            {/* Conversion Rate Toggle */}
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                Conversion estimate
+              </label>
+              <div className="flex gap-1.5">
+                {conversionPresets.map((preset, i) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => setConversionIndex(i)}
+                    className={cn(
+                      'flex-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+                      conversionIndex === i
+                        ? 'bg-[var(--bmn-color-accent)] text-[var(--bmn-color-accent-foreground)]'
+                        : 'border border-[var(--bmn-color-border)] text-[var(--bmn-color-text-secondary)] hover:border-[var(--bmn-color-border-hover)]',
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-[var(--bmn-color-text-muted)]">
+                {(conversionPreset.rate * 100).toFixed(1)}% of engaged audience converts
+              </p>
+            </div>
           </div>
 
           {/* Results */}
@@ -135,8 +208,36 @@ export function RoiCalculator() {
                 Potential annual income
               </p>
             </div>
+
+            {/* Profit Estimate */}
+            <div className="rounded-2xl border border-[var(--bmn-color-border)] bg-[var(--bmn-color-background)] p-6 text-center">
+              <p className="text-sm text-[var(--bmn-color-text-muted)]">
+                Est. Annual Profit ({Math.round(category.margin * 100)}% margin)
+              </p>
+              <p
+                className="mt-1 text-2xl font-bold text-[var(--bmn-color-success)]"
+                style={{ fontFamily: 'var(--bmn-font-secondary)' }}
+              >
+                ${projections.yearlyProfit.toLocaleString()}
+              </p>
+              <p className="mt-1 text-xs text-[var(--bmn-color-text-muted)]">
+                ${projections.monthlyProfit.toLocaleString()}/mo after costs
+              </p>
+            </div>
           </div>
         </motion.div>
+
+        {/* Disclaimer footnote */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.4 }}
+          className="mt-6 text-center text-xs leading-relaxed text-[var(--bmn-color-text-muted)]"
+        >
+          Estimates based on industry averages for creator-led brands. Actual
+          results vary based on audience engagement, product quality, and
+          marketing strategy.
+        </motion.p>
       </div>
     </section>
   );

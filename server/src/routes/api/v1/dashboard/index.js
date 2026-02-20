@@ -7,6 +7,9 @@ import { healthScoreRoutes } from './health-score.js';
 import { referralStatsRoutes, referralLeaderboardRoutes } from './referrals.js';
 import { integrationsRoutes } from './integrations.js';
 import { contentRoutes } from './content.js';
+import { restockAlertRoutes } from './restock-alerts.js';
+import { abTestingRoutes } from './ab-testing.js';
+import { brandEvolutionRoutes } from './brand-evolution.js';
 
 export const dashboardRoutes = Router();
 
@@ -17,3 +20,6 @@ dashboardRoutes.use('/referral-stats', referralStatsRoutes);
 dashboardRoutes.use('/referral-leaderboard', referralLeaderboardRoutes);
 dashboardRoutes.use('/integrations', integrationsRoutes);
 dashboardRoutes.use('/content', contentRoutes);
+dashboardRoutes.use('/restock-alerts', restockAlertRoutes);
+dashboardRoutes.use('/ab-tests', abTestingRoutes);
+dashboardRoutes.use('/brand-evolution', brandEvolutionRoutes);

@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { config } from '../../config/index.js';
 import { logger } from '../../lib/logger.js';
+import { routeModel } from '../_shared/model-router.js';
 
 // ── Lazy-load external SDKs (wrap in try/catch for environments where not installed) ──
 
@@ -1643,6 +1644,672 @@ Return ONLY a valid JSON object:
       } catch (err) {
         logger.error({ msg: 'Competitor detection failed', error: err.message });
         return { success: false, error: `Competitor detection failed: ${err.message}` };
+      }
+    },
+  },
+
+  // ── New Analysis Tools (Phase 2) ────────────────────────────────────
+
+  estimateAudienceDemographics: {
+    name: 'estimateAudienceDemographics',
+    description: 'Use Claude to estimate audience demographics (age range, gender split, geographic indicators, primary interests) from scraped profile data including follower count, bio, hashtags, and content.',
+    inputSchema: z.object({
+      followers: z.number().describe('Total follower count'),
+      bio: z.string().nullable().describe('Creator bio text'),
+      hashtags: z.array(z.string()).describe('All hashtags used across posts'),
+      captions: z.array(z.string()).describe('Array of post/video captions'),
+      platform: z.string().optional().describe('Primary platform (instagram, tiktok, etc.)'),
+      engagementRate: z.number().nullable().optional().describe('Average engagement rate'),
+      displayName: z.string().nullable().optional().describe('Creator display name'),
+    }),
+
+    /**
+     * @param {{ followers: number, bio: string | null, hashtags: string[], captions: string[], platform?: string, engagementRate?: number | null, displayName?: string | null }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     * Cost estimate: ~$0.005-0.02 per call (Claude Sonnet, text analysis)
+     */
+    async execute({ followers, bio, hashtags, captions, platform, engagementRate, displayName }) {
+      logger.info({ msg: 'Estimating audience demographics', followers, hashtagCount: hashtags.length, captionCount: captions.length });
+
+      try {
+        const topHashtags = hashtags
+          .map((h) => h.toLowerCase().replace(/^#/, ''))
+          .reduce((acc, tag) => {
+            acc[tag] = (acc[tag] || 0) + 1;
+            return acc;
+          }, {});
+
+        const sortedTags = Object.entries(topHashtags)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 30)
+          .map(([tag, count]) => `${tag} (${count}x)`);
+
+        const sampleCaptions = captions
+          .filter((c) => c && c.length > 10)
+          .slice(0, 15)
+          .map((c) => c.slice(0, 300));
+
+        const prompt = `Analyze the following social media creator data and estimate their AUDIENCE demographics (who follows/watches them, NOT the creator themselves).
+
+<creator_data>
+Display Name: ${displayName || 'Unknown'}
+Platform: ${platform || 'Unknown'}
+Followers: ${followers.toLocaleString()}
+Bio: ${bio || 'Not available'}
+Engagement Rate: ${engagementRate != null ? (engagementRate * 100).toFixed(2) + '%' : 'Unknown'}
+Top Hashtags: ${sortedTags.join(', ') || 'None'}
+Sample Captions:
+${sampleCaptions.map((c, i) => `${i + 1}. ${c}`).join('\n') || 'None available'}
+</creator_data>
+
+Based on content themes, language patterns, hashtag usage, platform, and follower count, estimate the audience demographics. Be data-driven and realistic.
+
+Return ONLY a valid JSON object with this exact shape:
+{
+  "estimatedAgeRange": "e.g. 18-34",
+  "ageBreakdown": [
+    { "range": "13-17", "percentage": 5 },
+    { "range": "18-24", "percentage": 35 },
+    { "range": "25-34", "percentage": 40 },
+    { "range": "35-44", "percentage": 15 },
+    { "range": "45+", "percentage": 5 }
+  ],
+  "genderSplit": { "male": 40, "female": 55, "other": 5 },
+  "geographicIndicators": ["US", "UK", "International English-speaking"],
+  "primaryInterests": ["interest1", "interest2", "interest3"],
+  "incomeLevel": "low | mid-range | upper-mid | high",
+  "loyaltySignals": ["signal1", "signal2"],
+  "confidence": 0.75,
+  "reasoning": "One-sentence explanation of how demographics were inferred"
+}`;
+
+        const result = await routeModel('social-analysis', {
+          prompt,
+          systemPrompt: 'You are a social media analytics expert specializing in audience demographics estimation. Always respond with valid JSON only. No markdown, no explanation outside JSON.',
+          maxTokens: 1024,
+          temperature: 0.4,
+          jsonMode: true,
+        });
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          return { success: false, error: 'Failed to parse audience demographics response as JSON.' };
+        }
+
+        const demographics = JSON.parse(jsonMatch[0]);
+        return { success: true, data: demographics };
+      } catch (err) {
+        logger.error({ msg: 'Audience demographics estimation failed', error: err.message });
+        return { success: false, error: `Audience demographics estimation failed: ${err.message}` };
+      }
+    },
+  },
+
+  analyzePostingFrequency: {
+    name: 'analyzePostingFrequency',
+    description: 'Analyze an array of post timestamps to calculate posting frequency, consistency percentage, best posting days and times, and identify significant gaps. Enhanced wrapper around calculatePostingFrequency with gap analysis.',
+    inputSchema: z.object({
+      timestamps: z
+        .array(z.string())
+        .min(2)
+        .describe('Array of ISO-8601 or Unix timestamp strings from posts'),
+    }),
+
+    /**
+     * @param {{ timestamps: string[] }} input
+     * @returns {{ success: boolean, data?: Object, error?: string }}
+     */
+    execute({ timestamps }) {
+      logger.info({ msg: 'Analyzing posting frequency (enhanced)', postCount: timestamps.length });
+
+      try {
+        // Parse and sort timestamps oldest-first
+        const dates = timestamps
+          .map((ts) => {
+            const parsed = new Date(isNaN(Number(ts)) ? ts : Number(ts) * 1000);
+            return isNaN(parsed.getTime()) ? null : parsed;
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.getTime() - b.getTime());
+
+        if (dates.length < 2) {
+          return { success: false, error: 'Need at least 2 valid timestamps to analyze frequency.' };
+        }
+
+        // Time span
+        const firstPost = dates[0];
+        const lastPost = dates[dates.length - 1];
+        const spanMs = lastPost.getTime() - firstPost.getTime();
+        const spanDays = Math.max(spanMs / (1000 * 60 * 60 * 24), 1);
+        const spanWeeks = Math.max(spanDays / 7, 1);
+
+        const postsPerWeek = Math.round((dates.length / spanWeeks) * 100) / 100;
+
+        // Gaps between consecutive posts (in hours)
+        const gaps = [];
+        for (let i = 1; i < dates.length; i++) {
+          const gapHours = (dates[i].getTime() - dates[i - 1].getTime()) / (1000 * 60 * 60);
+          gaps.push({
+            fromDate: dates[i - 1].toISOString(),
+            toDate: dates[i].toISOString(),
+            hours: Math.round(gapHours * 10) / 10,
+            days: Math.round((gapHours / 24) * 10) / 10,
+          });
+        }
+
+        const avgGapHours = gaps.reduce((s, g) => s + g.hours, 0) / gaps.length;
+
+        // Standard deviation for consistency
+        const meanGap = avgGapHours;
+        const variance = gaps.reduce((s, g) => s + Math.pow(g.hours - meanGap, 2), 0) / gaps.length;
+        const stdDevGap = Math.sqrt(variance);
+        const cv = meanGap > 0 ? stdDevGap / meanGap : 0;
+        const consistencyPercent = Math.round(Math.max(0, Math.min(100, (1 - Math.min(cv, 2) / 2) * 100)));
+
+        // Best posting days
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayCounts = new Array(7).fill(0);
+        for (const d of dates) {
+          dayCounts[d.getUTCDay()]++;
+        }
+        const bestDays = dayCounts
+          .map((count, idx) => ({ day: dayNames[idx], count, percentage: Math.round((count / dates.length) * 100) }))
+          .sort((a, b) => b.count - a.count)
+          .filter((d) => d.count > 0)
+          .slice(0, 3)
+          .map((d) => d.day);
+
+        // Best posting times (hours UTC)
+        const hourCounts = new Array(24).fill(0);
+        for (const d of dates) {
+          hourCounts[d.getUTCHours()]++;
+        }
+        const bestTimes = hourCounts
+          .map((count, hour) => ({ hour, label: `${hour.toString().padStart(2, '0')}:00 UTC`, count }))
+          .sort((a, b) => b.count - a.count)
+          .filter((h) => h.count > 0)
+          .slice(0, 3)
+          .map((h) => h.label);
+
+        // Identify significant gaps (gaps > 2x the average)
+        const significantGaps = gaps
+          .filter((g) => g.hours > avgGapHours * 2 && g.days >= 3)
+          .sort((a, b) => b.hours - a.hours)
+          .slice(0, 5)
+          .map((g) => ({
+            from: g.fromDate,
+            to: g.toDate,
+            days: g.days,
+          }));
+
+        return {
+          success: true,
+          data: {
+            postsPerWeek,
+            consistencyPercent,
+            bestDays,
+            bestTimes,
+            gaps: significantGaps,
+            avgGapHours: Math.round(avgGapHours * 10) / 10,
+            analysisSpan: {
+              firstPost: firstPost.toISOString(),
+              lastPost: lastPost.toISOString(),
+              totalDays: Math.round(spanDays),
+              totalPosts: dates.length,
+            },
+          },
+        };
+      } catch (err) {
+        logger.error({ msg: 'Posting frequency analysis failed', error: err.message });
+        return { success: false, error: `Posting frequency analysis failed: ${err.message}` };
+      }
+    },
+  },
+
+  analyzeHashtagStrategyAI: {
+    name: 'analyzeHashtagStrategyAI',
+    description: 'Enhanced hashtag strategy analysis that uses AI to map hashtags to niches with estimated market sizes. Groups hashtags by frequency and provides strategic recommendations.',
+    inputSchema: z.object({
+      posts: z
+        .array(z.object({
+          hashtags: z.array(z.string()).describe('Hashtags from a single post'),
+          likes: z.number().optional().describe('Post likes'),
+          comments: z.number().optional().describe('Post comments'),
+        }))
+        .min(1)
+        .describe('Array of posts with their hashtags and engagement metrics'),
+    }),
+
+    /**
+     * @param {{ posts: Array<{ hashtags: string[], likes?: number, comments?: number }> }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     * Cost estimate: ~$0.005-0.02 per call (Claude Sonnet for niche mapping)
+     */
+    async execute({ posts }) {
+      logger.info({ msg: 'Analyzing hashtag strategy with AI', postCount: posts.length });
+
+      try {
+        // Build frequency map
+        const hashtagCounts = {};
+        const hashtagEngagement = {};
+
+        for (const post of posts) {
+          const engagement = (post.likes || 0) + (post.comments || 0);
+          for (const tag of post.hashtags) {
+            const normalized = tag.toLowerCase().replace(/^#/, '');
+            if (!normalized) continue;
+            hashtagCounts[normalized] = (hashtagCounts[normalized] || 0) + 1;
+            if (!hashtagEngagement[normalized]) {
+              hashtagEngagement[normalized] = { total: 0, count: 0 };
+            }
+            hashtagEngagement[normalized].total += engagement;
+            hashtagEngagement[normalized].count++;
+          }
+        }
+
+        const topByFrequency = Object.entries(hashtagCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 25)
+          .map(([tag, count]) => ({
+            tag,
+            count,
+            avgEngagement: hashtagEngagement[tag]
+              ? Math.round(hashtagEngagement[tag].total / hashtagEngagement[tag].count)
+              : 0,
+          }));
+
+        if (topByFrequency.length === 0) {
+          return {
+            success: true,
+            data: {
+              topHashtags: [],
+              strategy: 'No hashtags detected in posts.',
+              recommendations: ['Start using relevant niche hashtags to increase discoverability.'],
+            },
+          };
+        }
+
+        // Use AI to map hashtags to niches with market sizes
+        const hashtagList = topByFrequency.map((h) => `#${h.tag} (used ${h.count}x, avg engagement: ${h.avgEngagement})`).join('\n');
+
+        const prompt = `Analyze these hashtags from a social media creator and map each to its niche with estimated market size.
+
+<hashtag_data>
+${hashtagList}
+</hashtag_data>
+
+For each hashtag, determine:
+1. The niche/category it belongs to
+2. The estimated creator-economy market size for that niche
+
+Then provide an overall strategy assessment and actionable recommendations.
+
+Return ONLY a valid JSON object with this exact shape:
+{
+  "topHashtags": [
+    { "tag": "hashtag", "count": 10, "niche": "fitness", "estimatedMarketSize": "$2.1B" }
+  ],
+  "strategy": "One-paragraph assessment of the hashtag strategy (mix of broad vs niche, consistency, etc.)",
+  "recommendations": [
+    "Specific actionable recommendation 1",
+    "Specific actionable recommendation 2",
+    "Specific actionable recommendation 3"
+  ]
+}`;
+
+        const result = await routeModel('social-analysis', {
+          prompt,
+          systemPrompt: 'You are a social media marketing strategist specializing in hashtag analytics and discoverability. Always respond with valid JSON only.',
+          maxTokens: 2048,
+          temperature: 0.4,
+          jsonMode: true,
+        });
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          // Fallback: return frequency-only analysis without AI niche mapping
+          return {
+            success: true,
+            data: {
+              topHashtags: topByFrequency.map((h) => ({
+                tag: h.tag,
+                count: h.count,
+                niche: 'unknown',
+                estimatedMarketSize: null,
+              })),
+              strategy: 'AI analysis unavailable. Frequency-based analysis only.',
+              recommendations: ['Diversify hashtags across niche and broad categories.'],
+            },
+          };
+        }
+
+        const analysis = JSON.parse(jsonMatch[0]);
+        return { success: true, data: analysis };
+      } catch (err) {
+        logger.error({ msg: 'AI hashtag strategy analysis failed', error: err.message });
+        return { success: false, error: `AI hashtag strategy analysis failed: ${err.message}` };
+      }
+    },
+  },
+
+  analyzeContentFormats: {
+    name: 'analyzeContentFormats',
+    description: 'Analyze content format preferences by calculating percentage breakdown (Reels, Carousel, Static Image, Stories, Live), identifying which format gets the best engagement, and returning engagement stats by format.',
+    inputSchema: z.object({
+      posts: z
+        .array(z.object({
+          type: z.string().describe('Post type (e.g. "Image", "Video", "Sidecar", "Reel", "Story", "Carousel", "Short")'),
+          likes: z.number().optional().describe('Post likes'),
+          comments: z.number().optional().describe('Post comments'),
+          shares: z.number().optional().describe('Post shares'),
+          views: z.number().optional().describe('Post views (for video content)'),
+        }))
+        .min(1)
+        .describe('Array of posts with type and engagement info'),
+    }),
+
+    /**
+     * @param {{ posts: Array<{ type: string, likes?: number, comments?: number, shares?: number, views?: number }> }} input
+     * @returns {{ success: boolean, data?: Object, error?: string }}
+     */
+    execute({ posts }) {
+      logger.info({ msg: 'Analyzing content formats', postCount: posts.length });
+
+      try {
+        // Canonical format normalizer
+        const normalizeFormat = (type) => {
+          const t = (type || 'unknown').toLowerCase().trim();
+          if (['reel', 'reels'].includes(t)) return 'reels';
+          if (['video', 'videos', 'short', 'shorts'].includes(t)) return 'video';
+          if (['sidecar', 'carousel', 'carousels', 'album'].includes(t)) return 'carousel';
+          if (['image', 'photo', 'photos', 'graphimage'].includes(t)) return 'static';
+          if (['story', 'stories'].includes(t)) return 'stories';
+          if (['live', 'stream'].includes(t)) return 'live';
+          if (['text', 'tweet', 'thread'].includes(t)) return 'text';
+          return 'other';
+        };
+
+        // Bucket posts by format
+        const formatBuckets = {};
+        for (const post of posts) {
+          const format = normalizeFormat(post.type);
+          if (!formatBuckets[format]) {
+            formatBuckets[format] = { count: 0, totalLikes: 0, totalComments: 0, totalShares: 0, totalViews: 0 };
+          }
+          formatBuckets[format].count++;
+          formatBuckets[format].totalLikes += post.likes || 0;
+          formatBuckets[format].totalComments += post.comments || 0;
+          formatBuckets[format].totalShares += post.shares || 0;
+          formatBuckets[format].totalViews += post.views || 0;
+        }
+
+        const totalPosts = posts.length;
+
+        // Build breakdown object { reels: X%, carousel: Y%, static: Z%, stories: W% }
+        const breakdown = {};
+        for (const [format, bucket] of Object.entries(formatBuckets)) {
+          breakdown[format] = Math.round((bucket.count / totalPosts) * 100);
+        }
+
+        // Engagement by format
+        const engagementByFormat = {};
+        for (const [format, bucket] of Object.entries(formatBuckets)) {
+          const avgEngagement = bucket.count > 0
+            ? Math.round((bucket.totalLikes + bucket.totalComments) / bucket.count)
+            : 0;
+          engagementByFormat[format] = {
+            avgLikes: bucket.count > 0 ? Math.round(bucket.totalLikes / bucket.count) : 0,
+            avgComments: bucket.count > 0 ? Math.round(bucket.totalComments / bucket.count) : 0,
+            avgShares: bucket.totalShares > 0 ? Math.round(bucket.totalShares / bucket.count) : null,
+            avgViews: bucket.totalViews > 0 ? Math.round(bucket.totalViews / bucket.count) : null,
+            avgEngagement,
+            postCount: bucket.count,
+          };
+        }
+
+        // Identify best format by average engagement
+        const bestFormat = Object.entries(engagementByFormat)
+          .sort((a, b) => b[1].avgEngagement - a[1].avgEngagement)[0]?.[0] || 'unknown';
+
+        return {
+          success: true,
+          data: {
+            breakdown,
+            bestFormat,
+            engagementByFormat,
+            totalPostsAnalyzed: totalPosts,
+          },
+        };
+      } catch (err) {
+        logger.error({ msg: 'Content format analysis failed', error: err.message });
+        return { success: false, error: `Content format analysis failed: ${err.message}` };
+      }
+    },
+  },
+
+  analyzeContentTone: {
+    name: 'analyzeContentTone',
+    description: 'Use Claude to analyze tone and voice from video captions and post text. Detects whether content is funny, serious, educational, motivational, lifestyle, etc. Output feeds into brand voice generation.',
+    inputSchema: z.object({
+      captions: z.array(z.string()).min(1).describe('Array of post captions and/or video transcription text'),
+      bio: z.string().nullable().optional().describe('Creator bio for additional tone context'),
+    }),
+
+    /**
+     * @param {{ captions: string[], bio?: string | null }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     * Cost estimate: ~$0.005-0.02 per call (Claude Sonnet, text analysis)
+     */
+    async execute({ captions, bio }) {
+      logger.info({ msg: 'Analyzing content tone', captionCount: captions.length });
+
+      try {
+        const sampleCaptions = captions
+          .filter((c) => c && c.length > 5)
+          .slice(0, 20)
+          .map((c) => c.slice(0, 500));
+
+        if (sampleCaptions.length === 0) {
+          return {
+            success: true,
+            data: {
+              primaryTone: 'neutral',
+              secondaryTones: [],
+              confidence: 0.3,
+              examples: [],
+            },
+          };
+        }
+
+        const prompt = `Analyze the tone and voice of this social media creator based on their content.
+
+<bio>${bio || 'Not available'}</bio>
+
+<captions>
+${sampleCaptions.map((c, i) => `${i + 1}. "${c}"`).join('\n')}
+</captions>
+
+Classify the overall tone into one PRIMARY tone and up to 3 SECONDARY tones from these categories:
+- funny (humorous, witty, comedic)
+- serious (formal, authoritative, professional)
+- educational (informative, tutorial-style, explainer)
+- motivational (inspiring, empowering, uplifting)
+- lifestyle (casual, relatable, day-in-my-life)
+- edgy (provocative, bold, controversial)
+- wholesome (warm, family-friendly, positive)
+- luxury (aspirational, high-end, exclusive)
+- conversational (chatty, informal, friend-like)
+- storytelling (narrative, personal anecdotes)
+
+For each sample caption, tag the dominant tone.
+
+Return ONLY a valid JSON object with this exact shape:
+{
+  "primaryTone": "one of the tone categories above",
+  "secondaryTones": ["tone2", "tone3"],
+  "confidence": 0.85,
+  "voiceDescription": "One-sentence description of the creator's voice style suitable for brand voice guidelines",
+  "examples": [
+    { "content": "truncated caption text...", "tone": "detected tone" },
+    { "content": "truncated caption text...", "tone": "detected tone" }
+  ]
+}`;
+
+        const result = await routeModel('social-analysis', {
+          prompt,
+          systemPrompt: 'You are a brand voice analyst specializing in tone-of-voice detection from social media content. Always respond with valid JSON only. No markdown.',
+          maxTokens: 1024,
+          temperature: 0.3,
+          jsonMode: true,
+        });
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          return { success: false, error: 'Failed to parse content tone response as JSON.' };
+        }
+
+        const toneAnalysis = JSON.parse(jsonMatch[0]);
+
+        // Limit examples to 5 max
+        if (toneAnalysis.examples && toneAnalysis.examples.length > 5) {
+          toneAnalysis.examples = toneAnalysis.examples.slice(0, 5);
+        }
+
+        return { success: true, data: toneAnalysis };
+      } catch (err) {
+        logger.error({ msg: 'Content tone analysis failed', error: err.message });
+        return { success: false, error: `Content tone analysis failed: ${err.message}` };
+      }
+    },
+  },
+
+  detectExistingBrandName: {
+    name: 'detectExistingBrandName',
+    description: 'Detect whether the creator already has an existing brand name by parsing bio text, display name, and linked URLs for patterns like LLC references, TM/registered marks, "Founder of X", and link text.',
+    inputSchema: z.object({
+      bio: z.string().nullable().describe('Creator bio text'),
+      displayName: z.string().nullable().describe('Creator display name'),
+      externalUrl: z.string().nullable().optional().describe('Linked URL from profile (e.g. linktree, website)'),
+      websiteText: z.string().nullable().optional().describe('Any visible text from linked website if available'),
+    }),
+
+    /**
+     * @param {{ bio: string | null, displayName: string | null, externalUrl?: string | null, websiteText?: string | null }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     * Cost estimate: ~$0.002-0.008 per call (Claude Sonnet, short text analysis)
+     */
+    async execute({ bio, displayName, externalUrl, websiteText }) {
+      logger.info({ msg: 'Detecting existing brand name', displayName });
+
+      try {
+        const allText = [bio, displayName, externalUrl, websiteText].filter(Boolean).join(' ');
+
+        if (!allText || allText.trim().length < 3) {
+          return {
+            success: true,
+            data: {
+              detected: false,
+              brandName: null,
+              confidence: 0,
+              source: 'insufficient data',
+            },
+          };
+        }
+
+        // Quick heuristic pass: check for obvious patterns before calling AI
+        const heuristicPatterns = [
+          { regex: /(?:founder|ceo|owner|creator)\s+(?:of|@|at)\s+([A-Z][\w\s&'.]+)/i, source: 'bio-founder-reference' },
+          { regex: /\b(\w[\w\s&'.]*?)(?:\s*(?:LLC|Inc|Ltd|Co\.|Corp|™|®|©))/i, source: 'bio-legal-entity' },
+          { regex: /(?:🏷️|🔖|📦|🛍️)\s*([A-Z][\w\s&'.]+)/u, source: 'bio-emoji-brand-marker' },
+          { regex: /(?:shop|store|brand):\s*@?([A-Za-z][\w.]+)/i, source: 'bio-shop-reference' },
+        ];
+
+        for (const { regex, source } of heuristicPatterns) {
+          const match = allText.match(regex);
+          if (match && match[1]) {
+            const brandName = match[1].trim().replace(/\s+/g, ' ');
+            if (brandName.length >= 2 && brandName.length <= 50) {
+              return {
+                success: true,
+                data: {
+                  detected: true,
+                  brandName,
+                  confidence: 0.8,
+                  source,
+                },
+              };
+            }
+          }
+        }
+
+        // Extract domain name from URL as potential brand name
+        let domainBrand = null;
+        if (externalUrl) {
+          try {
+            const url = new URL(externalUrl.startsWith('http') ? externalUrl : `https://${externalUrl}`);
+            const hostname = url.hostname.replace(/^www\./, '');
+            // Skip common link aggregator domains
+            const skipDomains = ['linktr.ee', 'linkin.bio', 'bit.ly', 'beacons.ai', 'bio.link', 'stan.store', 'taplink.cc', 'hoo.be', 'snipfeed.co', 'solo.to'];
+            if (!skipDomains.some((d) => hostname.includes(d))) {
+              domainBrand = hostname.split('.')[0];
+            }
+          } catch {
+            // Invalid URL, skip
+          }
+        }
+
+        // Use AI for deeper analysis
+        const prompt = `Analyze this social media creator's profile data and determine if they already have an existing brand or business name.
+
+<profile_data>
+Display Name: ${displayName || 'Not available'}
+Bio: ${bio || 'Not available'}
+External URL: ${externalUrl || 'Not available'}
+Website Text: ${websiteText || 'Not available'}
+${domainBrand ? `Domain Name (extracted): ${domainBrand}` : ''}
+</profile_data>
+
+Look for:
+1. Explicit brand names (LLC, Inc, TM, registered marks)
+2. "Founder of X", "CEO of X", "Creator of X" patterns
+3. Business references in bio
+4. Domain names that suggest a brand
+5. Display name that IS a brand name (not a personal name)
+
+Return ONLY a valid JSON object:
+{
+  "detected": true/false,
+  "brandName": "The Brand Name" or null,
+  "confidence": 0.0-1.0,
+  "source": "where the brand name was detected (e.g. 'bio-founder-reference', 'display-name', 'external-url', 'bio-business-mention')"
+}`;
+
+        const result = await routeModel('extraction', {
+          prompt,
+          systemPrompt: 'You are a brand name detection specialist. Analyze profile data to detect existing brands. Be precise -- only flag a brand name if there is clear evidence. Respond with valid JSON only.',
+          maxTokens: 256,
+          temperature: 0.2,
+          jsonMode: true,
+        });
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          return {
+            success: true,
+            data: {
+              detected: false,
+              brandName: domainBrand || null,
+              confidence: domainBrand ? 0.4 : 0,
+              source: domainBrand ? 'external-url-domain' : 'analysis-failed',
+            },
+          };
+        }
+
+        const detection = JSON.parse(jsonMatch[0]);
+        return { success: true, data: detection };
+      } catch (err) {
+        logger.error({ msg: 'Brand name detection failed', error: err.message });
+        return { success: false, error: `Brand name detection failed: ${err.message}` };
       }
     },
   },

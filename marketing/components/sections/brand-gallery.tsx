@@ -9,7 +9,6 @@ interface SampleBrand {
   niche: string;
   colors: string[];
   products: string[];
-  followers: string;
   creator: string;
 }
 
@@ -22,8 +21,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Fitness',
     colors: ['#1a1a2e', '#16213e', '#e94560', '#0f3460'],
     products: ['Pre-Workout', 'Protein Powder', 'Compression Tee'],
-    followers: '342K',
-    creator: '@alexmoves',
+    creator: 'Fitness Niche',
   },
   {
     name: 'Glow Theory',
@@ -31,8 +29,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Beauty',
     colors: ['#fce4ec', '#f8bbd0', '#ec407a', '#ad1457'],
     products: ['Face Serum', 'Lip Balm Set', 'Eye Cream'],
-    followers: '189K',
-    creator: '@skinbyrena',
+    creator: 'Beauty Niche',
   },
   {
     name: 'NutraVibe',
@@ -40,8 +37,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Wellness',
     colors: ['#e8f5e9', '#66bb6a', '#2e7d32', '#1b5e20'],
     products: ['Multivitamin', 'Sleep Formula', 'Collagen Powder'],
-    followers: '95K',
-    creator: '@wellnesswithjo',
+    creator: 'Wellness Niche',
   },
   {
     name: 'Plate & Pour',
@@ -49,8 +45,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Food',
     colors: ['#fff8e1', '#ffb74d', '#e65100', '#3e2723'],
     products: ['Spice Blends', 'Cooking Apron', 'Recipe Journal'],
-    followers: '278K',
-    creator: '@chefnova',
+    creator: 'Food Niche',
   },
   {
     name: 'STRUK',
@@ -58,8 +53,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Fashion',
     colors: ['#000000', '#212121', '#ff6f00', '#ffffff'],
     products: ['Oversized Hoodie', 'Dad Hat', 'Crossbody Bag'],
-    followers: '512K',
-    creator: '@jfitsnyc',
+    creator: 'Fashion Niche',
   },
   {
     name: 'ByteShift',
@@ -67,8 +61,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Tech',
     colors: ['#0d1117', '#161b22', '#58a6ff', '#c9d1d9'],
     products: ['Phone Case', 'Laptop Sleeve', 'Cable Organizer'],
-    followers: '134K',
-    creator: '@devdiana',
+    creator: 'Tech Niche',
   },
   {
     name: 'FlexForm',
@@ -76,8 +69,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Fitness',
     colors: ['#1a237e', '#283593', '#42a5f5', '#e3f2fd'],
     products: ['Creatine', 'Training Shorts', 'Shaker Bottle'],
-    followers: '421K',
-    creator: '@mikelifts',
+    creator: 'Fitness Niche',
   },
   {
     name: 'Aura Botanics',
@@ -85,8 +77,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Beauty',
     colors: ['#f3e5f5', '#ce93d8', '#7b1fa2', '#4a148c'],
     products: ['Essential Oil Set', 'Face Mask', 'Body Scrub'],
-    followers: '67K',
-    creator: '@botanic.babe',
+    creator: 'Beauty Niche',
   },
   {
     name: 'ZenFuel',
@@ -94,8 +85,7 @@ const sampleBrands: SampleBrand[] = [
     niche: 'Wellness',
     colors: ['#e0f2f1', '#80cbc4', '#00695c', '#004d40'],
     products: ['Adaptogen Blend', 'Calm Tea', 'Journal'],
-    followers: '156K',
-    creator: '@zenwithlily',
+    creator: 'Wellness Niche',
   },
 ];
 
@@ -110,6 +100,16 @@ export function BrandGallery() {
   return (
     <section className="py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* AI-Generated badge */}
+        <div className="mb-6 text-center">
+          <span className="inline-block rounded-full border border-[var(--bmn-color-accent)]/30 bg-[var(--bmn-color-accent-light)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--bmn-color-accent)]">
+            AI-Generated Examples
+          </span>
+          <p className="mt-2 text-sm text-[var(--bmn-color-text-muted)]">
+            Sample brands created by our AI to showcase platform capabilities
+          </p>
+        </div>
+
         {/* Filters */}
         <div className="mb-8 flex flex-wrap justify-center gap-2">
           {niches.map((niche) => (
@@ -176,7 +176,7 @@ export function BrandGallery() {
                     {brand.niche}
                   </span>
                   <span className="text-xs text-[var(--bmn-color-text-muted)]">
-                    {brand.creator} &middot; {brand.followers}
+                    {brand.creator}
                   </span>
                 </div>
 

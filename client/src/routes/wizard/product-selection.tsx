@@ -15,6 +15,7 @@ import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/c
 import { Spinner } from '@/components/ui/spinner';
 import { RecommendedProductGrid } from '@/components/products/RecommendedProductGrid';
 import { ProductDetailModal } from '@/components/products/ProductDetailModal';
+import { ConfettiBurst } from '@/components/animations/ConfettiBurst';
 import { ProductCompare } from '@/components/products/ProductCompare';
 import { RevenueEstimate } from '@/components/products/RevenueEstimate';
 import {
@@ -28,6 +29,9 @@ import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { SeasonalBadge } from '@/components/products/SeasonalBadge';
+import { SocialProofBadge } from '@/components/products/SocialProofBadge';
+import { CustomProductRequest } from '@/components/products/CustomProductRequest';
 import type { RecommendedProduct } from '@/components/products/ProductRecommendationCard';
 
 // ------ Component ------
@@ -53,6 +57,7 @@ export default function ProductSelectionPage() {
   }, [dossierProfile]);
 
   const [selectedSkus, setSelectedSkus] = useState<Set<string>>(new Set(storedSkus));
+  const [showCelebration, setShowCelebration] = useState(false);
   const [detailProduct, setDetailProduct] = useState<RecommendedProduct | null>(null);
   const [compareProducts, setCompareProducts] = useState<RecommendedProduct[]>([]);
   const [showCompare, setShowCompare] = useState(false);
@@ -153,8 +158,12 @@ export default function ProductSelectionPage() {
       return;
     }
 
-    setStep('mockup-review');
-    navigate(ROUTES.WIZARD_MOCKUP_REVIEW);
+    setShowCelebration(true);
+    setTimeout(() => {
+      setShowCelebration(false);
+      setStep('mockup-review');
+      navigate(ROUTES.WIZARD_MOCKUP_REVIEW);
+    }, 1200);
   };
 
   const handleBack = () => {
@@ -167,8 +176,10 @@ export default function ProductSelectionPage() {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex flex-col gap-8"
+      className="relative flex flex-col gap-8"
     >
+      {showCelebration && <ConfettiBurst active duration={2000} />}
+
       {/* Header */}
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-light">
@@ -321,6 +332,10 @@ export default function ProductSelectionPage() {
                   <CardContent className="p-4">
                     <h3 className="font-semibold text-text">{product.name}</h3>
                     <p className="mt-1 text-xs text-text-muted capitalize">{product.category}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      <SeasonalBadge category={product.category} />
+                      <SocialProofBadge productSku={product.sku} />
+                    </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-bold text-primary">
                         {formatCurrency(product.basePrice)}
@@ -342,6 +357,14 @@ export default function ProductSelectionPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Custom product request */}
+      {brandId && (
+        <CustomProductRequest
+          brandId={brandId}
+          onSubmit={() => addToast({ type: 'success', title: 'Product request submitted!' })}
+        />
       )}
 
       {/* Compare overlay */}
