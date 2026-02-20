@@ -351,101 +351,60 @@ export default function SocialAnalysisPage() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex flex-col items-center"
           >
-            {/* Onboarding Welcome Hero */}
+            {/* Compact header with icon */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="mb-10 text-center"
+              transition={{ duration: 0.5 }}
+              className="mb-2 flex flex-col items-center"
             >
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1">
-                <div className="h-1.5 w-1.5 rounded-full bg-[#B8956A]" />
-                <span className="text-[11px] font-medium uppercase tracking-widest text-text-muted">
-                  AI-Powered Brand Studio
-                </span>
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--bmn-color-primary)] to-[var(--bmn-color-accent)]">
+                <ScanSearch className="h-8 w-8 text-white" />
               </div>
 
-              <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-text md:text-5xl lg:text-6xl">
-                Your brand,
-                <br />
-                built in minutes.
+              <h1 className="text-center text-3xl font-bold tracking-tight text-text md:text-4xl">
+                Discover Your Brand DNA
               </h1>
-              <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-text-muted">
-                From social media presence to a complete brand identity —
-                logo, products, and revenue projections.
+              <p className="mx-auto mt-3 max-w-md text-center text-[15px] leading-relaxed text-text-muted">
+                Enter your social handles and our AI will analyze your content,
+                audience, and aesthetic to build your Creator Dossier.
               </p>
             </motion.div>
 
-            {/* Timeline Steps */}
+            {/* Compact inline timeline — single row */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="mb-12 grid w-full max-w-2xl grid-cols-1 gap-0 sm:grid-cols-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="mb-8 mt-4 flex w-full max-w-lg items-center justify-between"
             >
-              {TIMELINE_STEPS.map((step) => (
-                <div
-                  key={step.number}
-                  className="group relative border-b border-border p-6 sm:border-r sm:last:border-r-0 sm:nth-2:border-r-0 sm:nth-3:border-b-0 sm:nth-4:border-b-0"
-                >
-                  <span className="mb-3 block font-mono text-[11px] text-text-muted">
-                    {step.number}
-                  </span>
-                  <h3 className="text-base font-semibold tracking-tight text-text">
-                    {step.title}
-                  </h3>
-                  <p className="mt-1.5 text-[13px] leading-relaxed text-text-muted">
-                    {step.desc}
-                  </p>
-                  {/* Hover accent line */}
-                  <div className="absolute bottom-0 left-0 h-px w-0 bg-[#B8956A] transition-all duration-300 group-hover:w-full sm:bottom-auto sm:left-auto sm:right-0 sm:top-0 sm:h-0 sm:w-px group-hover:sm:h-full group-hover:sm:w-px" />
+              {TIMELINE_STEPS.map((step, i) => (
+                <div key={step.number} className="flex items-center gap-2">
+                  {i > 0 && <div className="h-px w-4 bg-border sm:w-6" />}
+                  <div className="flex items-center gap-1.5">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-border/60 font-mono text-[10px] font-semibold text-text-muted">
+                      {step.number}
+                    </span>
+                    <span className="text-xs font-medium text-text-muted">{step.title}</span>
+                  </div>
                 </div>
               ))}
             </motion.div>
-
-            {/* Divider with scan icon */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.3 }}
-              className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--bmn-color-primary)] to-[var(--bmn-color-accent)]"
-            >
-              <ScanSearch className="h-10 w-10 text-white" />
-            </motion.div>
-
-            {/* Social Analysis Section Header */}
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-              className="text-center text-3xl font-bold tracking-tight text-[var(--bmn-color-text)]"
-            >
-              Discover Your Brand DNA
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mt-2 max-w-md text-center text-[var(--bmn-color-text-secondary)]"
-            >
-              Enter your social handles and our AI will analyze your content, audience,
-              aesthetic, and niche to build your personalized Creator Dossier.
-            </motion.p>
 
             {/* Form */}
             <motion.form
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
+              transition={{ delay: 0.25 }}
               onSubmit={handleSubmit(onSubmit)}
-              className="mt-8 w-full max-w-lg space-y-4"
+              className="w-full max-w-lg space-y-4"
             >
               {PLATFORM_FIELDS.map((field, i) => (
                 <motion.div
                   key={field.name}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + i * 0.06 }}
+                  transition={{ delay: 0.3 + i * 0.06 }}
                 >
                   <Input
                     label={field.label}
@@ -461,7 +420,7 @@ export default function SocialAnalysisPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.82 }}
+                transition={{ delay: 0.62 }}
                 className="flex items-center gap-3 py-2"
               >
                 <div className="h-px flex-1 bg-border" />
@@ -475,7 +434,7 @@ export default function SocialAnalysisPage() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.85 }}
+                transition={{ delay: 0.65 }}
               >
                 <Input
                   label="Linktree / Website URL"
@@ -489,7 +448,7 @@ export default function SocialAnalysisPage() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.9 }}
+                transition={{ delay: 0.7 }}
                 className="text-center text-xs text-[var(--bmn-color-text-muted)]"
               >
                 Enter at least one handle. More platforms = richer brand insights.
@@ -499,7 +458,7 @@ export default function SocialAnalysisPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.92 }}
+                transition={{ delay: 0.72 }}
                 className="flex items-center justify-center gap-2 pt-1"
               >
                 <span className="text-xs text-[var(--bmn-color-text-muted)]">
@@ -520,7 +479,7 @@ export default function SocialAnalysisPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.95 }}
+                transition={{ delay: 0.75 }}
               >
                 <Button
                   type="submit"
@@ -536,7 +495,7 @@ export default function SocialAnalysisPage() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.0 }}
+                transition={{ delay: 0.8 }}
                 className="text-center text-[11px] text-text-muted"
               >
                 Takes about 10 minutes &middot; Save and resume anytime

@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useExitIntent } from '@/hooks/use-exit-intent';
-import { WIZARD_STEPS, WIZARD_PHASES } from '@/lib/constants';
+import { WIZARD_STEPS, WIZARD_PHASES, ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { ArrowLeft, X } from 'lucide-react';
 
 const ChatWindow = lazy(() =>
   import('@/components/chat/ChatWindow').then((m) => ({ default: m.ChatWindow })),
@@ -19,6 +20,7 @@ const ChatFab = lazy(() =>
  */
 export default function WizardLayout() {
   useExitIntent();
+  const navigate = useNavigate();
 
   const currentStep = useWizardStore((s) => s.meta.currentStep);
   const brandId = useWizardStore((s) => s.meta.brandId);
@@ -39,6 +41,16 @@ export default function WizardLayout() {
     ? WIZARD_PHASES.indexOf(currentPhase)
     : 0;
 
+  // Navigate back to the previous wizard step
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      const prevStep = WIZARD_STEPS[currentIndex - 1];
+      navigate(`/wizard/${prevStep.path}`);
+    } else {
+      navigate(ROUTES.DASHBOARD);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Progress bar — ultra thin */}
@@ -51,10 +63,21 @@ export default function WizardLayout() {
 
       {/* Minimal header with phase indicators */}
       <header className="flex items-center justify-between px-6 py-4 md:px-10">
-        <div>
-          <span className="text-sm font-bold tracking-tight text-text">brand</span>
-          <span className="text-sm font-light tracking-tight text-text-muted">me</span>
-          <span className="text-sm font-bold tracking-tight text-text">now</span>
+        {/* Left: Back button + Logo */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            title={currentIndex > 0 ? 'Previous step' : 'Back to dashboard'}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div>
+            <span className="text-sm font-bold tracking-tight text-text">brand</span>
+            <span className="text-sm font-light tracking-tight text-text-muted">me</span>
+            <span className="text-sm font-bold tracking-tight text-text">now</span>
+          </div>
         </div>
 
         {/* Phase indicators */}
@@ -108,6 +131,16 @@ export default function WizardLayout() {
             {WIZARD_STEPS[currentIndex]?.label ?? currentStep}
           </span>
         </div>
+
+        {/* Right: Exit button */}
+        <button
+          type="button"
+          onClick={() => navigate(ROUTES.DASHBOARD)}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+          title="Save & exit to dashboard"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </header>
 
       {/* Step content */}

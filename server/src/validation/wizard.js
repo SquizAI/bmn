@@ -26,6 +26,8 @@ export const socialHandlesSchema = z.object({
   facebook: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),
   youtube: z.string().max(100).optional(),
+  websiteUrl: z.string().url().max(2048).optional().or(z.literal('')),
+  regenerate: z.boolean().optional(),
 });
 
 /**

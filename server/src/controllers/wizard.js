@@ -360,13 +360,23 @@ IMPORTANT:
 
     logger.info({ brandId, userId, handles: handleParts }, 'Calling Claude for social analysis dossier');
 
-    const aiResult = await routeModel('social-analysis', {
-      systemPrompt,
-      prompt: taskPrompt,
-      maxTokens: 8192,
-      temperature: 0.7,
-      jsonMode: true,
-    });
+    let aiResult;
+    try {
+      aiResult = await routeModel('social-analysis', {
+        systemPrompt,
+        prompt: taskPrompt,
+        maxTokens: 8192,
+        temperature: 0.7,
+        jsonMode: true,
+      });
+    } catch (aiError) {
+      logger.error({ brandId, error: aiError.message }, 'AI model call failed for social analysis');
+      return res.status(503).json({
+        success: false,
+        error: 'AI analysis service is temporarily unavailable. Please try again in a moment.',
+        detail: process.env.NODE_ENV !== 'production' ? aiError.message : undefined,
+      });
+    }
 
     // Parse the AI response
     let parsed;
@@ -749,7 +759,7 @@ Return a JSON object with this exact structure:
       "suggestedRetailPrice": number,
       "marginPercent": number (0-100),
       "printAreas": ["front", "back", "sleeve"],
-      "mockupPrompt": "string (prompt for generating a photorealistic product mockup with brand logo)",
+      "mockupPrompt": "string (GPT Image 1.5 prompt for generating a photorealistic product mockup with brand logo)",
       "popularity": number (1-10 score, how likely this creator's audience would buy),
       "reasoning": "string (why this product fits this brand)",
       "tags": ["string tags"],
@@ -782,7 +792,7 @@ IMPORTANT:
 - Include a mix of price points (some accessible, some premium)
 - Bundles should combine 2-4 complementary products
 - Revenue projections should be based on the creator's follower count and typical creator conversion rates
-- Every product needs a detailed mockupPrompt that would create a great product image`;
+- Every product needs a detailed mockupPrompt optimized for GPT Image 1.5 that would create a great product image`;
 
     logger.info({ brandId, userId }, 'Calling Claude for product recommendations');
 
@@ -922,7 +932,7 @@ For each product, generate a detailed mockup specification. Return as JSON:
     {
       "productId": "string (matching product id)",
       "productName": "string",
-      "imagePrompt": "string (detailed DALL-E/FLUX prompt for photorealistic product mockup showing the brand logo/name on the product, specific colors, setting, lighting, camera angle)",
+      "imagePrompt": "string (detailed GPT Image 1.5 prompt for photorealistic product mockup showing the brand logo/name on the product, specific colors, setting, lighting, camera angle)",
       "backgroundColor": "#hex (solid background color for the mockup)",
       "placementDescription": "string (where the logo/text appears on the product)",
       "scene": "studio|lifestyle|flatlay|closeup",
