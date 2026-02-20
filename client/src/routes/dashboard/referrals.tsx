@@ -31,7 +31,7 @@ export default function ReferralsPage() {
           </h1>
         </div>
         <p className="mt-0.5 text-[13px] text-text-muted">
-          Earn commissions by referring creators to Brand Me Now.
+          Earn commissions by referring creators to PRZNL.
         </p>
       </div>
 

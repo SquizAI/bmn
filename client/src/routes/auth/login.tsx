@@ -68,9 +68,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-1 flex-col justify-between p-12">
           {/* Logo */}
           <div>
-            <span className="text-lg font-bold tracking-tight text-white">brand</span>
-            <span className="text-lg font-light tracking-tight text-white/40">me</span>
-            <span className="text-lg font-bold tracking-tight text-white">now</span>
+            <span className="text-lg font-bold tracking-tight text-white">PRZNL</span>
           </div>
 
           {/* Hero text */}
@@ -111,9 +109,7 @@ export default function LoginPage() {
       <div data-theme="light" className="flex w-full flex-col justify-center bg-white px-6 lg:w-1/2 lg:px-20">
         {/* Mobile logo */}
         <div className="mb-12 lg:hidden">
-          <span className="text-lg font-bold tracking-tight text-text">brand</span>
-          <span className="text-lg font-light tracking-tight text-text-muted">me</span>
-          <span className="text-lg font-bold tracking-tight text-text">now</span>
+          <span className="text-lg font-bold tracking-tight text-text">PRZNL</span>
         </div>
 
         <div className="mx-auto w-full max-w-sm">

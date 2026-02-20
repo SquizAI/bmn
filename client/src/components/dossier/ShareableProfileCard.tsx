@@ -269,10 +269,10 @@ export default function ShareableProfileCard({
           {/* Branding footer */}
           <div className="mt-3 flex items-center justify-between border-t border-[var(--bmn-color-border)] pt-2">
             <span className="text-[10px] text-[var(--bmn-color-text-muted)]">
-              Created with Brand Me Now
+              Created with PRZNL
             </span>
             <span className="text-[10px] font-medium text-[var(--bmn-color-accent)]">
-              brandmenow.com
+              prznl.com
             </span>
           </div>
         </div>

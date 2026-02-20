@@ -53,9 +53,7 @@ function Header({ className }: HeaderProps) {
           </Button>
         )}
         <Link to={ROUTES.DASHBOARD} className="flex items-center gap-0">
-          <span className="text-base font-bold tracking-tight text-text">brand</span>
-          <span className="text-base font-light tracking-tight text-text-muted">me</span>
-          <span className="text-base font-bold tracking-tight text-text">now</span>
+          <span className="text-base font-bold tracking-tight text-text">PRZNL</span>
         </Link>
       </div>
 
