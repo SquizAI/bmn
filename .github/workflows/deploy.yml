@@ -36,7 +36,9 @@ jobs:
             sudo chown -R $(whoami):$(whoami) /opt/bmn
 
             echo "=== Pulling latest code ==="
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             echo "=== Building and deploying ==="
             bash deploy/deploy.sh
