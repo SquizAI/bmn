@@ -7,6 +7,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
+import { getGoogleAIClient } from '../services/providers.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -21,29 +22,70 @@ function getBullRedisConfig() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// STUB: Gemini 3 Pro Image API -- replace with real implementation
-// ---------------------------------------------------------------------------
+/**
+ * Download an image from a URL and return it as a base64 data part
+ * compatible with the Gemini API.
+ * @param {string} url
+ * @returns {Promise<{inlineData: {data: string, mimeType: string}}>}
+ */
+async function fetchImageAsPart(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image from ${url}: HTTP ${response.status}`);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const mimeType = response.headers.get('content-type') || 'image/png';
+  return {
+    inlineData: {
+      data: buffer.toString('base64'),
+      mimeType,
+    },
+  };
+}
 
 /**
  * Generate a bundle composition image via Gemini 3 Pro Image.
- * STUB: Returns a placeholder URL for pipeline testing.
+ * Sends product mockup images as inline data to Gemini for compositing.
  *
  * @param {string} prompt - Composition prompt
- * @param {string[]} _productMockupUrls - URLs of product mockups to composite
- * @returns {Promise<string>} Composed image URL
+ * @param {string[]} productMockupUrls - URLs of product mockups to composite
+ * @returns {Promise<string>} Base64 data URL of the composed image
  */
-async function generateBundleComposition(prompt, _productMockupUrls) {
-  // TODO: Replace with real Gemini 3 Pro Image API call
-  // const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  // const genAI = new GoogleGenerativeAI(config.GOOGLE_API_KEY);
-  // const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image' });
-  // const result = await model.generateContent([prompt, ...imageRefs]);
-  // return result.response.imageUrl;
+async function generateBundleComposition(prompt, productMockupUrls) {
+  logger.debug({ prompt: prompt.slice(0, 100), productCount: productMockupUrls.length }, 'Generating bundle composition via Gemini');
 
-  logger.debug({ prompt: prompt.slice(0, 100) }, 'STUB: Gemini bundle composition');
-  await new Promise((resolve) => setTimeout(resolve, 2000 + Math.random() * 1000));
-  return `https://placeholder.google.com/stub/bundle-${Date.now()}.png`;
+  const genAI = getGoogleAIClient();
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+  // Download all product mockup images in parallel
+  const imageParts = await Promise.all(
+    productMockupUrls.map((url) => fetchImageAsPart(url))
+  );
+
+  // Send prompt + images to Gemini for compositing
+  const result = await model.generateContent([
+    prompt,
+    ...imageParts,
+  ]);
+
+  const response = result.response;
+  const candidates = response.candidates;
+
+  if (!candidates || candidates.length === 0) {
+    throw new Error('Gemini returned no candidates for bundle composition');
+  }
+
+  // Look for an image part in the response
+  for (const part of candidates[0].content.parts) {
+    if (part.inlineData) {
+      // Return as a data URL that can be uploaded to storage
+      const { data, mimeType } = part.inlineData;
+      return `data:${mimeType};base64,${data}`;
+    }
+  }
+
+  // If no image returned, the model may have only returned text
+  throw new Error('Gemini did not return an image for bundle composition');
 }
 
 /**

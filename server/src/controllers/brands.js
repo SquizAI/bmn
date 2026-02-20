@@ -1,15 +1,44 @@
 // server/src/controllers/brands.js
 
+import { supabaseAdmin } from '../lib/supabase.js';
+import { logger } from '../lib/logger.js';
+import { dispatchJob } from '../queues/dispatch.js';
+
 /**
  * GET /api/v1/brands
  * List all brands for the authenticated user.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function listBrands(req, res) {
-  // TODO: Implement via brand service -- query user's brands from Supabase
-  res.json({ success: true, data: { message: 'Not implemented yet' } });
+export async function listBrands(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const { data, error, count } = await supabaseAdmin
+      .from('brands')
+      .select('*', { count: 'exact' })
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      logger.error({ error, userId }, 'Failed to list brands');
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      data: { items: data, total: count, page, limit },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -18,10 +47,34 @@ export async function listBrands(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function createBrand(req, res) {
-  // TODO: Implement via brand service -- insert brand into Supabase
-  res.status(201).json({ success: true, data: { message: 'Not implemented yet' } });
+export async function createBrand(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { name, description } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('brands')
+      .insert({
+        user_id: userId,
+        name,
+        description: description || null,
+        status: 'draft',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error, userId }, 'Failed to create brand');
+      throw error;
+    }
+
+    logger.info({ brandId: data.id, userId }, 'Brand created');
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -30,10 +83,38 @@ export async function createBrand(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function getBrand(req, res) {
-  // TODO: Implement via brand service -- fetch brand by ID + user_id
-  res.json({ success: true, data: { message: 'Not implemented yet' } });
+export async function getBrand(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('*')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    // Get brand_assets count
+    const { count: assetCount } = await supabaseAdmin
+      .from('brand_assets')
+      .select('*', { count: 'exact', head: true })
+      .eq('brand_id', brandId);
+
+    res.json({
+      success: true,
+      data: { ...brand, asset_count: assetCount || 0 },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -42,22 +123,85 @@ export async function getBrand(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function updateBrand(req, res) {
-  // TODO: Implement via brand service -- update brand in Supabase
-  res.json({ success: true, data: { message: 'Not implemented yet' } });
+export async function updateBrand(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify ownership
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (fetchErr || !existing) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('brands')
+      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .eq('id', brandId)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error({ error, brandId, userId }, 'Failed to update brand');
+      throw error;
+    }
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
  * DELETE /api/v1/brands/:brandId
- * Delete a brand and all its assets.
+ * Delete a brand (soft delete).
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function deleteBrand(req, res) {
-  // TODO: Implement via brand service -- soft delete brand + cascade assets
-  res.status(204).end();
+export async function deleteBrand(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify ownership
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (fetchErr || !existing) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const { error } = await supabaseAdmin
+      .from('brands')
+      .update({ status: 'deleted', updated_at: new Date().toISOString() })
+      .eq('id', brandId);
+
+    if (error) {
+      logger.error({ error, brandId, userId }, 'Failed to delete brand');
+      throw error;
+    }
+
+    logger.info({ brandId, userId }, 'Brand soft-deleted');
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -66,10 +210,54 @@ export async function deleteBrand(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function listBrandAssets(req, res) {
-  // TODO: Implement via brand service -- query logos, mockups, bundles for brand
-  res.json({ success: true, data: { message: 'Not implemented yet' } });
+export async function listBrandAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+    const { asset_type } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    let query = supabaseAdmin
+      .from('brand_assets')
+      .select('*', { count: 'exact' })
+      .eq('brand_id', brandId)
+      .order('created_at', { ascending: false });
+
+    if (asset_type) {
+      query = query.eq('asset_type', asset_type);
+    }
+
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
+
+    if (error) {
+      logger.error({ error, brandId }, 'Failed to list brand assets');
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      data: { items: data, total: count, page, limit },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -78,13 +266,43 @@ export async function listBrandAssets(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function generateLogos(req, res) {
-  // TODO: Implement -- check credits, queue BullMQ job, return jobId
-  res.status(202).json({
-    success: true,
-    data: { message: 'Not implemented yet' },
-  });
+export async function generateLogos(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const result = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'logo-generation',
+      input: req.body,
+      creditCost: req.body.creditCost || 1,
+    });
+
+    logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId: result.jobId, queueName: result.queueName },
+    });
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -93,11 +311,41 @@ export async function generateLogos(req, res) {
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
-export async function generateMockups(req, res) {
-  // TODO: Implement -- check credits, queue BullMQ job, return jobId
-  res.status(202).json({
-    success: true,
-    data: { message: 'Not implemented yet' },
-  });
+export async function generateMockups(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const result = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'mockup-review',
+      input: req.body,
+      creditCost: req.body.creditCost || 1,
+    });
+
+    logger.info({ jobId: result.jobId, brandId, userId }, 'Mockup generation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId: result.jobId, queueName: result.queueName },
+    });
+  } catch (err) {
+    next(err);
+  }
 }

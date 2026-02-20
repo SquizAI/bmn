@@ -1,0 +1,256 @@
+/* src/styles/design-tokens.css */
+
+:root {
+  /* ========================================================
+     COLORS — Light Mode (Default)
+     ======================================================== */
+
+  /* Primary — Brand purple */
+  --bmn-color-primary: #7c3aed;
+  --bmn-color-primary-hover: #6d28d9;
+  --bmn-color-primary-active: #5b21b6;
+  --bmn-color-primary-light: #ede9fe;
+  --bmn-color-primary-foreground: #ffffff;
+
+  /* Secondary — Slate blue */
+  --bmn-color-secondary: #475569;
+  --bmn-color-secondary-hover: #334155;
+  --bmn-color-secondary-active: #1e293b;
+  --bmn-color-secondary-light: #f1f5f9;
+  --bmn-color-secondary-foreground: #ffffff;
+
+  /* Accent — Vibrant teal */
+  --bmn-color-accent: #14b8a6;
+  --bmn-color-accent-hover: #0d9488;
+  --bmn-color-accent-active: #0f766e;
+  --bmn-color-accent-light: #ccfbf1;
+  --bmn-color-accent-foreground: #ffffff;
+
+  /* Background & Surface */
+  --bmn-color-background: #fafafa;
+  --bmn-color-surface: #ffffff;
+  --bmn-color-surface-elevated: #ffffff;
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.5);
+  --bmn-color-surface-hover: #f5f5f5;
+
+  /* Border */
+  --bmn-color-border: #e2e8f0;
+  --bmn-color-border-hover: #cbd5e1;
+  --bmn-color-border-focus: #7c3aed;
+
+  /* Text */
+  --bmn-color-text: #0f172a;
+  --bmn-color-text-secondary: #475569;
+  --bmn-color-text-muted: #94a3b8;
+  --bmn-color-text-inverse: #ffffff;
+  --bmn-color-text-link: #7c3aed;
+  --bmn-color-text-link-hover: #6d28d9;
+
+  /* Semantic — Error */
+  --bmn-color-error: #ef4444;
+  --bmn-color-error-hover: #dc2626;
+  --bmn-color-error-bg: #fef2f2;
+  --bmn-color-error-border: #fecaca;
+  --bmn-color-error-foreground: #ffffff;
+
+  /* Semantic — Success */
+  --bmn-color-success: #22c55e;
+  --bmn-color-success-hover: #16a34a;
+  --bmn-color-success-bg: #f0fdf4;
+  --bmn-color-success-border: #bbf7d0;
+  --bmn-color-success-foreground: #ffffff;
+
+  /* Semantic — Warning */
+  --bmn-color-warning: #f59e0b;
+  --bmn-color-warning-hover: #d97706;
+  --bmn-color-warning-bg: #fffbeb;
+  --bmn-color-warning-border: #fde68a;
+  --bmn-color-warning-foreground: #000000;
+
+  /* Semantic — Info */
+  --bmn-color-info: #3b82f6;
+  --bmn-color-info-hover: #2563eb;
+  --bmn-color-info-bg: #eff6ff;
+  --bmn-color-info-border: #bfdbfe;
+  --bmn-color-info-foreground: #ffffff;
+
+  /* Wizard-specific */
+  --bmn-color-wizard-bg: #f8fafc;
+  --bmn-color-wizard-step-active: #7c3aed;
+  --bmn-color-wizard-step-complete: #22c55e;
+  --bmn-color-wizard-step-upcoming: #e2e8f0;
+  --bmn-color-wizard-step-text: #ffffff;
+
+  /* ========================================================
+     TYPOGRAPHY
+     ======================================================== */
+
+  /* Font families */
+  --bmn-font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+  --bmn-font-secondary: 'Space Grotesk', system-ui, sans-serif;
+  --bmn-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font sizes */
+  --bmn-text-xs: 0.75rem;
+  --bmn-text-sm: 0.875rem;
+  --bmn-text-base: 1rem;
+  --bmn-text-lg: 1.125rem;
+  --bmn-text-xl: 1.25rem;
+  --bmn-text-2xl: 1.5rem;
+  --bmn-text-3xl: 1.875rem;
+  --bmn-text-4xl: 2.25rem;
+  --bmn-text-5xl: 3rem;
+  --bmn-text-6xl: 3.75rem;
+
+  /* Line heights */
+  --bmn-leading-none: 1;
+  --bmn-leading-tight: 1.25;
+  --bmn-leading-snug: 1.375;
+  --bmn-leading-normal: 1.5;
+  --bmn-leading-relaxed: 1.625;
+  --bmn-leading-loose: 2;
+
+  /* Font weights */
+  --bmn-font-thin: 100;
+  --bmn-font-light: 300;
+  --bmn-font-normal: 400;
+  --bmn-font-medium: 500;
+  --bmn-font-semibold: 600;
+  --bmn-font-bold: 700;
+  --bmn-font-extrabold: 800;
+
+  /* ========================================================
+     BORDER RADIUS
+     ======================================================== */
+
+  --bmn-radius-none: 0;
+  --bmn-radius-sm: 0.25rem;
+  --bmn-radius-md: 0.5rem;
+  --bmn-radius-lg: 0.75rem;
+  --bmn-radius-xl: 1rem;
+  --bmn-radius-2xl: 1.5rem;
+  --bmn-radius-full: 9999px;
+
+  /* ========================================================
+     SHADOWS
+     ======================================================== */
+
+  --bmn-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --bmn-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --bmn-shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+  --bmn-shadow-glow-primary: 0 0 20px rgba(124, 58, 237, 0.3);
+  --bmn-shadow-glow-success: 0 0 20px rgba(34, 197, 94, 0.3);
+
+  /* ========================================================
+     TRANSITIONS
+     ======================================================== */
+
+  --bmn-transition-fast: 100ms ease;
+  --bmn-transition-base: 200ms ease;
+  --bmn-transition-slow: 300ms ease;
+  --bmn-transition-slower: 500ms ease;
+  --bmn-transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ========================================================
+     Z-INDEX SCALE
+     ======================================================== */
+
+  --bmn-z-base: 0;
+  --bmn-z-dropdown: 10;
+  --bmn-z-sticky: 20;
+  --bmn-z-overlay: 30;
+  --bmn-z-modal: 40;
+  --bmn-z-toast: 50;
+  --bmn-z-tooltip: 60;
+  --bmn-z-chat: 70;
+
+  /* ========================================================
+     LAYOUT
+     ======================================================== */
+
+  --bmn-max-width-content: 1280px;
+  --bmn-max-width-wizard: 960px;
+  --bmn-max-width-form: 640px;
+  --bmn-sidebar-width: 280px;
+  --bmn-header-height: 64px;
+  --bmn-wizard-progress-height: 4px;
+}
+
+/* ========================================================
+   DARK MODE
+   Swaps CSS variable values. Applied via class on <html>.
+   ======================================================== */
+
+:root.dark {
+  /* Background & Surface */
+  --bmn-color-background: #0a0a0f;
+  --bmn-color-surface: #18181b;
+  --bmn-color-surface-elevated: #27272a;
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.7);
+  --bmn-color-surface-hover: #27272a;
+
+  /* Primary — Lighter for dark bg */
+  --bmn-color-primary: #a78bfa;
+  --bmn-color-primary-hover: #8b5cf6;
+  --bmn-color-primary-active: #7c3aed;
+  --bmn-color-primary-light: #1e1b4b;
+  --bmn-color-primary-foreground: #000000;
+
+  /* Secondary */
+  --bmn-color-secondary: #94a3b8;
+  --bmn-color-secondary-hover: #cbd5e1;
+  --bmn-color-secondary-active: #e2e8f0;
+  --bmn-color-secondary-light: #1e293b;
+  --bmn-color-secondary-foreground: #000000;
+
+  /* Accent */
+  --bmn-color-accent: #2dd4bf;
+  --bmn-color-accent-hover: #14b8a6;
+  --bmn-color-accent-active: #0d9488;
+  --bmn-color-accent-light: #042f2e;
+
+  /* Border */
+  --bmn-color-border: #3f3f46;
+  --bmn-color-border-hover: #52525b;
+  --bmn-color-border-focus: #a78bfa;
+
+  /* Text */
+  --bmn-color-text: #fafafa;
+  --bmn-color-text-secondary: #a1a1aa;
+  --bmn-color-text-muted: #71717a;
+  --bmn-color-text-inverse: #0a0a0f;
+  --bmn-color-text-link: #a78bfa;
+  --bmn-color-text-link-hover: #c4b5fd;
+
+  /* Semantic */
+  --bmn-color-error: #f87171;
+  --bmn-color-error-bg: #1c0a0a;
+  --bmn-color-error-border: #7f1d1d;
+  --bmn-color-success: #4ade80;
+  --bmn-color-success-bg: #052e16;
+  --bmn-color-success-border: #166534;
+  --bmn-color-warning: #fbbf24;
+  --bmn-color-warning-bg: #1c1305;
+  --bmn-color-warning-border: #854d0e;
+  --bmn-color-info: #60a5fa;
+  --bmn-color-info-bg: #0a1628;
+  --bmn-color-info-border: #1e40af;
+
+  /* Wizard */
+  --bmn-color-wizard-bg: #0f0f14;
+  --bmn-color-wizard-step-active: #a78bfa;
+  --bmn-color-wizard-step-complete: #4ade80;
+  --bmn-color-wizard-step-upcoming: #3f3f46;
+
+  /* Shadows — darker for dark mode */
+  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --bmn-shadow-glow-primary: 0 0 20px rgba(167, 139, 250, 0.3);
+  --bmn-shadow-glow-success: 0 0 20px rgba(74, 222, 128, 0.3);
+}

@@ -7,6 +7,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
+import { getOpenAIClient, ideogramClient } from '../services/providers.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -21,32 +22,36 @@ function getBullRedisConfig() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// STUB: OpenAI GPT Image 1.5 API -- replace with real implementation
-// ---------------------------------------------------------------------------
-
 /**
  * Generate a product mockup image via OpenAI GPT Image 1.5.
- * STUB: Returns a placeholder URL for pipeline testing.
+ * Falls back to Ideogram for text-heavy mockups that need legible typography.
  *
  * @param {string} prompt - Generation prompt
+ * @param {Object} [options]
+ * @param {boolean} [options.useIdeogram=false] - Use Ideogram for text-heavy images
  * @returns {Promise<string>} Image URL
  */
-async function generateMockupImage(prompt) {
-  // TODO: Replace with real OpenAI API call
-  // const openai = new OpenAI();
-  // const result = await openai.images.generate({
-  //   model: 'gpt-image-1.5',
-  //   prompt,
-  //   n: 1,
-  //   size: '1024x1024',
-  //   quality: 'high',
-  // });
-  // return result.data[0].url;
+async function generateMockupImage(prompt, { useIdeogram = false } = {}) {
+  if (useIdeogram) {
+    logger.debug({ prompt: prompt.slice(0, 100) }, 'Generating mockup via Ideogram (text-heavy)');
+    const { imageUrl } = await ideogramClient.generate({
+      prompt,
+      aspectRatio: '1:1',
+      model: 'V_3',
+    });
+    return imageUrl;
+  }
 
-  logger.debug({ prompt: prompt.slice(0, 100) }, 'STUB: OpenAI mockup generation');
-  await new Promise((resolve) => setTimeout(resolve, 1500 + Math.random() * 1000));
-  return `https://placeholder.openai.com/stub/mockup-${Date.now()}.png`;
+  logger.debug({ prompt: prompt.slice(0, 100) }, 'Generating mockup via OpenAI GPT Image');
+  const openai = getOpenAIClient();
+  const result = await openai.images.generate({
+    model: 'gpt-image-1',
+    prompt,
+    n: 1,
+    size: '1024x1024',
+    quality: 'high',
+  });
+  return result.data[0].url;
 }
 
 /**
@@ -103,14 +108,21 @@ export function initMockupGenerationWorker(io) {
           mockupTemplateUrl, mockupInstructions,
         });
 
-        // Step 2: Generate via GPT Image 1.5 (10-70%)
+        // Step 2: Generate via GPT Image 1.5 (or Ideogram for text-heavy products) (10-70%)
+        const textHeavyCategories = ['book', 'card', 'packaging', 'label', 'poster', 'flyer'];
+        const useIdeogram = textHeavyCategories.some((cat) =>
+          productCategory.toLowerCase().includes(cat)
+        );
+
         io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'generating',
-          progress: 30, message: `Generating ${productName} mockup...`, timestamp: Date.now(),
+          progress: 30,
+          message: `Generating ${productName} mockup via ${useIdeogram ? 'Ideogram' : 'GPT Image'}...`,
+          timestamp: Date.now(),
         });
         await job.updateProgress(30);
 
-        const imageUrl = await generateMockupImage(prompt);
+        const imageUrl = await generateMockupImage(prompt, { useIdeogram });
 
         // Step 3: Queue upload (70-90%)
         io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {

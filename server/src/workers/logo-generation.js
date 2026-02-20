@@ -7,7 +7,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
-import { config } from '../config/index.js';
+import { bflClient } from '../services/providers.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -20,60 +20,6 @@ function getBullRedisConfig() {
     db: redis.options.db,
     maxRetriesPerRequest: null,
   };
-}
-
-// ---------------------------------------------------------------------------
-// STUB: BFL API (FLUX.2 Pro) -- replace with real implementation when ready
-// ---------------------------------------------------------------------------
-
-/**
- * Submit a logo generation request to BFL API.
- * STUB: Returns a fake request ID for pipeline testing.
- *
- * @param {string} prompt - Generation prompt
- * @param {string} _apiKey - BFL API key
- * @returns {Promise<string>} Request ID for polling
- */
-async function submitBFLGeneration(prompt, _apiKey) {
-  // TODO: Replace with real BFL API call
-  // const response = await fetch('https://api.bfl.ml/v1/flux-pro-1.1', {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json', 'X-Key': apiKey },
-  //   body: JSON.stringify({ prompt, width: 1024, height: 1024, num_inference_steps: 50, guidance_scale: 7.5 }),
-  // });
-  // const result = await response.json();
-  // return result.id;
-
-  logger.debug({ prompt: prompt.slice(0, 100) }, 'STUB: BFL generation submitted');
-  return `stub-bfl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/**
- * Poll BFL API for generation result.
- * STUB: Returns a placeholder URL after simulated delay.
- *
- * @param {string} requestId
- * @param {string} _apiKey
- * @returns {Promise<string>} Image URL
- */
-async function pollBFLResult(requestId, _apiKey) {
-  // TODO: Replace with real BFL polling
-  // const maxAttempts = 60;
-  // const pollInterval = 2000;
-  // for (let attempt = 0; attempt < maxAttempts; attempt++) {
-  //   const response = await fetch(`https://api.bfl.ml/v1/get_result?id=${requestId}`, {
-  //     headers: { 'X-Key': apiKey },
-  //   });
-  //   const data = await response.json();
-  //   if (data.status === 'Ready') return data.result.sample;
-  //   if (data.status === 'Error') throw new Error(`BFL failed: ${data.error}`);
-  //   await new Promise((resolve) => setTimeout(resolve, pollInterval));
-  // }
-  // throw new Error('BFL generation timed out');
-
-  // Simulate 1-2s generation time
-  await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
-  return `https://placeholder.bfl.ml/stub/${requestId}/logo.png`;
 }
 
 /**
@@ -154,9 +100,8 @@ export function initLogoGenerationWorker(io) {
         });
         await job.updateProgress(10);
 
-        // Step 2: Generate logos in parallel (10-80%)
+        // Step 2: Generate logos in parallel via BFL FLUX.2 Pro (10-80%)
         const progressPerLogo = 70 / count;
-        const apiKey = config.BFL_API_KEY;
 
         const generationResults = await Promise.allSettled(
           prompts.map(async (prompt, index) => {
@@ -169,8 +114,12 @@ export function initLogoGenerationWorker(io) {
               timestamp: Date.now(),
             });
 
-            const requestId = await submitBFLGeneration(prompt.text, apiKey);
-            const imageUrl = await pollBFLResult(requestId, apiKey);
+            const { taskId } = await bflClient.submit({
+              prompt: prompt.text,
+              width: 1024,
+              height: 1024,
+            });
+            const { imageUrl } = await bflClient.poll(taskId, 90_000);
 
             io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',

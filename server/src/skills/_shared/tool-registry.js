@@ -1,4 +1,17 @@
 // server/src/skills/_shared/tool-registry.js
+//
+// Discovers skill modules at startup and converts them into
+// AgentDefinition objects for the SDK's options.agents parameter.
+//
+// SDK AgentDefinition = {
+//   description: string,
+//   prompt: string,
+//   tools?: string[],           // tool names available to subagent
+//   disallowedTools?: string[],
+//   model?: 'sonnet' | 'opus' | 'haiku' | 'inherit',
+//   maxTurns?: number,
+//   mcpServers?: AgentMcpServerSpec[],
+// }
 
 import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
@@ -52,7 +65,6 @@ export async function initializeSkillRegistry() {
       /** @type {SkillConfig} */
       const config = skillModule.default || skillModule.skill;
 
-      // Validate required fields
       if (!config.name || !config.description || !config.prompt || !config.tools) {
         logger.warn(
           { skill: dir.name },
@@ -81,62 +93,60 @@ export async function initializeSkillRegistry() {
   logger.info({ totalSkills: registry.size }, 'Skill registry initialized');
 }
 
+/** @type {Record<string, string[]>} Maps wizard steps to relevant skill names */
+const STEP_TO_SKILLS = {
+  'social-analysis': ['social-analyzer'],
+  'brand-identity': ['brand-generator', 'name-generator'],
+  'logo-generation': ['logo-creator'],
+  'logo-refinement': ['logo-creator'],
+  'product-selection': [],
+  'mockup-generation': ['mockup-renderer'],
+  'bundle-composition': ['mockup-renderer'],
+  'profit-projection': ['profit-calculator'],
+  'completion': [],
+};
+
 /**
- * Get registered subagent tool definitions for a specific wizard step.
- * Returns only the subagents relevant to the requested step.
- *
- * The returned tools are Agent SDK "Task"-style tool definitions:
- * when Claude calls them, the SDK spawns a subagent with the
- * skill's own prompt, tools, and budget.
- *
- * @param {string} step - The current wizard step
- * @returns {Array} Tool definitions for this step
+ * Map SDK model string from a model identifier.
+ * @param {string} [model]
+ * @returns {'sonnet' | 'opus' | 'haiku' | 'inherit'}
  */
-export function getRegisteredTools(step) {
-  /** @type {Record<string, string[]>} Maps wizard steps to relevant skill names */
-  const stepToSkills = {
-    'social-analysis': ['social-analyzer'],
-    'brand-identity': ['brand-generator', 'name-generator'],
-    'logo-generation': ['logo-creator'],
-    'logo-refinement': ['logo-creator'],
-    'product-selection': [], // Only direct tools needed
-    'mockup-generation': ['mockup-renderer'],
-    'bundle-composition': ['mockup-renderer'],
-    'profit-projection': ['profit-calculator'],
-    'completion': [], // Only direct tools needed
-  };
-
-  const relevantSkills = stepToSkills[step] || [];
-
-  return relevantSkills
-    .filter((name) => registry.has(name))
-    .map((name) => {
-      const skill = registry.get(name);
-      return buildSubagentToolDefinition(skill);
-    });
+function mapModel(model) {
+  if (!model) return 'inherit';
+  if (model.includes('opus')) return 'opus';
+  if (model.includes('haiku')) return 'haiku';
+  if (model.includes('sonnet')) return 'sonnet';
+  return 'inherit';
 }
 
 /**
- * Convert a skill config into a Task-style subagent tool definition.
- * When Claude calls this tool, the Agent SDK spawns a child agent.
+ * Build SDK AgentDefinition objects for the given wizard step.
+ * These go into options.agents in the query() call.
  *
- * @param {SkillConfig} skill
- * @returns {Object} Tool definition compatible with the Agent SDK
+ * @param {string} step - The current wizard step
+ * @returns {Record<string, import('@anthropic-ai/claude-agent-sdk').AgentDefinition>}
  */
-export function buildSubagentToolDefinition(skill) {
-  return {
-    name: skill.name,
-    description: skill.description,
-    type: 'subagent',
-    subagentConfig: {
-      model: skill.model || 'claude-sonnet-4-6',
+export function getAgentDefinitions(step) {
+  const relevantSkills = STEP_TO_SKILLS[step] || [];
+
+  /** @type {Record<string, import('@anthropic-ai/claude-agent-sdk').AgentDefinition>} */
+  const agents = {};
+
+  for (const skillName of relevantSkills) {
+    const skill = registry.get(skillName);
+    if (!skill) continue;
+
+    agents[skillName] = {
+      description: skill.description,
       prompt: skill.prompt,
-      tools: Object.values(skill.tools),
+      model: mapModel(skill.model),
       maxTurns: skill.maxTurns || 15,
-      maxBudgetUsd: skill.maxBudgetUsd || 0.50,
-      permissionMode: 'bypassPermissions',
-    },
-  };
+      // Subagents inherit all tools from the parent by default.
+      // We don't restrict tools here — the subagent's prompt guides tool usage.
+    };
+  }
+
+  return agents;
 }
 
 /**
@@ -151,4 +161,12 @@ export function listRegisteredSkills() {
     maxBudgetUsd: skill.maxBudgetUsd,
     steps: skill.steps || [],
   }));
+}
+
+/**
+ * Check if the registry has been initialized with skills.
+ * @returns {boolean}
+ */
+export function isRegistryReady() {
+  return registry.size > 0;
 }

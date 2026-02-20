@@ -1,0 +1,111 @@
+/* src/styles/global.css */
+@import 'tailwindcss';
+@import './design-tokens.css';
+@import './animations.css';
+
+/* Tailwind 4 theme extension via @theme */
+@theme {
+  /* Map CSS variables to Tailwind utilities */
+  --color-primary: var(--bmn-color-primary);
+  --color-primary-hover: var(--bmn-color-primary-hover);
+  --color-primary-active: var(--bmn-color-primary-active);
+  --color-primary-light: var(--bmn-color-primary-light);
+  --color-primary-foreground: var(--bmn-color-primary-foreground);
+  --color-secondary: var(--bmn-color-secondary);
+  --color-secondary-hover: var(--bmn-color-secondary-hover);
+  --color-secondary-active: var(--bmn-color-secondary-active);
+  --color-secondary-light: var(--bmn-color-secondary-light);
+  --color-secondary-foreground: var(--bmn-color-secondary-foreground);
+  --color-accent: var(--bmn-color-accent);
+  --color-accent-hover: var(--bmn-color-accent-hover);
+  --color-accent-active: var(--bmn-color-accent-active);
+  --color-accent-light: var(--bmn-color-accent-light);
+  --color-background: var(--bmn-color-background);
+  --color-surface: var(--bmn-color-surface);
+  --color-surface-elevated: var(--bmn-color-surface-elevated);
+  --color-surface-overlay: var(--bmn-color-surface-overlay);
+  --color-surface-hover: var(--bmn-color-surface-hover);
+  --color-border: var(--bmn-color-border);
+  --color-border-hover: var(--bmn-color-border-hover);
+  --color-border-focus: var(--bmn-color-border-focus);
+  --color-text: var(--bmn-color-text);
+  --color-text-secondary: var(--bmn-color-text-secondary);
+  --color-text-muted: var(--bmn-color-text-muted);
+  --color-text-inverse: var(--bmn-color-text-inverse);
+  --color-text-link: var(--bmn-color-text-link);
+  --color-error: var(--bmn-color-error);
+  --color-error-hover: var(--bmn-color-error-hover);
+  --color-error-bg: var(--bmn-color-error-bg);
+  --color-error-border: var(--bmn-color-error-border);
+  --color-error-foreground: var(--bmn-color-error-foreground);
+  --color-success: var(--bmn-color-success);
+  --color-success-hover: var(--bmn-color-success-hover);
+  --color-success-bg: var(--bmn-color-success-bg);
+  --color-success-border: var(--bmn-color-success-border);
+  --color-success-foreground: var(--bmn-color-success-foreground);
+  --color-warning: var(--bmn-color-warning);
+  --color-warning-hover: var(--bmn-color-warning-hover);
+  --color-warning-bg: var(--bmn-color-warning-bg);
+  --color-warning-border: var(--bmn-color-warning-border);
+  --color-warning-foreground: var(--bmn-color-warning-foreground);
+  --color-info: var(--bmn-color-info);
+  --color-info-hover: var(--bmn-color-info-hover);
+  --color-info-bg: var(--bmn-color-info-bg);
+  --color-info-border: var(--bmn-color-info-border);
+  --color-info-foreground: var(--bmn-color-info-foreground);
+  --color-wizard-bg: var(--bmn-color-wizard-bg);
+  --color-wizard-step-active: var(--bmn-color-wizard-step-active);
+  --color-wizard-step-complete: var(--bmn-color-wizard-step-complete);
+  --color-wizard-step-upcoming: var(--bmn-color-wizard-step-upcoming);
+
+  --font-family-primary: var(--bmn-font-primary);
+  --font-family-secondary: var(--bmn-font-secondary);
+  --font-family-mono: var(--bmn-font-mono);
+
+  --radius-sm: var(--bmn-radius-sm);
+  --radius-md: var(--bmn-radius-md);
+  --radius-lg: var(--bmn-radius-lg);
+  --radius-xl: var(--bmn-radius-xl);
+  --radius-2xl: var(--bmn-radius-2xl);
+  --radius-full: var(--bmn-radius-full);
+
+  --shadow-sm: var(--bmn-shadow-sm);
+  --shadow-md: var(--bmn-shadow-md);
+  --shadow-lg: var(--bmn-shadow-lg);
+  --shadow-xl: var(--bmn-shadow-xl);
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-out: fade-out 0.2s ease-in;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-progress: progress-fill 1.5s ease-out forwards;
+  --animate-confetti: confetti-pop 0.6s ease-out forwards;
+}
+
+/* Base layer overrides */
+@layer base {
+  html {
+    font-family: var(--bmn-font-primary);
+    color: var(--bmn-color-text);
+    background-color: var(--bmn-color-background);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background-color: var(--bmn-color-primary);
+    color: var(--bmn-color-text-inverse);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--bmn-color-primary);
+    outline-offset: 2px;
+  }
+}

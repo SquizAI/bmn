@@ -46,16 +46,29 @@ export function initImageUploadWorker(_io) {
       jobLog.info({ storagePath, sourceUrl: sourceUrl.slice(0, 80) }, 'Image upload started');
 
       try {
-        // Step 1: Download image from temporary AI provider URL
-        jobLog.debug('Downloading image from source URL');
-        const response = await fetch(sourceUrl);
+        // Step 1: Get image buffer (from URL or base64 data URL)
+        /** @type {Buffer} */
+        let imageBuffer;
 
-        if (!response.ok) {
-          throw new Error(`Failed to download image: HTTP ${response.status} from ${sourceUrl}`);
+        if (sourceUrl.startsWith('data:')) {
+          // Handle base64 data URLs (e.g. from Gemini image generation)
+          jobLog.debug('Decoding base64 data URL');
+          const base64Data = sourceUrl.split(',')[1];
+          if (!base64Data) {
+            throw new Error('Invalid data URL: missing base64 content');
+          }
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+          // Download from remote URL
+          jobLog.debug('Downloading image from source URL');
+          const response = await fetch(sourceUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to download image: HTTP ${response.status} from ${sourceUrl}`);
+          }
+          imageBuffer = Buffer.from(await response.arrayBuffer());
         }
 
-        const imageBuffer = Buffer.from(await response.arrayBuffer());
-        jobLog.debug({ size: imageBuffer.length }, 'Image downloaded');
+        jobLog.debug({ size: imageBuffer.length }, 'Image ready for upload');
 
         await job.updateProgress(50);
 

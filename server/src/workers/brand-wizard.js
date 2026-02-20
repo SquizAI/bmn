@@ -66,70 +66,49 @@ export function initBrandWizardWorker(io) {
         await job.updateProgress(5);
 
         // ------------------------------------------------------------------
-        // STUB: Agent SDK call
-        // The real implementation will use @anthropic-ai/claude-agent-sdk
-        // and is built in Phase 1 Week 3 (04-AGENT-SYSTEM.md).
-        // For now, simulate progress to validate the worker pipeline.
+        // Run the Brand Wizard Agent via the agent system.
+        // Falls back to stub simulation if the Agent SDK is not installed.
         // ------------------------------------------------------------------
         let finalResult = null;
 
         try {
-          // Attempt dynamic import of Agent SDK (will fail until SDK is installed)
-          const { query } = await import('@anthropic-ai/claude-agent-sdk');
-          const { buildStepPrompt, getStepTools, calculateProgress } = await import('../agents/brand-wizard.js');
+          const { runBrandWizard } = await import('../agents/brand-wizard.js');
 
-          for await (const message of query({
-            prompt: buildStepPrompt(step, input),
-            options: {
-              model: 'claude-sonnet-4-6',
-              allowedTools: getStepTools(step),
-              resume: sessionId || undefined,
-              maxTurns: 30,
-              maxBudgetUsd: 2.0,
-              permissionMode: 'bypassPermissions',
-            },
-            hooks: {
-              PreToolUse: ({ toolName }) => {
-                jobLog.debug({ tool: toolName }, 'Agent calling tool');
-              },
-              PostToolUse: ({ toolName }) => {
-                const progress = calculateProgress(toolName, step);
-                io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
-                  jobId: job.id,
-                  brandId,
-                  step,
-                  status: 'processing',
-                  progress,
-                  message: `Completed: ${toolName}`,
-                  toolName,
-                  timestamp: Date.now(),
-                });
-                job.updateProgress(progress);
-              },
-              PostToolUseFailure: ({ toolName, error }) => {
-                jobLog.error({ tool: toolName, err: error }, 'Agent tool failed');
-                io.of('/wizard').to(jobRoom).to(room).emit('job:tool-error', {
-                  jobId: job.id,
-                  brandId,
-                  toolName,
-                  error: error.message,
-                  timestamp: Date.now(),
-                });
-              },
-            },
+          for await (const message of runBrandWizard({
+            userId,
+            brandId,
+            step,
+            sessionId,
+            input,
+            io,
+            job,
           })) {
+            // SDKAssistantMessage — stream agent text to client
             if (message.type === 'assistant') {
               io.of('/wizard').to(jobRoom).to(room).emit('agent:message', {
                 jobId: job.id,
                 brandId,
-                content: message.message.content,
+                content: message.message?.content,
                 timestamp: Date.now(),
               });
             }
-            if (message.type === 'result') {
+            // SDKResultSuccess — agent completed successfully
+            if (message.type === 'result' && message.subtype === 'success') {
               finalResult = {
                 result: message.result,
                 cost: message.total_cost_usd,
+                sessionId: message.session_id,
+              };
+            }
+            // SDKResultError — agent hit an error (budget, turns, etc.)
+            if (message.type === 'result' && message.subtype === 'error') {
+              jobLog.warn(
+                { error: message.error, sessionId: message.session_id },
+                'Agent returned error result'
+              );
+              finalResult = {
+                result: message.error || 'Agent error',
+                cost: message.total_cost_usd || 0,
                 sessionId: message.session_id,
               };
             }
@@ -156,7 +135,6 @@ export function initBrandWizardWorker(io) {
               timestamp: Date.now(),
             });
             await job.updateProgress(stage.progress);
-            // Simulate work (500ms per stage)
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
 
