@@ -50,17 +50,22 @@ export default function BrandDetailPage() {
     window.open(`/api/v1/brands/${brandId}/download`, '_blank');
   };
 
+  // Safe-access arrays that may be undefined if brand is still generating
+  const logos = brand.logos ?? [];
+  const mockups = brand.mockups ?? [];
+  const projections = brand.projections ?? [];
+
   // Map logos to gallery images
-  const logoImages: GalleryImage[] = brand.logos.map((logo) => ({
+  const logoImages: GalleryImage[] = logos.map((logo, i) => ({
     id: logo.id,
     url: logo.url,
     thumbnailUrl: logo.thumbnailUrl,
     status: logo.status === 'selected' ? 'selected' : 'none',
-    label: `Logo ${brand.logos.indexOf(logo) + 1}`,
+    label: `Logo ${i + 1}`,
   }));
 
   // Map mockups to gallery images
-  const mockupImages: GalleryImage[] = brand.mockups.map((mockup) => ({
+  const mockupImages: GalleryImage[] = mockups.map((mockup) => ({
     id: mockup.id,
     url: mockup.url,
     status: mockup.status,
@@ -68,7 +73,7 @@ export default function BrandDetailPage() {
   }));
 
   // Revenue chart data from projections
-  const revenueChartData: RevenueBarData[] = brand.projections.slice(0, 6).map((p) => ({
+  const revenueChartData: RevenueBarData[] = projections.slice(0, 6).map((p) => ({
     label: p.productName.length > 12 ? p.productName.slice(0, 12) + '...' : p.productName,
     value: p.monthlyRevenue,
   }));
@@ -148,7 +153,7 @@ export default function BrandDetailPage() {
                 Values
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {brand.identity.values.map((value) => (
+                {(brand.identity.values ?? []).map((value) => (
                   <span
                     key={value}
                     className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary"
@@ -169,13 +174,13 @@ export default function BrandDetailPage() {
           </div>
 
           {/* Color Palette */}
-          {brand.identity.colorPalette.length > 0 && (
+          {(brand.identity.colorPalette ?? []).length > 0 && (
             <div className="mt-6">
               <p className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3">
                 Color Palette
               </p>
               <ColorPalette
-                colors={brand.identity.colorPalette.map((c) => ({
+                colors={(brand.identity.colorPalette ?? []).map((c) => ({
                   hex: c.hex,
                   name: c.name,
                   role: c.role as ColorEntry['role'],
@@ -248,7 +253,7 @@ export default function BrandDetailPage() {
       )}
 
       {/* Profit Projections */}
-      {brand.projections.length > 0 && (
+      {projections.length > 0 && (
         <Card variant="outlined" padding="lg">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-success" />
@@ -272,7 +277,7 @@ export default function BrandDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {brand.projections.map((p) => (
+                {projections.map((p) => (
                   <tr key={p.productSku} className="border-b border-border/50">
                     <td className="py-2 font-medium text-text">{p.productName}</td>
                     <td className="py-2 text-text-secondary">{formatCurrency(p.costPrice)}</td>

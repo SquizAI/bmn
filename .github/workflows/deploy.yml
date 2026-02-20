@@ -7,6 +7,20 @@
 #   DO_SSH_KEY         - Private SSH key for the deploy user
 #   DO_HOST            - Droplet IP address or hostname
 #   DO_USERNAME        - SSH username (default: deploy)
+#
+# Optional GitHub Secrets (API keys injected into .env.production):
+#   ANTHROPIC_API_KEY  - Anthropic/Claude API key
+#   OPENAI_API_KEY     - OpenAI API key
+#   GOOGLE_API_KEY     - Google AI API key
+#   BFL_API_KEY        - Black Forest Labs (FLUX) API key
+#   IDEOGRAM_API_KEY   - Ideogram API key
+#   SUPABASE_URL       - Supabase project URL
+#   SUPABASE_ANON_KEY  - Supabase anon/public key
+#   SUPABASE_SERVICE_ROLE_KEY - Supabase service role key
+#   STRIPE_SECRET_KEY  - Stripe secret key
+#   STRIPE_PUBLISHABLE_KEY - Stripe publishable key
+#   SENTRY_DSN         - Sentry DSN for error tracking
+#   POSTHOG_API_KEY    - PostHog analytics key
 
 name: Deploy
 
@@ -30,6 +44,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME || 'deploy' }}
           key: ${{ secrets.DO_SSH_KEY }}
           script_stop: true
+          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,BFL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,SENTRY_DSN,POSTHOG_API_KEY
           script: |
             cd /opt/bmn
             echo "=== Fixing permissions ==="
@@ -40,11 +55,51 @@ jobs:
             git reset --hard origin/main
             git clean -fd
 
+            echo "=== Injecting secrets into .env.production ==="
+            ENV_FILE="/opt/bmn/.env.production"
+            inject_secret() {
+              local key="$1" val="$2"
+              if [ -n "$val" ]; then
+                if grep -q "^${key}=" "$ENV_FILE"; then
+                  sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
+                else
+                  echo "${key}=${val}" >> "$ENV_FILE"
+                fi
+                echo "  Injected: ${key}"
+              fi
+            }
+
+            inject_secret "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY"
+            inject_secret "OPENAI_API_KEY" "$OPENAI_API_KEY"
+            inject_secret "GOOGLE_API_KEY" "$GOOGLE_API_KEY"
+            inject_secret "BFL_API_KEY" "$BFL_API_KEY"
+            inject_secret "IDEOGRAM_API_KEY" "$IDEOGRAM_API_KEY"
+            inject_secret "SUPABASE_URL" "$SUPABASE_URL"
+            inject_secret "SUPABASE_ANON_KEY" "$SUPABASE_ANON_KEY"
+            inject_secret "SUPABASE_SERVICE_ROLE_KEY" "$SUPABASE_SERVICE_ROLE_KEY"
+            inject_secret "STRIPE_SECRET_KEY" "$STRIPE_SECRET_KEY"
+            inject_secret "STRIPE_PUBLISHABLE_KEY" "$STRIPE_PUBLISHABLE_KEY"
+            inject_secret "SENTRY_DSN" "$SENTRY_DSN"
+            inject_secret "POSTHOG_API_KEY" "$POSTHOG_API_KEY"
+
             echo "=== Building and deploying ==="
             bash deploy/deploy.sh
 
             echo "=== Deploy complete ==="
             echo "Commit: $(git log --oneline -1)"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          BFL_API_KEY: ${{ secrets.BFL_API_KEY }}
+          IDEOGRAM_API_KEY: ${{ secrets.IDEOGRAM_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Notify on failure
         if: failure()
