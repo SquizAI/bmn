@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { WizardStepKey } from '@/lib/constants';
+import type { CreatorDossier } from '@/lib/dossier-types';
 
 // ------ Type Definitions ------
 
@@ -91,6 +92,7 @@ interface DossierSlice {
   feedColors: string[];
   audienceDemo: Record<string, unknown> | null;
   topPosts: Array<{ url: string; engagement: number; type: string }>;
+  rawDossier: Partial<CreatorDossier> | null;
 }
 
 interface NameGenSlice {
@@ -184,6 +186,7 @@ const initialDossier: DossierSlice = {
   feedColors: [],
   audienceDemo: null,
   topPosts: [],
+  rawDossier: null,
 };
 
 const initialNameGen: NameGenSlice = {
@@ -367,7 +370,7 @@ export const useWizardStore = create<WizardState>()(
       }),
       {
         name: 'bmn-wizard',
-        version: 2,
+        version: 3,
         partialize: (state) => ({
           dossier: state.dossier,
           nameGen: state.nameGen,

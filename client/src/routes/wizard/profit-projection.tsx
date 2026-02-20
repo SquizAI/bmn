@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router';
 import { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, ArrowLeft, TrendingUp } from 'lucide-react';
+import { ArrowRight, ArrowLeft, TrendingUp, DollarSign, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { RevenueChart, type RevenueBarData } from '@/components/revenue-chart';
 import { useWizardStore } from '@/stores/wizard-store';
 import { ROUTES } from '@/lib/constants';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency, formatNumber, cn } from '@/lib/utils';
 
 // ------ Types ------
 
@@ -45,8 +45,42 @@ const TIERS: TierProjection[] = [
   },
 ];
 
-const BASE_MONTHLY_SALES = 50;
+const DEFAULT_MONTHLY_SALES = 50;
 const BASE_COST_PER_PRODUCT = 12;
+
+// Revenue formula constants (v1 reference)
+const CTR = 0.16; // 16% click-through rate from followers
+const CONVERSION_RATE = 0.02; // 2% of clickers purchase
+const AVG_ORDER_VALUE = 75;
+const COMMISSION_RATE = 0.20; // 20% commission on direct sales
+
+/**
+ * Derive a realistic monthly sales default from dossier follower count + engagement rate.
+ * Formula: followers * engagementRate * conversionFactor, clamped to slider range.
+ */
+function deriveSalesFromDossier(followers: number, engagementRate: number): number {
+  // Monthly engaged audience -> estimated buyers
+  // followers * engagement rate gives "engaged users"
+  // Then apply a modest conversion factor for product purchases
+  const engagedUsers = followers * (engagementRate / 100);
+  const estimatedBuyers = Math.round(engagedUsers * CONVERSION_RATE);
+  // Clamp to slider range [10, 500]
+  return Math.max(10, Math.min(500, estimatedBuyers));
+}
+
+/**
+ * Calculate "money left on the table" range using v1 formula.
+ */
+function calcMoneyOnTable(followers: number): { low: number; high: number } {
+  const monthlyClicks = followers * CTR;
+  const monthlyBuyers = monthlyClicks * CONVERSION_RATE;
+  const directSales = monthlyBuyers * AVG_ORDER_VALUE * COMMISSION_RATE;
+  // Conservative = 60% of baseline, Aggressive = 150% of baseline
+  return {
+    low: Math.round(directSales * 0.6),
+    high: Math.round(directSales * 1.5),
+  };
+}
 
 // ------ Component ------
 
@@ -54,9 +88,25 @@ export default function ProfitProjectionPage() {
   const navigate = useNavigate();
   const selectedSkus = useWizardStore((s) => s.products.selectedSkus);
   const setStep = useWizardStore((s) => s.setStep);
+  const dossierProfile = useWizardStore((s) => s.dossier.profile);
+  const dossierNiche = useWizardStore((s) => s.dossier.niche);
 
-  const [salesVolume, setSalesVolume] = useState(BASE_MONTHLY_SALES);
+  // Extract dossier values (null-safe)
+  const followers = dossierProfile?.totalFollowers ?? 0;
+  const engagementRate = dossierProfile?.engagementRate ?? 0;
+  const hasDossier = followers > 0 && engagementRate > 0;
+  const nicheName = dossierNiche?.primary ?? null;
+
+  // Derive personalized defaults from dossier, or fall back to generic
+  const defaultSales = hasDossier
+    ? deriveSalesFromDossier(followers, engagementRate)
+    : DEFAULT_MONTHLY_SALES;
+
+  const [salesVolume, setSalesVolume] = useState(defaultSales);
   const [markupPercent, setMarkupPercent] = useState(100);
+
+  // "Money left on the table" estimates
+  const moneyOnTable = hasDossier ? calcMoneyOnTable(followers) : null;
 
   const productCount = selectedSkus.length || 1;
 
@@ -116,11 +166,62 @@ export default function ProfitProjectionPage() {
           <TrendingUp className="h-7 w-7 text-success" />
         </div>
         <h2 className="text-2xl font-bold text-text">Profit Projections</h2>
-        <p className="mt-2 text-text-secondary">
-          Adjust the sliders to see projected revenue based on your product lineup of{' '}
-          {productCount} product{productCount !== 1 ? 's' : ''}.
-        </p>
+        {hasDossier ? (
+          <p className="mt-2 text-text-secondary">
+            Based on your {formatNumber(followers)} followers and {engagementRate.toFixed(1)}%
+            engagement rate{nicheName ? ` in the ${nicheName} niche` : ''}, here are your projected
+            earnings across {productCount} product{productCount !== 1 ? 's' : ''}.
+          </p>
+        ) : (
+          <p className="mt-2 text-text-secondary">
+            Adjust the sliders to see projected revenue based on your product lineup of{' '}
+            {productCount} product{productCount !== 1 ? 's' : ''}.
+          </p>
+        )}
       </div>
+
+      {/* Money Left on the Table Banner */}
+      {moneyOnTable && moneyOnTable.high > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-xl border-2 border-success/30 bg-success/5 p-5"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success/10">
+              <DollarSign className="h-5 w-5 text-success" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-text">
+                Money Left on the Table
+              </h3>
+              <p className="mt-1 text-sm text-text-secondary">
+                With your {formatNumber(followers)} followers and {engagementRate.toFixed(1)}%
+                engagement rate, creators like you earn{' '}
+                <span className="font-bold text-success">
+                  {formatCurrency(moneyOnTable.low)}&ndash;{formatCurrency(moneyOnTable.high)}/month
+                </span>{' '}
+                from branded products.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-4 text-xs text-text-muted">
+                <div className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  <span>{formatNumber(Math.round(followers * CTR))} monthly clicks (16% CTR)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>{formatNumber(Math.round(followers * CTR * CONVERSION_RATE))} est. buyers (2% conv.)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>{formatCurrency(AVG_ORDER_VALUE)} avg. order, {Math.round(COMMISSION_RATE * 100)}% commission</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Controls */}
       <Card variant="outlined" padding="lg">

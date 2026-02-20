@@ -5,6 +5,9 @@ import { logger } from '../lib/logger.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { sessionManager } from '../agents/session-manager.js';
 import { verifyResumeToken } from '../lib/hmac-tokens.js';
+import { routeModel } from '../skills/_shared/model-router.js';
+import { SYSTEM_PROMPT as BRAND_GENERATOR_PROMPT, buildDirectionsTaskPrompt } from '../skills/brand-generator/prompts.js';
+import { SYSTEM_PROMPT as NAME_GENERATOR_PROMPT } from '../skills/name-generator/prompts.js';
 
 /**
  * POST /api/v1/wizard/start
@@ -223,7 +226,7 @@ export async function generateIdentity(req, res, next) {
     // Verify ownership
     const { data: brand, error } = await supabaseAdmin
       .from('brands')
-      .select('id, wizard_state')
+      .select('id, name, wizard_state')
       .eq('id', brandId)
       .eq('user_id', userId)
       .single();
@@ -232,29 +235,90 @@ export async function generateIdentity(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    const sessionId = await sessionManager.get(brandId);
+    // Return cached directions if they already exist and no regeneration was requested
+    const existingDirections = brand.wizard_state?.['brand-identity']?.directions;
+    if (existingDirections && existingDirections.length > 0 && !req.body?.regenerate) {
+      logger.info({ brandId, userId }, 'Returning cached brand identity directions');
+      return res.json({
+        success: true,
+        data: {
+          cached: true,
+          brandId,
+          step: 'brand-identity',
+          directions: existingDirections,
+          socialContext: brand.wizard_state?.['brand-identity']?.socialContext || null,
+        },
+      });
+    }
 
-    const { jobId } = await dispatchJob('brand-wizard', {
-      userId,
+    // Call Claude directly to generate 3 brand identity directions
+    const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
+    const taskPrompt = buildDirectionsTaskPrompt({
+      socialAnalysis,
       brandId,
-      step: 'brand-identity',
-      sessionId: sessionId || undefined,
-      input: {
-        socialAnalysis: brand.wizard_state?.['social-analysis'] || {},
-        userPreferences: req.body,
-      },
+      userId,
+      brandName: brand.name || null,
+      userPreferences: req.body,
     });
+
+    logger.info({ brandId, userId }, 'Calling Claude for brand identity directions');
+
+    const aiResult = await routeModel('brand-vision', {
+      systemPrompt: BRAND_GENERATOR_PROMPT,
+      prompt: taskPrompt,
+      maxTokens: 8192,
+      temperature: 0.8,
+      jsonMode: true,
+    });
+
+    // Parse the AI response
+    let parsed;
+    try {
+      // Extract JSON from the response (handle markdown code blocks)
+      let jsonText = aiResult.text.trim();
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) jsonText = jsonMatch[1].trim();
+      parsed = JSON.parse(jsonText);
+    } catch (parseErr) {
+      logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse AI directions response');
+      return res.status(500).json({ success: false, error: 'Failed to parse AI-generated directions' });
+    }
+
+    const directions = parsed.directions || [];
+    const socialContext = parsed.socialContext || null;
+
+    // Cache in wizard_state
+    const updatedState = {
+      ...(brand.wizard_state || {}),
+      'brand-identity': {
+        ...(brand.wizard_state?.['brand-identity'] || {}),
+        directions,
+        socialContext,
+        generatedAt: new Date().toISOString(),
+        model: aiResult.model,
+      },
+    };
 
     await supabaseAdmin
       .from('brands')
-      .update({ wizard_step: 'brand-identity', updated_at: new Date().toISOString() })
+      .update({
+        wizard_step: 'brand-identity',
+        wizard_state: updatedState,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', brandId);
 
-    logger.info({ jobId, brandId, userId }, 'Identity generation job dispatched');
+    logger.info({ brandId, userId, model: aiResult.model, directionCount: directions.length }, 'Brand identity directions generated');
 
-    res.status(202).json({
+    res.json({
       success: true,
-      data: { jobId, brandId, step: 'brand-identity' },
+      data: {
+        brandId,
+        step: 'brand-identity',
+        directions,
+        socialContext,
+        model: aiResult.model,
+      },
     });
   } catch (err) {
     next(err);
@@ -285,24 +349,104 @@ export async function generateNames(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    const sessionId = await sessionManager.get(brandId);
+    // Return cached names if they exist and no regeneration was requested
+    const existingNames = brand.wizard_state?.['brand-names']?.suggestions;
+    if (existingNames && existingNames.length > 0 && !req.body?.regenerate) {
+      logger.info({ brandId, userId }, 'Returning cached name suggestions');
+      return res.json({
+        success: true,
+        data: {
+          cached: true,
+          brandId,
+          step: 'brand-names',
+          suggestions: existingNames,
+          topRecommendation: brand.wizard_state?.['brand-names']?.topRecommendation || existingNames[0]?.name,
+        },
+      });
+    }
 
-    const { jobId } = await dispatchJob('brand-wizard', {
-      userId,
-      brandId,
-      step: 'brand-names',
-      sessionId: sessionId || undefined,
-      input: {
-        brandIdentity: brand.wizard_state?.['brand-identity'] || {},
-        userPreferences: req.body,
-      },
+    // Build context from wizard state
+    const brandIdentity = brand.wizard_state?.['brand-identity'] || {};
+    const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
+    const selectedDirection = brandIdentity.directions?.find(
+      (d) => d.id === brandIdentity.selectedDirectionId
+    ) || brandIdentity.directions?.[0] || {};
+
+    const contextParts = [];
+    if (selectedDirection.vision) contextParts.push(`Brand Vision: ${selectedDirection.vision}`);
+    if (selectedDirection.archetype?.name) contextParts.push(`Archetype: ${selectedDirection.archetype.name}`);
+    if (selectedDirection.values?.length > 0) contextParts.push(`Core Values: ${selectedDirection.values.join(', ')}`);
+    if (socialAnalysis.niche?.primaryNiche?.name) contextParts.push(`Niche: ${socialAnalysis.niche.primaryNiche.name}`);
+    if (socialAnalysis.personality?.traits?.length > 0) contextParts.push(`Personality: ${socialAnalysis.personality.traits.join(', ')}`);
+    if (req.body?.archetype) contextParts.push(`User-Preferred Archetype: ${req.body.archetype}`);
+    if (req.body?.traits?.length > 0) contextParts.push(`User Traits: ${req.body.traits.join(', ')}`);
+
+    const taskPrompt = `Generate 8-10 creative brand name suggestions based on the following brand identity context:
+
+Brand ID: ${brandId}
+
+<brand_context>
+${contextParts.length > 0 ? contextParts.join('\n') : 'No prior brand context available. Generate creative, versatile brand names suitable for a personal creator brand.'}
+</brand_context>
+
+${req.body?.userPreferences ? `<user_preferences>\n${JSON.stringify(req.body.userPreferences, null, 2)}\n</user_preferences>\n` : ''}
+Generate names using various techniques (portmanteau, evocative, invented, metaphor, descriptive). For each name, provide rationale, pronunciation guide, memorability/brandability scores, and note that domain/trademark checks require separate verification. Return as structured JSON per the output format.`;
+
+    logger.info({ brandId, userId }, 'Calling Claude for brand name suggestions');
+
+    const aiResult = await routeModel('name-generation', {
+      systemPrompt: NAME_GENERATOR_PROMPT,
+      prompt: taskPrompt,
+      maxTokens: 6144,
+      temperature: 0.9,
+      jsonMode: true,
     });
 
-    logger.info({ jobId, brandId, userId }, 'Name generation job dispatched');
+    // Parse the AI response
+    let parsed;
+    try {
+      let jsonText = aiResult.text.trim();
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) jsonText = jsonMatch[1].trim();
+      parsed = JSON.parse(jsonText);
+    } catch (parseErr) {
+      logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse AI names response');
+      return res.status(500).json({ success: false, error: 'Failed to parse AI-generated names' });
+    }
 
-    res.status(202).json({
+    const suggestions = parsed.suggestions || [];
+    const topRecommendation = parsed.topRecommendation || suggestions[0]?.name;
+
+    // Cache in wizard_state
+    const updatedState = {
+      ...(brand.wizard_state || {}),
+      'brand-names': {
+        suggestions,
+        topRecommendation,
+        generatedAt: new Date().toISOString(),
+        model: aiResult.model,
+      },
+    };
+
+    await supabaseAdmin
+      .from('brands')
+      .update({
+        wizard_state: updatedState,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', brandId);
+
+    logger.info({ brandId, userId, model: aiResult.model, nameCount: suggestions.length }, 'Brand names generated');
+
+    res.json({
       success: true,
-      data: { jobId, brandId, step: 'brand-names' },
+      data: {
+        brandId,
+        step: 'brand-names',
+        suggestions,
+        topRecommendation,
+        model: aiResult.model,
+      },
     });
   } catch (err) {
     next(err);

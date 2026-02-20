@@ -10,17 +10,19 @@
 --
 -- This file documents the tier definitions for reference.
 
--- ┌──────────┬──────────┬────────┬──────────────┬────────────────┬──────────────────────────┐
--- │ Tier     │ Price/mo │ Brands │ Logo Credits │ Mockup Credits │ Stripe Price ID          │
--- ├──────────┼──────────┼────────┼──────────────┼────────────────┼──────────────────────────┤
--- │ free     │ $0       │ 1      │ 4            │ 4              │ (no Stripe price)        │
--- │ starter  │ $29      │ 3      │ 20           │ 30             │ price_REPLACE_starter    │
--- │ pro      │ $79      │ 10     │ 50           │ 100            │ price_REPLACE_pro        │
--- │ agency   │ $199     │ Unlim  │ 200          │ 500            │ price_REPLACE_agency     │
--- └──────────┴──────────┴────────┴──────────────┴────────────────┴──────────────────────────┘
+-- ┌──────────┬──────────┬────────┬──────────────┬────────────────┬─────────────────────────────┐
+-- │ Tier     │ Price/mo │ Brands │ Logo Credits │ Mockup Credits │ Env Var for Stripe Price ID │
+-- ├──────────┼──────────┼────────┼──────────────┼────────────────┼─────────────────────────────┤
+-- │ free     │ $0       │ 1      │ 4            │ 4              │ (no Stripe price)           │
+-- │ starter  │ $29      │ 3      │ 20           │ 30             │ STRIPE_PRICE_STARTER        │
+-- │ pro      │ $79      │ 10     │ 50           │ 100            │ STRIPE_PRICE_PRO            │
+-- │ agency   │ $199     │ Unlim  │ 200          │ 500            │ STRIPE_PRICE_AGENCY         │
+-- └──────────┴──────────┴────────┴──────────────┴────────────────┴─────────────────────────────┘
 --
--- IMPORTANT: Replace price_REPLACE_* with actual Stripe price IDs after creating
--- products in the Stripe Dashboard.
+-- NOTE: Stripe Price IDs are NOT stored in the database. They are configured via
+-- environment variables (see .env.example) and read by server/src/config/tiers.js.
+-- Defaults: price_starter_monthly, price_pro_monthly, price_agency_monthly.
+-- Replace with real Stripe Price IDs after creating products in the Stripe Dashboard.
 --
 -- Credits refresh monthly. Unused credits do NOT roll over. Overage at per-unit rates.
 --

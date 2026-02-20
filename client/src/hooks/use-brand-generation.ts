@@ -58,6 +58,7 @@ export interface BrandTone {
 
 interface GenerateDirectionsPayload {
   brandId: string;
+  regenerate?: boolean;
 }
 
 interface SelectDirectionPayload {
@@ -66,29 +67,30 @@ interface SelectDirectionPayload {
   direction: BrandDirection;
 }
 
-interface DispatchJobResponse {
-  jobId: string;
+interface GenerateDirectionsResponse {
+  brandId: string;
+  step: string;
+  cached?: boolean;
+  jobId?: string;
+  directions?: BrandDirection[];
+  socialContext?: string | null;
+  model?: string;
 }
 
 // ── Hooks ────────────────────────────────────────────────────────
 
 /**
- * Dispatch a brand identity generation job (3 directions).
- * Returns jobId for Socket.io tracking.
+ * Generate brand identity directions (3 directions).
+ * If cached directions exist in wizard_state, returns them directly.
+ * Otherwise calls Claude to generate new directions synchronously.
  */
 export function useDispatchBrandGeneration() {
-  const setActiveJob = useWizardStore((s) => s.setActiveJob);
-
   return useMutation({
     mutationFn: (payload: GenerateDirectionsPayload) =>
-      apiClient.post<DispatchJobResponse>(
+      apiClient.post<GenerateDirectionsResponse>(
         `/api/v1/wizard/${payload.brandId}/generate-identity`,
+        payload.regenerate ? { regenerate: true } : undefined,
       ),
-    onSuccess: (data) => {
-      if (data?.jobId) {
-        setActiveJob(data.jobId);
-      }
-    },
   });
 }
 

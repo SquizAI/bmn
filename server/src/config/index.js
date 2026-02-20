@@ -107,17 +107,17 @@ export const config = cleanEnv(process.env, {
     devDefault: 'whsec_placeholder',
     desc: 'Stripe webhook signing secret',
   }),
-  STRIPE_PRICE_STARTER_MONTHLY: str({
-    devDefault: 'price_starter_placeholder',
-    desc: 'Stripe Price ID for Starter tier ($29/mo)',
+  STRIPE_PRICE_STARTER: str({
+    default: 'price_starter_monthly',
+    desc: 'Stripe Price ID for Starter tier ($29/mo) -- replace with real Stripe Price ID',
   }),
-  STRIPE_PRICE_PRO_MONTHLY: str({
-    devDefault: 'price_pro_placeholder',
-    desc: 'Stripe Price ID for Pro tier ($79/mo)',
+  STRIPE_PRICE_PRO: str({
+    default: 'price_pro_monthly',
+    desc: 'Stripe Price ID for Pro tier ($79/mo) -- replace with real Stripe Price ID',
   }),
-  STRIPE_PRICE_AGENCY_MONTHLY: str({
-    devDefault: 'price_agency_placeholder',
-    desc: 'Stripe Price ID for Agency tier ($199/mo)',
+  STRIPE_PRICE_AGENCY: str({
+    default: 'price_agency_monthly',
+    desc: 'Stripe Price ID for Agency tier ($199/mo) -- replace with real Stripe Price ID',
   }),
 
   // ── Email ──────────────────────────────────────────────────

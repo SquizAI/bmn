@@ -47,6 +47,8 @@ const ACTORS = {
   instagram: 'apify/instagram-profile-scraper',
   tiktok: 'clockworks/tiktok-profile-scraper',
   facebook: 'apify/facebook-pages-scraper',
+  youtube: 'apify/youtube-channel-scraper',
+  twitter: 'apify/twitter-scraper',
 };
 
 // ── Retry Configuration ───────────────────────────────────────────
@@ -129,7 +131,7 @@ async function recordCost(actualCostUsd) {
 /**
  * @typedef {Object} ScrapeProfileOutput
  * @property {boolean} success
- * @property {'instagram'|'tiktok'|'facebook'} platform
+ * @property {'instagram'|'tiktok'|'facebook'|'youtube'|'twitter'} platform
  * @property {SocialProfileData} profile
  * @property {SocialPost[]} recentPosts
  * @property {string|null} error
@@ -349,12 +351,132 @@ export async function scrapeFacebook(pageId, postLimit = 12) {
   }
 }
 
+/**
+ * Scrape a YouTube channel.
+ *
+ * @param {string} handle - YouTube channel handle (without @)
+ * @param {number} [videoLimit=12] - Number of recent videos to scrape
+ * @returns {Promise<ScrapeProfileOutput>}
+ */
+export async function scrapeYouTube(handle, videoLimit = 12) {
+  const cleanHandle = handle.replace(/^@/, '').trim();
+  logger.info({ handle: cleanHandle, videoLimit }, 'Scraping YouTube channel');
+
+  if (!(await checkBudget(0.05))) {
+    return {
+      success: false,
+      platform: 'youtube',
+      profile: emptyProfile(cleanHandle),
+      recentPosts: [],
+      error: 'Apify monthly budget exceeded.',
+    };
+  }
+
+  try {
+    return await withRetry(async () => {
+      const client = await getClient();
+
+      const run = await client.actor(ACTORS.youtube).call(
+        {
+          channelUrls: [`https://www.youtube.com/@${cleanHandle}`],
+          maxResults: videoLimit,
+          maxResultsShorts: 0,
+        },
+        {
+          timeout: 180,
+          memory: 512,
+        }
+      );
+
+      const { items } = await client.dataset(run.defaultDatasetId).listItems();
+
+      if (!items || items.length === 0) {
+        throw new Error(`No data returned for YouTube @${cleanHandle}. Channel may not exist.`);
+      }
+
+      const actualCost = run.stats?.costUsd || 0.04;
+      await recordCost(actualCost);
+
+      return normalizeYouTube(items, cleanHandle);
+    }, `youtube:${cleanHandle}`);
+  } catch (err) {
+    logger.error({ handle: cleanHandle, error: err.message }, 'YouTube scrape failed after retries');
+    return {
+      success: false,
+      platform: 'youtube',
+      profile: emptyProfile(cleanHandle),
+      recentPosts: [],
+      error: err.message,
+    };
+  }
+}
+
+/**
+ * Scrape an X/Twitter profile.
+ *
+ * @param {string} handle - Twitter/X handle (without @)
+ * @param {number} [tweetLimit=12] - Number of recent tweets to scrape
+ * @returns {Promise<ScrapeProfileOutput>}
+ */
+export async function scrapeTwitter(handle, tweetLimit = 12) {
+  const cleanHandle = handle.replace(/^@/, '').trim();
+  logger.info({ handle: cleanHandle, tweetLimit }, 'Scraping X/Twitter profile');
+
+  if (!(await checkBudget(0.05))) {
+    return {
+      success: false,
+      platform: 'twitter',
+      profile: emptyProfile(cleanHandle),
+      recentPosts: [],
+      error: 'Apify monthly budget exceeded.',
+    };
+  }
+
+  try {
+    return await withRetry(async () => {
+      const client = await getClient();
+
+      const run = await client.actor(ACTORS.twitter).call(
+        {
+          handle: [cleanHandle],
+          maxItems: tweetLimit,
+          addUserInfo: true,
+        },
+        {
+          timeout: 120,
+          memory: 256,
+        }
+      );
+
+      const { items } = await client.dataset(run.defaultDatasetId).listItems();
+
+      if (!items || items.length === 0) {
+        throw new Error(`No data returned for X/Twitter @${cleanHandle}. Profile may be private or not exist.`);
+      }
+
+      const actualCost = run.stats?.costUsd || 0.03;
+      await recordCost(actualCost);
+
+      return normalizeTwitter(items, cleanHandle);
+    }, `twitter:${cleanHandle}`);
+  } catch (err) {
+    logger.error({ handle: cleanHandle, error: err.message }, 'X/Twitter scrape failed after retries');
+    return {
+      success: false,
+      platform: 'twitter',
+      profile: emptyProfile(cleanHandle),
+      recentPosts: [],
+      error: err.message,
+    };
+  }
+}
+
 // ── Router ────────────────────────────────────────────────────────
 
 /**
  * Route to the correct scraper based on platform.
  *
- * @param {'instagram'|'tiktok'|'facebook'} platform
+ * @param {'instagram'|'tiktok'|'facebook'|'youtube'|'twitter'} platform
  * @param {string} handle
  * @param {Object} [options]
  * @param {number} [options.postLimit=12]
@@ -370,13 +492,17 @@ export async function scrapeProfile(platform, handle, options = {}) {
       return scrapeTikTok(handle, postLimit);
     case 'facebook':
       return scrapeFacebook(handle, postLimit);
+    case 'youtube':
+      return scrapeYouTube(handle, postLimit);
+    case 'twitter':
+      return scrapeTwitter(handle, postLimit);
     default:
       return {
         success: false,
         platform,
         profile: emptyProfile(handle),
         recentPosts: [],
-        error: `Unsupported platform: ${platform}. Supported: instagram, tiktok, facebook.`,
+        error: `Unsupported platform: ${platform}. Supported: instagram, tiktok, facebook, youtube, twitter.`,
       };
   }
 }
@@ -529,6 +655,93 @@ function normalizeFacebook(raw, pageId) {
   };
 }
 
+/**
+ * Normalize YouTube API response to unified output.
+ * YouTube channel scraper returns an array of video items with embedded channel info.
+ *
+ * @param {Object[]} items - Raw Apify response items (videos)
+ * @param {string} handle
+ * @returns {ScrapeProfileOutput}
+ */
+function normalizeYouTube(items, handle) {
+  const firstItem = items[0] || {};
+
+  const recentPosts = items.slice(0, 12).map((/** @type {any} */ v) => ({
+    id: v.id || v.videoId || '',
+    caption: v.title || '',
+    imageUrl: v.thumbnailUrl || v.thumbnail || '',
+    videoUrl: v.url || (v.id ? `https://www.youtube.com/watch?v=${v.id}` : ''),
+    likeCount: v.likes || v.likeCount || 0,
+    commentCount: v.commentsCount || v.numberOfComments || 0,
+    shareCount: 0,
+    viewCount: v.viewCount || v.views || 0,
+    timestamp: v.date || v.uploadDate || '',
+    hashtags: extractHashtags(v.text || v.description || ''),
+    type: 'video',
+  }));
+
+  return {
+    success: true,
+    platform: 'youtube',
+    profile: {
+      handle,
+      displayName: firstItem.channelName || firstItem.channelTitle || handle,
+      bio: firstItem.channelDescription || '',
+      followerCount: firstItem.channelSubscribers || firstItem.subscriberCount || 0,
+      followingCount: 0, // YouTube channels don't "follow"
+      postCount: firstItem.channelVideoCount || items.length,
+      profilePicUrl: firstItem.channelAvatar || firstItem.channelThumbnail || '',
+      isVerified: firstItem.channelVerified || false,
+    },
+    recentPosts,
+    error: null,
+  };
+}
+
+/**
+ * Normalize X/Twitter API response to unified output.
+ * Twitter scraper returns an array of tweet items with embedded user info.
+ *
+ * @param {Object[]} items - Raw Apify response items (tweets)
+ * @param {string} handle
+ * @returns {ScrapeProfileOutput}
+ */
+function normalizeTwitter(items, handle) {
+  const userInfo = items[0]?.author || items[0]?.user || {};
+  const tweetItems = items.filter((/** @type {any} */ i) => i.text || i.full_text || i.tweetText);
+
+  const recentPosts = tweetItems.slice(0, 12).map((/** @type {any} */ t) => ({
+    id: t.id || t.tweetId || '',
+    caption: t.text || t.full_text || t.tweetText || '',
+    imageUrl: t.media?.photos?.[0]?.url || '',
+    videoUrl: '',
+    likeCount: t.likeCount || t.favoriteCount || 0,
+    commentCount: t.replyCount || 0,
+    shareCount: t.retweetCount || 0,
+    viewCount: t.viewCount || t.impressionCount || 0,
+    timestamp: t.createdAt || t.created_at || '',
+    hashtags: extractHashtags(t.text || t.full_text || ''),
+    type: t.media?.photos?.length ? 'image' : 'text',
+  }));
+
+  return {
+    success: true,
+    platform: 'twitter',
+    profile: {
+      handle,
+      displayName: userInfo.name || userInfo.userName || handle,
+      bio: userInfo.description || userInfo.bio || '',
+      followerCount: userInfo.followers || userInfo.followersCount || 0,
+      followingCount: userInfo.following || userInfo.friendsCount || 0,
+      postCount: userInfo.statusesCount || tweetItems.length,
+      profilePicUrl: userInfo.profileImageUrl || userInfo.profilePicUrl || '',
+      isVerified: userInfo.isVerified || userInfo.isBlueVerified || false,
+    },
+    recentPosts,
+    error: null,
+  };
+}
+
 // ── Utilities ─────────────────────────────────────────────────────
 
 /**
@@ -548,6 +761,8 @@ export default {
   scrapeInstagram,
   scrapeTikTok,
   scrapeFacebook,
+  scrapeYouTube,
+  scrapeTwitter,
   checkBudget,
   recordCost,
 };

@@ -44,7 +44,15 @@ export function createApp() {
   app.use(httpLogger);
 
   // 5. Body parsing -- JSON with 10MB limit
-  app.use(express.json({ limit: '10mb' }));
+  //    IMPORTANT: Skip JSON parsing for Stripe webhook route. Stripe signature
+  //    verification requires the raw request body (Buffer). The webhook route
+  //    applies express.raw() itself in server/src/routes/webhooks.js.
+  app.use((req, res, next) => {
+    if (req.originalUrl.startsWith('/api/v1/webhooks/stripe')) {
+      return next();
+    }
+    express.json({ limit: '10mb' })(req, res, next);
+  });
 
   // 6. URL-encoded body parsing
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));

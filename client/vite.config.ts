@@ -17,17 +17,18 @@ export default defineConfig({
       '@hooks': resolve(__dirname, 'src/hooks'),
       '@lib': resolve(__dirname, 'src/lib'),
       '@styles': resolve(__dirname, 'src/styles'),
+      '@shared': resolve(__dirname, '../shared'),
     },
   },
   server: {
-    port: 5173,
+    port: 4848,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:4847',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:4847',
         ws: true,
       },
     },

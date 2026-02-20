@@ -3,6 +3,7 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config/index.js';
+import { dispatchJob } from '../queues/dispatch.js';
 
 /**
  * POST /api/v1/auth/signup
@@ -54,8 +55,12 @@ export async function signup(req, res) {
     }
   }
 
-  // TODO: Queue CRM sync job via BullMQ when queue is available
-  // await dispatchJob('crm-sync', { type: 'contact.created', userId: data.user.id, email, full_name });
+  // Queue CRM sync job via BullMQ
+  try {
+    await dispatchJob('crm-sync', { type: 'contact.created', userId: data.user.id, email, full_name });
+  } catch (err) {
+    logger.warn({ msg: 'Failed to queue CRM sync for signup', userId: data.user.id, error: err.message });
+  }
   logger.info({ msg: 'User created', userId: data.user.id, email });
 
   res.status(201).json({
@@ -276,8 +281,12 @@ export async function completeOnboarding(req, res) {
     logger.warn({ msg: 'refill_credits RPC not available', userId, error: err.message });
   }
 
-  // TODO: Queue CRM sync job via BullMQ when queue is available
-  // await dispatchJob('crm-sync', { type: 'contact.updated', userId, phone, full_name });
+  // Queue CRM sync job via BullMQ
+  try {
+    await dispatchJob('crm-sync', { type: 'contact.updated', userId, phone, full_name });
+  } catch (err) {
+    logger.warn({ msg: 'Failed to queue CRM sync for onboarding', userId, error: err.message });
+  }
   logger.info({ msg: 'Onboarding completed', userId });
 
   res.json({

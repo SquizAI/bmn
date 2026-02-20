@@ -349,3 +349,42 @@ export async function generateMockups(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * GET /api/v1/brands/:brandId/download
+ * Download a ZIP of all brand assets (logos, mockups, guidelines).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function downloadBrandAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id, name, status')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    // TODO: Implement ZIP generation from Supabase Storage
+    // For now, return a 501 indicating the feature is not yet available.
+    logger.info({ brandId, userId }, 'Brand asset download requested (not yet implemented)');
+
+    res.status(501).json({
+      success: false,
+      error: 'Brand asset download is coming soon. Your assets are available individually from the brand detail page.',
+    });
+  } catch (err) {
+    next(err);
+  }
+}

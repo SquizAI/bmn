@@ -13,7 +13,9 @@ import {
   Palette,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DossierPdfExport from './DossierPdfExport';
 import type {
+  CreatorDossier,
   CreatorProfile,
   PlatformData,
   NicheDetection,
@@ -28,6 +30,8 @@ interface ShareableProfileCardProps {
   niche: NicheDetection | null;
   readiness: BrandReadiness | null;
   aesthetic: AestheticProfile | null;
+  /** Pass the full dossier to enable the "Download Full Report" PDF export button. */
+  dossier?: CreatorDossier | null;
 }
 
 const platformIcons: Record<Platform, React.ReactNode> = {
@@ -61,6 +65,7 @@ export default function ShareableProfileCard({
   niche,
   readiness,
   aesthetic,
+  dossier,
 }: ShareableProfileCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -298,6 +303,7 @@ export default function ShareableProfileCard({
           <Download className="mr-1.5 h-4 w-4" />
           Download PNG
         </Button>
+        {dossier && <DossierPdfExport dossier={dossier} />}
       </div>
     </motion.div>
   );

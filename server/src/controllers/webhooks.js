@@ -96,8 +96,9 @@ async function getUserEmail(userId) {
  * queues CRM sync and welcome email.
  *
  * @param {import('stripe').Stripe.CheckoutSession} session
+ * @param {import('socket.io').Server} io - Socket.io server instance
  */
-async function handleCheckoutCompleted(session) {
+async function handleCheckoutCompleted(session, io) {
   const userId = session.metadata?.supabase_user_id;
   const tier = session.metadata?.tier;
   const stripeCustomerId = session.customer;
@@ -176,8 +177,10 @@ async function handleCheckoutCompleted(session) {
     }
   }
 
-  // TODO: Emit Socket.io event `subscription:created` when socket module is available
-  // io.to(`user:${userId}`).emit('subscription:created', { tier, status: 'active' });
+  // Emit Socket.io event to notify the user's browser in real-time
+  if (io) {
+    io.to(`user:${userId}`).emit('subscription:created', { tier, status: 'active' });
+  }
 
   logger.info({ userId, tier, stripeSubscriptionId }, 'Checkout completed -- subscription created');
 }
@@ -187,8 +190,9 @@ async function handleCheckoutCompleted(session) {
  * Updates tier, adjusts credits if tier changed, emits socket event.
  *
  * @param {import('stripe').Stripe.Subscription} subscription
+ * @param {import('socket.io').Server} io - Socket.io server instance
  */
-async function handleSubscriptionUpdated(subscription) {
+async function handleSubscriptionUpdated(subscription, io) {
   const stripeCustomerId = subscription.customer;
   const userId = await getUserIdByStripeCustomer(stripeCustomerId);
 
@@ -250,8 +254,14 @@ async function handleSubscriptionUpdated(subscription) {
     await allocateCredits(userId, tier);
   }
 
-  // TODO: Emit Socket.io event `subscription:updated`
-  // io.to(`user:${userId}`).emit('subscription:updated', { tier, status, cancelAtPeriodEnd: subscription.cancel_at_period_end });
+  // Emit Socket.io event to notify the user's browser in real-time
+  if (io) {
+    io.to(`user:${userId}`).emit('subscription:updated', {
+      tier,
+      status,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    });
+  }
 
   logger.info({ userId, tier, status, stripeSubscriptionId: subscription.id }, 'Subscription updated');
 }
@@ -261,8 +271,9 @@ async function handleSubscriptionUpdated(subscription) {
  * Downgrades user to free tier, resets credits, emits socket event.
  *
  * @param {import('stripe').Stripe.Subscription} subscription
+ * @param {import('socket.io').Server} io - Socket.io server instance
  */
-async function handleSubscriptionDeleted(subscription) {
+async function handleSubscriptionDeleted(subscription, io) {
   const stripeCustomerId = subscription.customer;
   const userId = await getUserIdByStripeCustomer(stripeCustomerId);
 
@@ -315,8 +326,10 @@ async function handleSubscriptionDeleted(subscription) {
     }
   }
 
-  // TODO: Emit Socket.io event `subscription:deleted`
-  // io.to(`user:${userId}`).emit('subscription:deleted', { tier: 'free' });
+  // Emit Socket.io event to notify the user's browser in real-time
+  if (io) {
+    io.to(`user:${userId}`).emit('subscription:deleted', { tier: 'free' });
+  }
 
   logger.info({ userId, stripeSubscriptionId: subscription.id }, 'Subscription deleted -- downgraded to free');
 }
@@ -327,8 +340,9 @@ async function handleSubscriptionDeleted(subscription) {
  * Also records the payment in payment_history.
  *
  * @param {import('stripe').Stripe.Invoice} invoice
+ * @param {import('socket.io').Server} io - Socket.io server instance
  */
-async function handlePaymentSucceeded(invoice) {
+async function handlePaymentSucceeded(invoice, io) {
   const stripeCustomerId = invoice.customer;
   const userId = await getUserIdByStripeCustomer(stripeCustomerId);
 
@@ -383,8 +397,10 @@ async function handlePaymentSucceeded(invoice) {
   // Refill credits for the new billing period
   await refillCredits(userId, tier);
 
-  // TODO: Emit Socket.io event `credits:refilled`
-  // io.to(`user:${userId}`).emit('credits:refilled', { tier });
+  // Emit Socket.io event to notify the user's browser of credit refill
+  if (io) {
+    io.to(`user:${userId}`).emit('credits:refilled', { tier });
+  }
 
   logger.info({ userId, tier, invoiceId: invoice.id }, 'Invoice paid -- credits refilled');
 }
@@ -394,8 +410,9 @@ async function handlePaymentSucceeded(invoice) {
  * Updates subscription status to past_due, queues warning email.
  *
  * @param {import('stripe').Stripe.Invoice} invoice
+ * @param {import('socket.io').Server} io - Socket.io server instance
  */
-async function handlePaymentFailed(invoice) {
+async function handlePaymentFailed(invoice, io) {
   const stripeCustomerId = invoice.customer;
   const userId = await getUserIdByStripeCustomer(stripeCustomerId);
 
@@ -438,7 +455,7 @@ async function handlePaymentFailed(invoice) {
     try {
       await dispatchJob('email-send', {
         to: email,
-        template: 'generation-failed',
+        template: 'credit-low-warning',
         data: {
           type: 'payment_failed',
           message: 'Your payment has failed. Please update your payment method to continue using Brand Me Now.',
@@ -451,8 +468,12 @@ async function handlePaymentFailed(invoice) {
     }
   }
 
-  // TODO: Emit Socket.io event `subscription:payment_failed`
-  // io.to(`user:${userId}`).emit('subscription:payment_failed', { invoiceUrl: invoice.hosted_invoice_url });
+  // Emit Socket.io event to notify the user's browser of payment failure
+  if (io) {
+    io.to(`user:${userId}`).emit('subscription:payment_failed', {
+      invoiceUrl: invoice.hosted_invoice_url,
+    });
+  }
 
   logger.warn({ userId, invoiceId: invoice.id }, 'Payment failed -- subscription past_due');
 }
@@ -468,9 +489,11 @@ async function handlePaymentFailed(invoice) {
  * Flow:
  * 1. Verify Stripe signature
  * 2. Check idempotency (skip if already processed)
- * 3. Process the event synchronously (per PRD: events are fast enough inline)
- * 4. Mark event as processed
- * 5. Return 200 immediately
+ * 3. Get Socket.io instance from app.locals
+ * 4. Process the event synchronously (per PRD: events are fast enough inline)
+ * 5. Emit Socket.io events to notify connected clients
+ * 6. Mark event as processed
+ * 7. Return 200 immediately
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -512,34 +535,38 @@ export async function handleStripeWebhook(req, res) {
     logger.warn({ eventId, error: err.message }, 'Idempotency check failed -- processing anyway');
   }
 
-  // 4. Process the event
+  // 4. Get Socket.io instance from Express app locals (set in server/src/index.js)
+  /** @type {import('socket.io').Server | undefined} */
+  const io = req.app.locals.io;
+
+  // 5. Process the event
   try {
     switch (eventType) {
       case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object);
+        await handleCheckoutCompleted(event.data.object, io);
         break;
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object);
+        await handleSubscriptionUpdated(event.data.object, io);
         break;
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object);
+        await handleSubscriptionDeleted(event.data.object, io);
         break;
 
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object);
+        await handlePaymentSucceeded(event.data.object, io);
         break;
 
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object);
+        await handlePaymentFailed(event.data.object, io);
         break;
 
       default:
         logger.debug({ eventType }, 'No handler for event type');
     }
 
-    // 5. Mark event as processed (idempotency)
+    // 6. Mark event as processed (idempotency)
     await markEventProcessed(eventId, eventType);
 
     logger.info({ eventId, eventType }, 'Stripe webhook processed successfully');
@@ -549,7 +576,7 @@ export async function handleStripeWebhook(req, res) {
     return res.status(500).json({ success: false, error: 'Webhook processing failed' });
   }
 
-  // 6. Return 200
+  // 7. Return 200
   res.json({ received: true });
 }
 

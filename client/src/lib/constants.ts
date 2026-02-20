@@ -20,6 +20,7 @@ export const ROUTES = {
   WIZARD: '/wizard',
   WIZARD_ONBOARDING: '/wizard/onboarding',
   WIZARD_SOCIAL_ANALYSIS: '/wizard/social-analysis',
+  WIZARD_BRAND_QUIZ: '/wizard/brand-quiz',
   WIZARD_BRAND_NAME: '/wizard/brand-name',
   WIZARD_BRAND_IDENTITY: '/wizard/brand-identity',
   WIZARD_CUSTOMIZATION: '/wizard/customization',
@@ -81,7 +82,13 @@ export const SOCKET_EVENTS = {
   GENERATION_COMPLETE: 'generation:complete',
   GENERATION_ERROR: 'generation:error',
 
+  // Job events (emitted by BullMQ brand-wizard worker)
+  JOB_PROGRESS: 'job:progress',
+  JOB_COMPLETE: 'job:complete',
+  JOB_FAILED: 'job:failed',
+
   // Agent events
+  AGENT_MESSAGE: 'agent:message',
   AGENT_TOOL_COMPLETE: 'agent:tool:complete',
   AGENT_COMPLETE: 'agent:complete',
   AGENT_TOOL_ERROR: 'agent:tool:error',

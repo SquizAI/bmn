@@ -14,6 +14,9 @@ import { buildSupportRequestEmail } from './support-request.js';
 import { buildPaymentConfirmedEmail } from './payment-confirmed.js';
 import { buildSubscriptionRenewalEmail } from './subscription-renewal.js';
 import { buildCreditLowWarningEmail } from './credit-low-warning.js';
+import { buildSubscriptionConfirmedEmail } from './subscription-confirmed.js';
+import { buildSubscriptionCancelledEmail } from './subscription-cancelled.js';
+import { buildGenerationFailedEmail } from './generation-failed.js';
 
 /**
  * @typedef {Object} TemplateEntry
@@ -54,6 +57,18 @@ export const TEMPLATE_REGISTRY = {
   'credit-low-warning': {
     build: buildCreditLowWarningEmail,
     tag: 'credit-warning',
+  },
+  'subscription-confirmed': {
+    build: buildSubscriptionConfirmedEmail,
+    tag: 'subscription-confirmed',
+  },
+  'subscription-cancelled': {
+    build: buildSubscriptionCancelledEmail,
+    tag: 'subscription-cancelled',
+  },
+  'generation-failed': {
+    build: buildGenerationFailedEmail,
+    tag: 'generation-failed',
   },
 };
 

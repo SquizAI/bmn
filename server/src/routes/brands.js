@@ -61,3 +61,10 @@ brandRoutes.post(
   generationLimiter,
   brandController.generateMockups
 );
+
+// GET /api/v1/brands/:brandId/download -- Download brand assets ZIP
+brandRoutes.get(
+  '/:brandId/download',
+  validate({ params: brandIdParamsSchema }),
+  brandController.downloadBrandAssets
+);

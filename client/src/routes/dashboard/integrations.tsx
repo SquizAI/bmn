@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Plug,
@@ -11,6 +12,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { useIntegrations, type IntegrationStatus } from '@/hooks/use-dashboard';
+import { useUIStore } from '@/stores/ui-store';
+import { apiClient } from '@/lib/api';
 import { cn, formatNumber } from '@/lib/utils';
 
 // ------ Integration Configs ------
@@ -92,13 +95,24 @@ interface IntegrationCardProps {
 
 function IntegrationCard({ config, status }: IntegrationCardProps) {
   const isConnected = status?.connected ?? false;
+  const [connecting, setConnecting] = useState(false);
+  const addToast = useUIStore((s) => s.addToast);
 
-  const handleConnect = () => {
-    window.location.href = config.connectUrl;
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      await apiClient.get(config.connectUrl);
+    } catch (err) {
+      // The server returns 501 with a "coming soon" message
+      const message = err instanceof Error ? err.message : `${config.name} integration is coming soon.`;
+      addToast({ type: 'info', title: message });
+    } finally {
+      setConnecting(false);
+    }
   };
 
   const handleDisconnect = () => {
-    // TODO: Wire up disconnect mutation
+    addToast({ type: 'info', title: `${config.name} disconnect is not yet available.` });
   };
 
   return (
@@ -170,6 +184,7 @@ function IntegrationCard({ config, status }: IntegrationCardProps) {
               <Button
                 size="sm"
                 onClick={handleConnect}
+                loading={connecting}
                 leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
               >
                 Connect {config.name}

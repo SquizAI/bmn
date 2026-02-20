@@ -20,7 +20,7 @@ export const skill = {
   maxTurns: skillConfig.maxTurns,
   maxBudgetUsd: skillConfig.maxBudgetUsd,
   model: skillConfig.model,
-  steps: ['brand-identity'],
+  steps: ['brand-names'],
 };
 
 export default skill;

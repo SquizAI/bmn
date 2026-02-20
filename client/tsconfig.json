@@ -14,6 +14,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Allow importing shared JS schemas */
+    "allowJs": true,
+
     /* Strict mode */
     "strict": true,
     "noUnusedLocals": true,
@@ -30,9 +33,10 @@
       "@stores/*": ["src/stores/*"],
       "@hooks/*": ["src/hooks/*"],
       "@lib/*": ["src/lib/*"],
-      "@styles/*": ["src/styles/*"]
+      "@styles/*": ["src/styles/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "vite-env.d.ts"],
+  "include": ["src", "vite-env.d.ts", "../shared"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

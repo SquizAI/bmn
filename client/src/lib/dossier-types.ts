@@ -262,4 +262,5 @@ export interface SocialHandlesInput {
   youtube?: string;
   twitter?: string;
   facebook?: string;
+  websiteUrl?: string;
 }

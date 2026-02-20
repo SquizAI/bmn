@@ -16,6 +16,8 @@ const AdminLayout = lazy(() => import('@/routes/admin/layout'));
 
 // Auth
 const Login = lazy(() => import('@/routes/auth/login'));
+const Signup = lazy(() => import('@/routes/auth/signup'));
+const ForgotPassword = lazy(() => import('@/routes/auth/forgot-password'));
 const AuthCallback = lazy(() => import('@/routes/auth/callback'));
 
 // Wizard steps
@@ -68,6 +70,22 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <Login />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: '/signup',
+            element: (
+              <SuspenseRoute>
+                <Signup />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: '/forgot-password',
+            element: (
+              <SuspenseRoute>
+                <ForgotPassword />
               </SuspenseRoute>
             ),
           },

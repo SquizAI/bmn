@@ -39,6 +39,18 @@ export default function ProductSelectionPage() {
   const setProducts = useWizardStore((s) => s.setProducts);
   const setStep = useWizardStore((s) => s.setStep);
   const addToast = useUIStore((s) => s.addToast);
+  const dossierProfile = useWizardStore((s) => s.dossier.profile);
+
+  // Build audience data from dossier for revenue scaling
+  const audienceData = useMemo(() => {
+    if (dossierProfile && dossierProfile.totalFollowers > 0 && dossierProfile.engagementRate > 0) {
+      return {
+        followers: dossierProfile.totalFollowers,
+        engagementRate: dossierProfile.engagementRate,
+      };
+    }
+    return null;
+  }, [dossierProfile]);
 
   const [selectedSkus, setSelectedSkus] = useState<Set<string>>(new Set(storedSkus));
   const [detailProduct, setDetailProduct] = useState<RecommendedProduct | null>(null);
@@ -245,7 +257,7 @@ export default function ProductSelectionPage() {
 
       {/* Revenue estimate for selected products */}
       {revenueSummary && selectedSkus.size > 0 && (
-        <RevenueEstimate tiers={revenueSummary} />
+        <RevenueEstimate tiers={revenueSummary} audienceData={audienceData} />
       )}
 
       {/* Main content */}

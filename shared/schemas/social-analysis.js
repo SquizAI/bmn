@@ -35,6 +35,11 @@ export const SocialHandlesInputSchema = z
       .min(1)
       .optional()
       .or(z.literal('')),
+    websiteUrl: z
+      .string()
+      .url('Please enter a valid URL')
+      .optional()
+      .or(z.literal('')),
   })
   .refine(
     (data) =>

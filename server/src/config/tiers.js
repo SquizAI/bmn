@@ -71,7 +71,7 @@ export const TIER_CONFIG = {
       'chatbot',
       'brand_dashboard',
     ],
-    stripePriceId: config.STRIPE_PRICE_STARTER_MONTHLY,
+    stripePriceId: config.STRIPE_PRICE_STARTER,
   },
 
   pro: {
@@ -104,7 +104,7 @@ export const TIER_CONFIG = {
       'bundle_composition',
       'advanced_projections',
     ],
-    stripePriceId: config.STRIPE_PRICE_PRO_MONTHLY,
+    stripePriceId: config.STRIPE_PRICE_PRO,
   },
 
   agency: {
@@ -142,7 +142,7 @@ export const TIER_CONFIG = {
       'bulk_generation',
       'custom_templates',
     ],
-    stripePriceId: config.STRIPE_PRICE_AGENCY_MONTHLY,
+    stripePriceId: config.STRIPE_PRICE_AGENCY,
   },
 };
 

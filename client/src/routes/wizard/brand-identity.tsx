@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,9 @@ import {
   Eye,
   Sparkles,
   PenLine,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,9 +32,11 @@ import { ArchetypeExplainer } from '@/components/brand/ArchetypeExplainer';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useSaveBrandIdentity } from '@/hooks/use-wizard-actions';
 import {
+  useDispatchBrandGeneration,
   useSelectBrandDirection,
   type BrandDirection,
 } from '@/hooks/use-brand-generation';
+import { useBrandDirections } from '@/hooks/use-brand-directions';
 import { ROUTES } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -58,68 +63,6 @@ const brandIdentitySchema = z.object({
 
 type BrandIdentityForm = z.infer<typeof brandIdentitySchema>;
 
-// ── Mock 3 Directions (replaced by real AI in production) ───────
-
-const MOCK_DIRECTIONS: BrandDirection[] = [
-  {
-    id: 'direction-a',
-    label: 'Bold & Energetic',
-    tagline: 'Stand out. Speak loud. Own it.',
-    archetype: { name: 'The Hero', score: 0.88, description: 'Your content radiates determination and strength. You inspire your audience to take action and achieve their goals.' },
-    vision: 'Empower a generation of creators to build brands that demand attention and drive real results.',
-    values: ['Courage', 'Authenticity', 'Impact', 'Excellence'],
-    colorPalette: [
-      { hex: '#111111', name: 'Obsidian', role: 'primary' },
-      { hex: '#FF4D4D', name: 'Flame Red', role: 'secondary' },
-      { hex: '#FFB800', name: 'Electric Gold', role: 'accent' },
-      { hex: '#FAFAFA', name: 'Clean White', role: 'background' },
-      { hex: '#1A1A1A', name: 'Near Black', role: 'text' },
-    ],
-    fonts: { heading: { family: 'Oswald', weight: '700' }, body: { family: 'Source Sans 3', weight: '400' } },
-    voice: { tone: 'Direct, confident, and action-oriented', vocabularyLevel: 'conversational', communicationStyle: 'Motivational calls-to-action with punchy, short sentences' },
-    logoStyle: { style: 'bold', reasoning: 'Bold typography and high-contrast design match your energetic, action-driven content style.' },
-    narrative: 'Based on your content, you are a natural motivator. Your audience looks to you for the push they need to take the next step. Your brand should feel like a rallying cry -- bold colors, strong typography, and messaging that hits hard.',
-  },
-  {
-    id: 'direction-b',
-    label: 'Clean & Premium',
-    tagline: 'Refined. Intentional. Elevated.',
-    archetype: { name: 'The Ruler', score: 0.82, description: 'Your aesthetic is polished and purposeful. You project authority and sophistication that your audience trusts.' },
-    vision: 'Set the standard for premium creator brands through meticulous quality and refined aesthetics.',
-    values: ['Quality', 'Precision', 'Trust', 'Sophistication'],
-    colorPalette: [
-      { hex: '#1C1C1E', name: 'Rich Black', role: 'primary' },
-      { hex: '#B8956A', name: 'Champagne Gold', role: 'secondary' },
-      { hex: '#E8DDD3', name: 'Warm Linen', role: 'accent' },
-      { hex: '#FEFDFB', name: 'Ivory', role: 'background' },
-      { hex: '#2C2C2E', name: 'Charcoal', role: 'text' },
-    ],
-    fonts: { heading: { family: 'Playfair Display', weight: '700' }, body: { family: 'Inter', weight: '400' } },
-    voice: { tone: 'Polished, authoritative, and understated', vocabularyLevel: 'professional', communicationStyle: 'Elegant and measured, with confidence that speaks through restraint' },
-    logoStyle: { style: 'minimal', reasoning: 'Minimalist design with premium typography conveys the sophisticated, high-end positioning of your brand.' },
-    narrative: 'Based on your content, you have an eye for quality and detail that your audience deeply respects. Your brand should feel like a luxury experience -- refined colors, elegant typography, and messaging that conveys authority without shouting.',
-  },
-  {
-    id: 'direction-c',
-    label: 'Warm & Approachable',
-    tagline: 'Real. Relatable. Yours.',
-    archetype: { name: 'The Caregiver', score: 0.85, description: 'Your content creates genuine connection. Your audience feels seen and supported through your warm, nurturing presence.' },
-    vision: 'Build a brand that feels like a trusted friend -- accessible, genuine, and deeply human.',
-    values: ['Community', 'Empathy', 'Transparency', 'Joy'],
-    colorPalette: [
-      { hex: '#5B4A3F', name: 'Warm Earth', role: 'primary' },
-      { hex: '#E07A5F', name: 'Terracotta', role: 'secondary' },
-      { hex: '#F4D35E', name: 'Sunlight', role: 'accent' },
-      { hex: '#FFF8F0', name: 'Cream', role: 'background' },
-      { hex: '#3D3027', name: 'Dark Bark', role: 'text' },
-    ],
-    fonts: { heading: { family: 'DM Sans', weight: '700' }, body: { family: 'Nunito', weight: '400' } },
-    voice: { tone: 'Warm, friendly, and encouraging', vocabularyLevel: 'casual', communicationStyle: 'Storytelling with personal anecdotes, like talking to a friend' },
-    logoStyle: { style: 'modern', reasoning: 'Modern but warm design with rounded elements creates the approachable, friendly feel that matches your community-building style.' },
-    narrative: 'Based on your content, you build real connections. Your audience trusts you because you show up as yourself -- no facade, no filters. Your brand should feel like coming home -- warm tones, friendly typography, and messaging that makes everyone feel welcome.',
-  },
-];
-
 // ── Archetypes list ─────────────────────────────────────────────
 
 const ARCHETYPES = [
@@ -136,9 +79,21 @@ const FONT_OPTIONS = [
   'Source Sans 3', 'Nunito', 'Work Sans', 'Sora', 'Outfit',
 ];
 
+// ── Generation progress messages ────────────────────────────────
+
+const GENERATION_MESSAGES = [
+  'Analyzing your social DNA...',
+  'Mapping brand archetypes...',
+  'Crafting color palettes...',
+  'Pairing typography...',
+  'Defining brand voice...',
+  'Writing brand narratives...',
+  'Finalizing directions...',
+];
+
 // ── Phase enum ──────────────────────────────────────────────────
 
-type Phase = 'choose-direction' | 'review-narrative' | 'customize';
+type Phase = 'loading' | 'choose-direction' | 'review-narrative' | 'customize';
 
 // ── Component ───────────────────────────────────────────────────
 
@@ -147,18 +102,88 @@ export default function BrandIdentityPage() {
   const brand = useWizardStore((s) => s.brand);
   const design = useWizardStore((s) => s.design);
   const brandId = useWizardStore((s) => s.meta.brandId);
+  const activeJobId = useWizardStore((s) => s.meta.activeJobId);
   const setBrand = useWizardStore((s) => s.setBrand);
   const setDesign = useWizardStore((s) => s.setDesign);
   const setStep = useWizardStore((s) => s.setStep);
+  const setActiveJob = useWizardStore((s) => s.setActiveJob);
   const addToast = useUIStore((s) => s.addToast);
 
   const saveMutation = useSaveBrandIdentity();
   const selectDirectionMutation = useSelectBrandDirection();
+  const generateMutation = useDispatchBrandGeneration();
 
   // ── Local state ─────────────────────────────────────────────
-  const [phase, setPhase] = useState<Phase>('choose-direction');
-  const [directions] = useState<BrandDirection[]>(MOCK_DIRECTIONS);
+  const [phase, setPhase] = useState<Phase>('loading');
+  const [directions, setDirections] = useState<BrandDirection[]>([]);
   const [selectedDirection, setSelectedDirection] = useState<BrandDirection | null>(null);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [genError, setGenError] = useState<string | null>(null);
+  const hasDispatchedRef = useRef(false);
+
+  // ── Socket.io tracking for real-time generation progress ────
+  const [trackingJobId, setTrackingJobId] = useState<string | null>(activeJobId);
+  const brandGen = useBrandDirections(trackingJobId);
+
+  // ── Auto-trigger generation on mount ──────────────────────────
+  useEffect(() => {
+    if (!brandId || hasDispatchedRef.current) return;
+    hasDispatchedRef.current = true;
+
+    generateMutation.mutate(
+      { brandId },
+      {
+        onSuccess: (data) => {
+          // Case 1: Server returned cached directions (no BullMQ job needed)
+          if (data?.cached && data?.directions?.length) {
+            setDirections(data.directions);
+            setPhase('choose-direction');
+            return;
+          }
+          // Case 2: Server dispatched a BullMQ job -- track via Socket.io
+          if (data?.jobId) {
+            setTrackingJobId(data.jobId);
+            setActiveJob(data.jobId);
+            // Phase stays 'loading'; brandGen hook will track progress
+          }
+        },
+        onError: (err) => {
+          setGenError(err instanceof Error ? err.message : 'Failed to generate brand directions');
+          hasDispatchedRef.current = false;
+        },
+      },
+    );
+  }, [brandId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── React to Socket.io progress updates ─────────────────────
+  useEffect(() => {
+    // When brandGen completes with directions, transition to choose phase
+    if (brandGen.isComplete && brandGen.directions.length > 0) {
+      setDirections(brandGen.directions);
+      setPhase('choose-direction');
+      setTrackingJobId(null);
+      setActiveJob(null);
+    }
+
+    // Handle error from Socket.io
+    if (brandGen.isError) {
+      setGenError(brandGen.error || 'Brand generation failed');
+    }
+  }, [brandGen.isComplete, brandGen.isError, brandGen.directions, brandGen.error, setActiveJob]);
+
+  // ── Rotating loading messages ─────────────────────────────────
+  useEffect(() => {
+    if (phase !== 'loading') return;
+
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) =>
+        prev < GENERATION_MESSAGES.length - 1 ? prev + 1 : prev,
+      );
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [phase]);
+
   const [toneValues, setToneValues] = useState<ToneValues>({
     casualToFormal: 50,
     playfulToSerious: 50,
@@ -198,6 +223,72 @@ export default function BrandIdentityPage() {
   const watchedValues = watch('values');
 
   // ── Handlers ────────────────────────────────────────────────
+
+  const handleRetry = useCallback(() => {
+    if (!brandId) return;
+    hasDispatchedRef.current = false;
+    setGenError(null);
+    setDirections([]);
+    setPhase('loading');
+    setLoadingMessageIndex(0);
+    brandGen.reset();
+
+    generateMutation.mutate(
+      { brandId },
+      {
+        onSuccess: (data) => {
+          if (data?.cached && data?.directions?.length) {
+            setDirections(data.directions);
+            setPhase('choose-direction');
+            return;
+          }
+          if (data?.jobId) {
+            setTrackingJobId(data.jobId);
+            setActiveJob(data.jobId);
+          }
+        },
+        onError: (err) => {
+          setGenError(err instanceof Error ? err.message : 'Failed to generate brand directions');
+          hasDispatchedRef.current = false;
+        },
+      },
+    );
+  }, [brandId, generateMutation, brandGen, setActiveJob]);
+
+  const handleRegenerate = useCallback(() => {
+    if (!brandId) return;
+    hasDispatchedRef.current = true;
+    setGenError(null);
+    setDirections([]);
+    setSelectedDirection(null);
+    setPhase('loading');
+    setLoadingMessageIndex(0);
+    brandGen.reset();
+
+    generateMutation.mutate(
+      { brandId, regenerate: true },
+      {
+        onSuccess: (data) => {
+          if (data?.directions?.length) {
+            setDirections(data.directions);
+            setPhase('choose-direction');
+            return;
+          }
+          if (data?.jobId) {
+            setTrackingJobId(data.jobId);
+            setActiveJob(data.jobId);
+          }
+        },
+        onError: (err) => {
+          setGenError(err instanceof Error ? err.message : 'Failed to regenerate brand directions');
+          hasDispatchedRef.current = false;
+          if (directions.length > 0) {
+            setPhase('choose-direction');
+          }
+        },
+      },
+    );
+  }, [brandId, generateMutation, brandGen, setActiveJob, directions.length]);
 
   const handleSelectDirection = useCallback((direction: BrandDirection) => {
     setSelectedDirection(direction);
@@ -316,6 +407,9 @@ export default function BrandIdentityPage() {
     }
   };
 
+  // Determine if we are in an error state
+  const isError = genError !== null || generateMutation.isError;
+
   // ── Render ──────────────────────────────────────────────────
 
   return (
@@ -326,8 +420,150 @@ export default function BrandIdentityPage() {
       className="flex flex-col gap-8"
     >
       <AnimatePresence mode="wait">
+        {/* ─── PHASE 0: Loading / Generating ─────────────────── */}
+        {phase === 'loading' && !isError && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex flex-col items-center gap-8 py-16"
+          >
+            {/* Animated icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+              className="relative"
+            >
+              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--bmn-color-primary)] to-[var(--bmn-color-accent)]">
+                <Sparkles className="h-12 w-12 text-white" />
+              </div>
+              <motion.div
+                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-surface border-2 border-border"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+              >
+                <Loader2 className="h-4 w-4 text-primary" />
+              </motion.div>
+            </motion.div>
+
+            {/* Title */}
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-text">
+                Crafting Your Brand Directions
+              </h2>
+              <p className="mt-2 max-w-md text-text-secondary">
+                Our AI is analyzing your social presence and creating three unique
+                brand identity directions tailored just for you.
+              </p>
+            </div>
+
+            {/* Progress indicator */}
+            <div className="w-full max-w-md">
+              <div className="mb-2 flex justify-between text-xs text-text-muted">
+                <span>
+                  {brandGen.message || GENERATION_MESSAGES[loadingMessageIndex]}
+                </span>
+                {brandGen.progress > 0 && (
+                  <span>{Math.round(brandGen.progress)}%</span>
+                )}
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-hover">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                  initial={{ width: '5%' }}
+                  animate={{
+                    width: `${Math.max(
+                      brandGen.progress > 0 ? brandGen.progress : 0,
+                      Math.min(5 + loadingMessageIndex * 14, 95),
+                    )}%`,
+                  }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+
+            {/* Animated loading steps */}
+            <div className="flex flex-col gap-2 text-sm">
+              {GENERATION_MESSAGES.slice(0, loadingMessageIndex + 1).map(
+                (msg, i) => (
+                  <motion.div
+                    key={msg}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-2"
+                  >
+                    {i < loadingMessageIndex ? (
+                      <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                      </div>
+                    ) : (
+                      <motion.div
+                        className="h-4 w-4 rounded-full border-2 border-primary"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                      />
+                    )}
+                    <span
+                      className={
+                        i < loadingMessageIndex
+                          ? 'text-text-muted line-through'
+                          : 'text-text-secondary font-medium'
+                      }
+                    >
+                      {msg}
+                    </span>
+                  </motion.div>
+                ),
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ─── ERROR STATE ───────────────────────────────────── */}
+        {phase === 'loading' && isError && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-6 py-16"
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-error/10">
+              <AlertCircle className="h-10 w-10 text-error" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-text">Generation Failed</h2>
+              <p className="mt-2 max-w-md text-text-secondary">
+                {genError || 'Something went wrong while generating your brand directions. Please try again.'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={handleBack}
+                leftIcon={<ArrowLeft className="h-5 w-5" />}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleRetry}
+                loading={generateMutation.isPending}
+                leftIcon={<RefreshCw className="h-5 w-5" />}
+              >
+                Try Again
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
         {/* ─── PHASE 1: Choose Direction ─────────────────────── */}
-        {phase === 'choose-direction' && (
+        {phase === 'choose-direction' && directions.length > 0 && (
           <motion.div
             key="choose-direction"
             initial={{ opacity: 0 }}
@@ -370,6 +606,16 @@ export default function BrandIdentityPage() {
                 leftIcon={<ArrowLeft className="h-5 w-5" />}
               >
                 Back
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                onClick={handleRegenerate}
+                loading={generateMutation.isPending}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+              >
+                Regenerate
               </Button>
               <Button
                 type="button"

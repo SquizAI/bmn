@@ -202,6 +202,7 @@ export default function DossierLoadingSequence({
               niche={dossier.niche || null}
               readiness={dossier.readinessScore || null}
               aesthetic={dossier.aesthetic || null}
+              dossier={phase === 'complete' ? (dossier as import('@/lib/dossier-types').CreatorDossier) : null}
             />
           </motion.div>
         )}

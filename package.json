@@ -5,13 +5,13 @@
   "type": "module",
   "workspaces": [
     "server",
-    "web",
+    "client",
     "marketing",
     "shared"
   ],
   "scripts": {
     "dev:server": "npm run dev --workspace=server",
-    "dev:web": "npm run dev --workspace=web",
+    "dev:client": "npm run dev --workspace=client",
     "dev:marketing": "npm run dev --workspace=marketing",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",

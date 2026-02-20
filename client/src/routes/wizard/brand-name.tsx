@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -8,6 +8,7 @@ import {
   RefreshCw,
   PenLine,
   Type,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,94 +16,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { BrandNameCard } from '@/components/brand/BrandNameCard';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useUIStore } from '@/stores/ui-store';
-import { useDispatchNameGeneration, useSelectBrandName } from '@/hooks/use-name-generation';
+import {
+  useDispatchNameGeneration,
+  useSelectBrandName,
+  parseNameGenerationResult,
+} from '@/hooks/use-name-generation';
+import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import { ROUTES } from '@/lib/constants';
 import type { NameSuggestion } from '@/hooks/use-name-generation';
-
-// ── Mock data for prototype (will be replaced by real Socket.io events) ──
-
-const MOCK_SUGGESTIONS: NameSuggestion[] = [
-  {
-    name: 'Lumivora',
-    technique: 'invented',
-    rationale: 'Combines "lumi" (light) with "vora" (to devour/embrace), suggesting a brand that devours the spotlight with radiant energy.',
-    pronunciation: 'LOO-mih-VOR-ah',
-    scores: { memorability: 9, brandability: 9 },
-    domain: { com: 'available', co: 'available', io: 'taken', bestAvailable: 'lumivora.com' },
-    socialHandles: { instagram: 'available', tiktok: 'available', youtube: 'available' },
-    trademark: { status: 'clear', risk: 'low', notes: 'No existing trademarks found.' },
-  },
-  {
-    name: 'Aureate',
-    technique: 'evocative',
-    rationale: 'Means "golden" or "gilded" -- evokes premium quality, warmth, and aspiration. Connects to the golden standard of personal branding.',
-    pronunciation: 'AW-ree-it',
-    scores: { memorability: 8, brandability: 8 },
-    domain: { com: 'taken', co: 'available', io: 'available', bestAvailable: 'aureate.co' },
-    socialHandles: { instagram: 'taken', tiktok: 'available', youtube: 'available' },
-    trademark: { status: 'potential-conflict', risk: 'medium', notes: 'Similar name found in jewelry category.' },
-  },
-  {
-    name: 'Vantage Point',
-    technique: 'metaphor',
-    rationale: 'Suggests an elevated perspective -- a brand that gives creators a strategic viewpoint above their competition.',
-    pronunciation: 'VAN-tij POINT',
-    scores: { memorability: 7, brandability: 7 },
-    domain: { com: 'taken', co: 'taken', io: 'available', bestAvailable: 'vantagepoint.io' },
-    socialHandles: { instagram: 'taken', tiktok: 'taken', youtube: 'taken' },
-    trademark: { status: 'potential-conflict', risk: 'medium', notes: 'Multiple trademarks exist with similar name.' },
-  },
-  {
-    name: 'Kindred Co',
-    technique: 'descriptive',
-    rationale: 'Speaks to community and shared values. "Kindred" implies like-minded people drawn together, perfect for a creator brand.',
-    pronunciation: 'KIN-dred CO',
-    scores: { memorability: 8, brandability: 8 },
-    domain: { com: 'taken', co: 'available', io: 'available', bestAvailable: 'kindredco.co' },
-    socialHandles: { instagram: 'taken', tiktok: 'available', youtube: 'available' },
-    trademark: { status: 'clear', risk: 'low', notes: 'No direct conflicts found in relevant categories.' },
-  },
-  {
-    name: 'Novahaus',
-    technique: 'compound',
-    rationale: 'Combines "nova" (new/star) with "haus" (house/creative studio), blending innovation with craftsmanship. German-inspired sounds premium.',
-    pronunciation: 'NO-vah-HOUS',
-    scores: { memorability: 9, brandability: 9 },
-    domain: { com: 'available', co: 'available', io: 'available', bestAvailable: 'novahaus.com' },
-    socialHandles: { instagram: 'available', tiktok: 'available', youtube: 'available' },
-    trademark: { status: 'clear', risk: 'low', notes: 'No existing trademarks found.' },
-  },
-  {
-    name: 'Meridian',
-    technique: 'metaphor',
-    rationale: 'A meridian is a line of longitude -- symbolizes reaching the peak, the highest point. Suggests ambition and global reach.',
-    pronunciation: 'meh-RID-ee-an',
-    scores: { memorability: 8, brandability: 7 },
-    domain: { com: 'taken', co: 'taken', io: 'taken', bestAvailable: null },
-    socialHandles: { instagram: 'taken', tiktok: 'taken', youtube: 'taken' },
-    trademark: { status: 'conflict-found', risk: 'high', notes: 'Existing trademark in multiple categories.' },
-  },
-  {
-    name: 'Prismiq',
-    technique: 'coined',
-    rationale: 'Based on "prism" (refracting light into many colors) with a modern "-iq" suffix, suggesting multifaceted intelligence and creativity.',
-    pronunciation: 'PRIZ-meek',
-    scores: { memorability: 8, brandability: 9 },
-    domain: { com: 'available', co: 'available', io: 'available', bestAvailable: 'prismiq.com' },
-    socialHandles: { instagram: 'available', tiktok: 'available', youtube: 'available' },
-    trademark: { status: 'clear', risk: 'low', notes: 'No existing trademarks found.' },
-  },
-  {
-    name: 'Embark Studio',
-    technique: 'descriptive',
-    rationale: 'Embark means to begin a journey -- perfect for creators starting their brand journey. "Studio" adds creative professionalism.',
-    pronunciation: 'em-BARK STOO-dee-oh',
-    scores: { memorability: 7, brandability: 7 },
-    domain: { com: 'taken', co: 'available', io: 'available', bestAvailable: 'embarkstudio.co' },
-    socialHandles: { instagram: 'taken', tiktok: 'available', youtube: 'taken' },
-    trademark: { status: 'potential-conflict', risk: 'medium', notes: 'Gaming studio with similar name exists.' },
-  },
-];
 
 // ── Component ──────────────────────────────────────────────────
 
@@ -110,18 +31,99 @@ export default function BrandNamePage() {
   const navigate = useNavigate();
   const brand = useWizardStore((s) => s.brand);
   const brandId = useWizardStore((s) => s.meta.brandId);
+  const activeJobId = useWizardStore((s) => s.meta.activeJobId);
   const setBrand = useWizardStore((s) => s.setBrand);
   const setStep = useWizardStore((s) => s.setStep);
+  const setActiveJob = useWizardStore((s) => s.setActiveJob);
   const addToast = useUIStore((s) => s.addToast);
 
-  const [suggestions, setSuggestions] = useState<NameSuggestion[]>(MOCK_SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
   const [selectedName, setSelectedName] = useState<string | null>(brand.name || null);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customName, setCustomName] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   const dispatchMutation = useDispatchNameGeneration();
   const selectMutation = useSelectBrandName();
+
+  // Track the current job's progress via Socket.io
+  const generation = useGenerationProgress(activeJobId);
+  const isGenerating =
+    generation.status === 'pending' || generation.status === 'processing';
+
+  // Track whether we already processed this job's result
+  const processedJobRef = useRef<string | null>(null);
+
+  // When the Socket.io job completes, parse the result into suggestions
+  useEffect(() => {
+    if (
+      generation.isComplete &&
+      generation.result &&
+      activeJobId &&
+      processedJobRef.current !== activeJobId
+    ) {
+      processedJobRef.current = activeJobId;
+      const parsed = parseNameGenerationResult(generation.result);
+      if (parsed.suggestions.length > 0) {
+        setSuggestions(parsed.suggestions);
+        setHasGenerated(true);
+      } else {
+        addToast({
+          type: 'warning',
+          title: 'No names were generated. Try again with different preferences.',
+        });
+      }
+      // Clear the active job so the progress hook resets
+      setActiveJob(null);
+    }
+  }, [generation.isComplete, generation.result, activeJobId, setActiveJob, addToast]);
+
+  // Handle generation errors
+  useEffect(() => {
+    if (generation.isError && activeJobId) {
+      addToast({
+        type: 'error',
+        title: generation.error || 'Name generation failed. Please try again.',
+      });
+      setActiveJob(null);
+    }
+  }, [generation.isError, generation.error, activeJobId, setActiveJob, addToast]);
+
+  // Auto-trigger generation on first mount if no suggestions exist
+  const autoTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (
+      brandId &&
+      !autoTriggeredRef.current &&
+      suggestions.length === 0 &&
+      !isGenerating &&
+      !hasGenerated
+    ) {
+      autoTriggeredRef.current = true;
+      dispatchMutation.mutate(
+        {
+          brandId,
+          archetype: brand.archetype || undefined,
+          traits: brand.values.length > 0 ? brand.values : undefined,
+        },
+        {
+          onSuccess: (data) => {
+            // Server returned suggestions directly (synchronous Claude call)
+            if (data?.suggestions?.length) {
+              setSuggestions(data.suggestions);
+              setHasGenerated(true);
+              return;
+            }
+            // Fall back to Socket.io tracking if jobId returned
+          },
+          onError: () => {
+            autoTriggeredRef.current = false;
+            addToast({ type: 'error', title: 'Failed to generate names. Please try again.' });
+          },
+        },
+      );
+    }
+  }, [brandId, suggestions.length, isGenerating, hasGenerated, brand.archetype, brand.values, dispatchMutation, addToast]);
 
   const topRecommendation = suggestions.length > 0 ? suggestions[0].name : null;
 
@@ -140,27 +142,27 @@ export default function BrandNamePage() {
 
   const handleRegenerate = useCallback(async () => {
     if (!brandId) return;
-    setIsGenerating(true);
     setSelectedName(null);
+    setSuggestions([]);
+    processedJobRef.current = null;
+    generation.reset();
 
     try {
-      await dispatchMutation.mutateAsync({
+      const data = await dispatchMutation.mutateAsync({
         brandId,
+        regenerate: true,
         archetype: brand.archetype || undefined,
         traits: brand.values.length > 0 ? brand.values : undefined,
       });
-      // In production, the results would come via Socket.io events.
-      // For now, simulate with a delay and the same mock data shuffled.
-      setTimeout(() => {
-        const shuffled = [...MOCK_SUGGESTIONS].sort(() => Math.random() - 0.5);
-        setSuggestions(shuffled);
-        setIsGenerating(false);
-      }, 2000);
+      // Handle direct results from synchronous Claude call
+      if (data?.suggestions?.length) {
+        setSuggestions(data.suggestions);
+        setHasGenerated(true);
+      }
     } catch {
       addToast({ type: 'error', title: 'Failed to generate names. Please try again.' });
-      setIsGenerating(false);
     }
-  }, [brandId, brand.archetype, brand.values, dispatchMutation, addToast]);
+  }, [brandId, brand.archetype, brand.values, dispatchMutation, addToast, generation]);
 
   const handleContinue = async () => {
     if (!selectedName) {
@@ -226,8 +228,56 @@ export default function BrandNamePage() {
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
               <Sparkles className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-accent" />
             </div>
-            <p className="text-sm text-text-secondary">Brainstorming creative names...</p>
+            <p className="text-sm text-text-secondary">
+              {generation.message || 'Brainstorming creative names...'}
+            </p>
             <p className="text-xs text-text-muted">Checking domains, social handles, and trademarks</p>
+            {generation.progress > 0 && (
+              <div className="mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-border">
+                <motion.div
+                  className="h-full rounded-full bg-accent"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${generation.progress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            )}
+          </motion.div>
+        ) : suggestions.length === 0 && hasGenerated ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-4 py-16"
+          >
+            <AlertCircle className="h-12 w-12 text-text-muted" />
+            <p className="text-sm text-text-secondary">
+              No suggestions generated yet. Click below to generate names.
+            </p>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleRegenerate}
+              leftIcon={<Sparkles className="h-4 w-4" />}
+              loading={dispatchMutation.isPending}
+            >
+              Generate Brand Names
+            </Button>
+          </motion.div>
+        ) : suggestions.length === 0 && !hasGenerated ? (
+          <motion.div
+            key="initial"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-4 py-16"
+          >
+            <div className="relative">
+              <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
+              <Sparkles className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-accent" />
+            </div>
+            <p className="text-sm text-text-secondary">Preparing name generation...</p>
           </motion.div>
         ) : (
           <motion.div

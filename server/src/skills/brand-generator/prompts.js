@@ -86,19 +86,86 @@ Your final response MUST be a JSON object with this shape:
  * @param {Object} input.socialAnalysis - The social analysis data from the social-analyzer skill
  * @param {string} input.brandId - Brand record ID
  * @param {string} input.userId - User ID for scoping
+ * @param {string} [input.brandName] - Brand name if already chosen
+ * @param {Object} [input.userPreferences] - Any user preferences from wizard state
  * @returns {string}
  */
 export function buildDirectionsTaskPrompt(input) {
   const analysis = input.socialAnalysis || {};
 
+  // Extract structured dossier signals for clearer AI context
+  const niche = analysis.niche || {};
+  const aesthetic = analysis.aesthetic || {};
+  const audience = analysis.audience || {};
+  const content = analysis.content || {};
+  const personality = analysis.personality || {};
+  const readiness = analysis.readinessScore || {};
+
+  const contextSections = [];
+
+  if (input.brandName) {
+    contextSections.push(`Brand Name: ${input.brandName}`);
+  }
+
+  if (niche.primaryNiche?.name) {
+    const subNiches = (niche.secondaryNiches || []).map((n) => n.name || n).filter(Boolean);
+    contextSections.push(`Creator Niche: ${niche.primaryNiche.name} (confidence: ${niche.primaryNiche.confidence || 'N/A'})${subNiches.length > 0 ? `\nSub-niches: ${subNiches.join(', ')}` : ''}`);
+  }
+
+  if (aesthetic.dominantColors?.length > 0) {
+    const colorList = aesthetic.dominantColors.map((c) => `${c.name || c.hex} (${c.hex})`).join(', ');
+    contextSections.push(`Dominant Feed Colors: ${colorList}`);
+  }
+
+  if (aesthetic.naturalPalette?.length > 0) {
+    contextSections.push(`Natural Palette: ${aesthetic.naturalPalette.join(', ')}`);
+  }
+
+  if (aesthetic.visualMood?.length > 0) {
+    contextSections.push(`Visual Mood: ${aesthetic.visualMood.join(', ')}`);
+  }
+
+  if (audience.estimatedAgeRange) {
+    const audienceParts = [`Age Range: ${audience.estimatedAgeRange}`];
+    if (audience.genderSplit) {
+      audienceParts.push(`Gender: ${Object.entries(audience.genderSplit).map(([k, v]) => `${k}: ${v}%`).join(', ')}`);
+    }
+    if (audience.primaryInterests?.length > 0) {
+      audienceParts.push(`Interests: ${audience.primaryInterests.join(', ')}`);
+    }
+    contextSections.push(`Audience Demographics:\n${audienceParts.join('\n')}`);
+  }
+
+  if (content.themes?.length > 0) {
+    const themeList = content.themes.map((t) => `${t.name} (${Math.round((t.frequency || 0) * 100)}%)`).join(', ');
+    contextSections.push(`Content Themes: ${themeList}`);
+  }
+
+  if (personality.traits?.length > 0) {
+    contextSections.push(`Personality Traits: ${personality.traits.join(', ')}`);
+  }
+
+  if (personality.voiceTone) {
+    contextSections.push(`Existing Voice Tone: ${personality.voiceTone}`);
+  }
+
+  if (readiness.totalScore) {
+    contextSections.push(`Brand Readiness Score: ${readiness.totalScore}/100 (tier: ${readiness.tier || 'N/A'})`);
+  }
+
+  const structuredContext = contextSections.length > 0
+    ? `\n<dossier_summary>\n${contextSections.join('\n\n')}\n</dossier_summary>\n`
+    : '';
+
   return `Generate 3 brand identity directions based on the following social media analysis data:
 
 Brand ID: ${input.brandId}
 User ID: ${input.userId}
-
+${structuredContext}
 <social_analysis>
 ${JSON.stringify(analysis, null, 2)}
 </social_analysis>
 
-Analyze the data above and generate 3 distinct, contrasting brand identity directions (Bold & Energetic, Clean & Premium, Warm & Approachable). Each must be fully specified with archetype, colors, fonts, voice, and narrative.`;
+${input.userPreferences ? `<user_preferences>\n${JSON.stringify(input.userPreferences, null, 2)}\n</user_preferences>\n` : ''}
+Analyze the data above and generate 3 distinct, contrasting brand identity directions (Bold & Energetic, Clean & Premium, Warm & Approachable). Each must be fully specified with archetype, colors, fonts, voice, and narrative. Ground every recommendation in evidence from the social data. The color palettes should harmonize with the creator's natural feed palette but interpret it differently per direction.`;
 }
