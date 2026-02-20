@@ -107,8 +107,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right panel — Login form */}
-      <div className="flex w-full flex-col justify-center bg-white px-6 lg:w-1/2 lg:px-20">
+      {/* Right panel — Login form (force light mode so semantic tokens resolve correctly) */}
+      <div data-theme="light" className="flex w-full flex-col justify-center bg-white px-6 lg:w-1/2 lg:px-20">
         {/* Mobile logo */}
         <div className="mb-12 lg:hidden">
           <span className="text-lg font-bold tracking-tight text-text">brand</span>

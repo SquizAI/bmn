@@ -189,6 +189,68 @@
 }
 
 /* ========================================================
+   LIGHT MODE (explicit scope — for containers inside dark mode)
+   ======================================================== */
+
+[data-theme="light"] {
+  --bmn-color-primary: #111111;
+  --bmn-color-primary-hover: #000000;
+  --bmn-color-primary-active: #000000;
+  --bmn-color-primary-light: #f5f5f5;
+  --bmn-color-primary-foreground: #ffffff;
+  --bmn-color-secondary: #525252;
+  --bmn-color-secondary-hover: #404040;
+  --bmn-color-secondary-active: #262626;
+  --bmn-color-secondary-light: #f5f5f5;
+  --bmn-color-secondary-foreground: #ffffff;
+  --bmn-color-accent: #B8956A;
+  --bmn-color-accent-hover: #A6825A;
+  --bmn-color-accent-active: #94704B;
+  --bmn-color-accent-light: #FAF6F1;
+  --bmn-color-accent-foreground: #ffffff;
+  --bmn-color-background: #fafafa;
+  --bmn-color-surface: #ffffff;
+  --bmn-color-surface-elevated: #ffffff;
+  --bmn-color-surface-overlay: rgba(0, 0, 0, 0.4);
+  --bmn-color-surface-hover: #f5f5f5;
+  --bmn-color-border: #e5e5e5;
+  --bmn-color-border-hover: #d4d4d4;
+  --bmn-color-border-focus: #111111;
+  --bmn-color-text: #111111;
+  --bmn-color-text-secondary: #525252;
+  --bmn-color-text-muted: #a3a3a3;
+  --bmn-color-text-inverse: #ffffff;
+  --bmn-color-text-link: #111111;
+  --bmn-color-text-link-hover: #000000;
+  --bmn-color-error: #dc2626;
+  --bmn-color-error-hover: #b91c1c;
+  --bmn-color-error-bg: #fef2f2;
+  --bmn-color-error-border: #fecaca;
+  --bmn-color-error-foreground: #ffffff;
+  --bmn-color-success: #16a34a;
+  --bmn-color-success-hover: #15803d;
+  --bmn-color-success-bg: #f0fdf4;
+  --bmn-color-success-border: #bbf7d0;
+  --bmn-color-success-foreground: #ffffff;
+  --bmn-color-warning: #d97706;
+  --bmn-color-warning-hover: #b45309;
+  --bmn-color-warning-bg: #fffbeb;
+  --bmn-color-warning-border: #fde68a;
+  --bmn-color-warning-foreground: #000000;
+  --bmn-color-info: #2563eb;
+  --bmn-color-info-hover: #1d4ed8;
+  --bmn-color-info-bg: #eff6ff;
+  --bmn-color-info-border: #bfdbfe;
+  --bmn-color-info-foreground: #ffffff;
+  --bmn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --bmn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --bmn-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --bmn-shadow-glow-primary: 0 0 0 1px rgba(17, 17, 17, 0.1);
+  --bmn-shadow-glow-accent: 0 0 20px rgba(184, 149, 106, 0.1);
+}
+
+/* ========================================================
    DARK MODE
    ======================================================== */
 
