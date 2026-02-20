@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { validate } from '../../../../middleware/validate.js';
 import { supabaseAdmin } from '../../../../lib/supabase.js';
 import { logger } from '../../../../lib/logger.js';
-import { topProductsQuerySchema } from '../../../../../../shared/schemas/dashboard.js';
+import { topProductsQuerySchema } from '../../../../validation/dashboard.js';
 
 export const productsRoutes = Router();
 

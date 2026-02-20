@@ -6,7 +6,7 @@ import { supabaseAdmin } from '../../../../lib/supabase.js';
 import { logger } from '../../../../lib/logger.js';
 import {
   dashboardOverviewQuerySchema,
-} from '../../../../../../shared/schemas/dashboard.js';
+} from '../../../../validation/dashboard.js';
 
 export const overviewRoutes = Router();
 
