@@ -1,6 +1,7 @@
 # client/Dockerfile
 #
 # Multi-stage build for the React 19 + Vite 7 SPA.
+# Build context: repo root (to include shared/ directory)
 # Stage 1: Install deps + build static assets
 # Stage 2: Serve via Nginx Alpine
 
@@ -12,13 +13,16 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Copy dependency files
-COPY package.json package-lock.json* ./
+COPY client/package.json client/package-lock.json* ./
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy shared schemas (referenced via @shared alias)
+COPY shared/ /shared/
+
+# Copy client source code
+COPY client/ .
 
 # Build the production bundle
 ARG VITE_API_URL=http://localhost:4847
@@ -48,7 +52,7 @@ FROM nginx:1.27-alpine AS production
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY client/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from build stage
 COPY --from=build /app/dist /usr/share/nginx/html

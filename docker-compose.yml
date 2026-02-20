@@ -56,8 +56,8 @@ services:
   client:
     profiles: ["full"]
     build:
-      context: ./client
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: client/Dockerfile
     container_name: bmn-client
     ports:
       - "4848:80"
