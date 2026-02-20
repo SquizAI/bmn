@@ -32,6 +32,9 @@ jobs:
           script_stop: true
           script: |
             cd /opt/bmn
+            echo "=== Fixing permissions ==="
+            sudo chown -R $(whoami):$(whoami) /opt/bmn
+
             echo "=== Pulling latest code ==="
             git pull origin main
 
