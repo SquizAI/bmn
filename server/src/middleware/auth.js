@@ -55,7 +55,7 @@ async function authenticateRequest(token, req) {
   // Fetch profile from the profiles table
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, full_name, role, subscription_tier, onboarding_done')
+    .select('id, full_name, role, subscription_tier, onboarding_done, stripe_customer_id')
     .eq('id', user.id)
     .single();
 

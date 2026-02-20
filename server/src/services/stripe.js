@@ -8,19 +8,31 @@ import { logger } from '../lib/logger.js';
 import { AppError, NotFoundError } from '../utils/errors.js';
 
 /**
- * Stripe SDK client instance.
- * Pinned API version for stability. Telemetry disabled in production.
- *
- * @type {Stripe}
+ * Lazy-initialized Stripe SDK client.
+ * Deferred so the server can boot even when STRIPE_SECRET_KEY is not yet set.
+ * @type {Stripe | null}
  */
-const stripe = new Stripe(config.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-12-18.acacia',
-  maxNetworkRetries: 2,
-  timeout: 10_000,
-  telemetry: config.isProduction ? false : true,
-});
+let _stripe = null;
 
-export { stripe };
+/**
+ * Get the Stripe client, initializing on first call.
+ * @returns {Stripe}
+ */
+export function getStripe() {
+  if (!_stripe) {
+    const key = config.STRIPE_SECRET_KEY;
+    if (!key || key.includes('placeholder')) {
+      throw new AppError('Stripe is not configured. Set STRIPE_SECRET_KEY in .env', 503, 'STRIPE_NOT_CONFIGURED');
+    }
+    _stripe = new Stripe(key, {
+      apiVersion: '2025-12-18.acacia',
+      maxNetworkRetries: 2,
+      timeout: 10_000,
+      telemetry: config.isProduction ? false : true,
+    });
+  }
+  return _stripe;
+}
 
 // ─── Customer Management ────────────────────────────────────────────────────
 
@@ -51,7 +63,7 @@ export async function getOrCreateCustomer(userId, email, name) {
   }
 
   // 2. Create a new Stripe customer
-  const customer = await stripe.customers.create({
+  const customer = await getStripe().customers.create({
     email,
     name: name || undefined,
     metadata: {
@@ -103,7 +115,7 @@ export async function createCheckoutSession(userId, email, tier, successUrl, can
   const stripeCustomerId = await getOrCreateCustomer(userId, email);
 
   // Check for existing active subscription
-  const existingSubs = await stripe.subscriptions.list({
+  const existingSubs = await getStripe().subscriptions.list({
     customer: stripeCustomerId,
     status: 'active',
     limit: 1,
@@ -118,7 +130,7 @@ export async function createCheckoutSession(userId, email, tier, successUrl, can
   }
 
   // Create checkout session
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     customer: stripeCustomerId,
     mode: 'subscription',
     line_items: [
@@ -166,7 +178,7 @@ export async function createPortalSession(stripeCustomerId, returnUrl) {
     throw new AppError('No Stripe customer found. Please subscribe first.', 400, 'NO_CUSTOMER');
   }
 
-  const session = await stripe.billingPortal.sessions.create({
+  const session = await getStripe().billingPortal.sessions.create({
     customer: stripeCustomerId,
     return_url: returnUrl || `${config.APP_URL}/billing`,
   });
@@ -189,7 +201,7 @@ export async function getSubscription(stripeCustomerId) {
     return null;
   }
 
-  const subscriptions = await stripe.subscriptions.list({
+  const subscriptions = await getStripe().subscriptions.list({
     customer: stripeCustomerId,
     status: 'all',
     limit: 1,
@@ -211,7 +223,7 @@ export async function getSubscription(stripeCustomerId) {
  */
 export function constructWebhookEvent(rawBody, signature) {
   try {
-    return stripe.webhooks.constructEvent(
+    return getStripe().webhooks.constructEvent(
       rawBody,
       signature,
       config.STRIPE_WEBHOOK_SECRET

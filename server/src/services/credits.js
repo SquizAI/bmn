@@ -153,7 +153,8 @@ export async function deductCredits(userId, creditType, quantity = 1, reason, br
 
 /**
  * Refund credits back to a user (e.g., after a failed generation job).
- * Adds quantity back to `credits_remaining` and decrements `credits_used`.
+ * Uses the atomic `refund_credit` database function to add quantity back
+ * to `credits_remaining` and decrement `credits_used`.
  *
  * @param {string} userId - Supabase user ID
  * @param {CreditType} creditType - Type of credit to refund
@@ -162,51 +163,22 @@ export async function deductCredits(userId, creditType, quantity = 1, reason, br
  * @returns {Promise<void>}
  */
 export async function refundCredits(userId, creditType, quantity = 1, reason) {
-  // Direct update: add credits back. Use the admin client (bypasses RLS).
-  const { error } = await supabaseAdmin
-    .from('generation_credits')
-    .update({
-      credits_remaining: supabaseAdmin.rpc ? undefined : undefined, // We need raw SQL for atomic increment
-    })
-    .eq('user_id', userId)
-    .eq('credit_type', creditType);
-
-  // Since Supabase JS client doesn't support atomic increment directly,
-  // use an RPC or raw update approach. We'll use a direct SQL via RPC.
-  const { error: rpcError } = await supabaseAdmin.rpc('refund_credit', {
+  const { data, error } = await supabaseAdmin.rpc('refund_credit', {
     p_user_id: userId,
     p_credit_type: creditType,
     p_amount: quantity,
   });
 
-  // If the RPC doesn't exist yet, fall back to a direct query approach
-  if (rpcError && rpcError.message?.includes('function')) {
-    // Fallback: fetch current value, compute new value, update
-    const { data: current } = await supabaseAdmin
-      .from('generation_credits')
-      .select('id, credits_remaining, credits_used')
-      .eq('user_id', userId)
-      .eq('credit_type', creditType)
-      .gt('period_end', new Date().toISOString())
-      .order('period_end', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (current) {
-      await supabaseAdmin
-        .from('generation_credits')
-        .update({
-          credits_remaining: current.credits_remaining + quantity,
-          credits_used: Math.max(0, current.credits_used - quantity),
-        })
-        .eq('id', current.id);
-    }
-  } else if (rpcError) {
-    logger.error({ userId, creditType, quantity, error: rpcError }, 'Credit refund failed');
-    throw new AppError(`Credit refund failed: ${rpcError.message}`, 500);
+  if (error) {
+    logger.error({ userId, creditType, quantity, error }, 'Credit refund RPC failed');
+    throw new AppError(`Credit refund failed: ${error.message}`, 500);
   }
 
-  logger.info({ userId, creditType, quantity, reason }, 'Credits refunded');
+  if (data && !data.success) {
+    logger.warn({ userId, creditType, quantity, error: data.error }, 'Credit refund failed -- no active credit record');
+  }
+
+  logger.info({ userId, creditType, quantity, reason, balanceAfter: data?.balance_after }, 'Credits refunded');
 }
 
 // ─── Refill Credits ─────────────────────────────────────────────────────────

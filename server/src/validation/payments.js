@@ -3,17 +3,25 @@
 import { z } from 'zod';
 
 /**
- * POST /api/v1/payments/checkout
+ * POST /api/v1/billing/checkout-session
+ *
+ * Validates the request to create a Stripe Checkout session.
+ * Tier must be one of the paid tiers (free has no Stripe product).
  */
 export const checkoutSessionSchema = z.object({
-  price_id: z.string().min(1, 'Price ID is required'),
-  success_url: z.string().url().optional(),
-  cancel_url: z.string().url().optional(),
+  tier: z.enum(['starter', 'pro', 'agency'], {
+    required_error: 'Subscription tier is required',
+    invalid_type_error: 'Tier must be one of: starter, pro, agency',
+  }),
+  successUrl: z.string().url('Success URL must be a valid URL').optional(),
+  cancelUrl: z.string().url('Cancel URL must be a valid URL').optional(),
 });
 
 /**
- * POST /api/v1/payments/portal
+ * POST /api/v1/billing/portal-session
+ *
+ * Validates the request to create a Stripe Customer Portal session.
  */
 export const portalSessionSchema = z.object({
-  return_url: z.string().url().optional(),
+  returnUrl: z.string().url('Return URL must be a valid URL').optional(),
 });

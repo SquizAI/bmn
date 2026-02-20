@@ -97,6 +97,8 @@ export const CRMSyncJobSchema = z.object({
     'brand.completed',
     'subscription.created',
     'subscription.cancelled',
+    'logo.generated',
+    'mockup.generated',
   ]),
   data: z.record(z.unknown()),
 });
@@ -115,6 +117,10 @@ export const EmailSendJobSchema = z.object({
     'subscription-cancelled',
     'generation-failed',
     'support-ticket',
+    'support-request',
+    'payment-confirmed',
+    'subscription-renewal',
+    'credit-low-warning',
   ]),
   data: z.record(z.unknown()),
   userId: z.string().uuid().optional(),
@@ -137,7 +143,7 @@ export const ImageUploadJobSchema = z.object({
  * Cleanup job -- periodic maintenance.
  */
 export const CleanupJobSchema = z.object({
-  type: z.enum(['expired-jobs', 'orphaned-assets', 'stale-sessions', 'temp-files']),
+  type: z.enum(['expired-jobs', 'orphaned-assets', 'stale-sessions', 'temp-files', 'detect-abandonment']),
 });
 
 /**

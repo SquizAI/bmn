@@ -7,9 +7,17 @@ import { logger } from '../../lib/logger.js';
 // ── Tool Definitions ────────────────────────────────────────────────
 
 export const tools = {
+  /**
+   * getProductPricing
+   *
+   * Fetch product pricing data from the products table by SKU.
+   * Uses Supabase admin client for server-side queries.
+   *
+   * Cost estimate: Free (Supabase query within plan limits)
+   */
   getProductPricing: {
     name: 'getProductPricing',
-    description: 'Fetch product pricing data (base cost and retail price) from the products table by SKU.',
+    description: 'Fetch product pricing data (base cost, retail price, shipping cost) from the products table by SKU.',
     inputSchema: z.object({
       skus: z
         .array(z.string())
@@ -18,51 +26,69 @@ export const tools = {
         .describe('Array of product SKUs to look up (1-20)'),
     }),
 
-    /** @param {{ skus: string[] }} input */
+    /**
+     * @param {{ skus: string[] }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     */
     async execute({ skus }) {
       logger.info({ msg: 'Fetching product pricing', skuCount: skus.length });
 
-      const { data, error } = await supabaseAdmin
-        .from('products')
-        .select('sku, name, base_cost, retail_price, category')
-        .in('sku', skus);
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('products')
+          .select('sku, name, base_cost, retail_price, shipping_cost, category')
+          .in('sku', skus);
 
-      if (error) {
-        return { success: false, error: `Failed to fetch product pricing: ${error.message}` };
+        if (error) {
+          return { success: false, error: `Failed to fetch product pricing: ${error.message}` };
+        }
+
+        if (!data || data.length === 0) {
+          return { success: false, error: `No products found for SKUs: ${skus.join(', ')}` };
+        }
+
+        // Map to camelCase for consistency
+        const products = data.map((p) => ({
+          sku: p.sku,
+          name: p.name,
+          baseCost: parseFloat(p.base_cost) || 0,
+          retailPrice: parseFloat(p.retail_price) || 0,
+          shippingCost: parseFloat(p.shipping_cost) || 0,
+          category: p.category,
+        }));
+
+        // Report any SKUs that were not found
+        const foundSkus = new Set(products.map((p) => p.sku));
+        const missingSkus = skus.filter((s) => !foundSkus.has(s));
+
+        return {
+          success: true,
+          data: {
+            products,
+            found: products.length,
+            requested: skus.length,
+            missingSkus: missingSkus.length > 0 ? missingSkus : undefined,
+          },
+        };
+      } catch (err) {
+        logger.error({ msg: 'Product pricing fetch failed', error: err.message });
+        return { success: false, error: `Product pricing fetch failed: ${err.message}` };
       }
-
-      if (!data || data.length === 0) {
-        return { success: false, error: `No products found for SKUs: ${skus.join(', ')}` };
-      }
-
-      // Map to camelCase for consistency
-      const products = data.map((p) => ({
-        sku: p.sku,
-        name: p.name,
-        baseCost: parseFloat(p.base_cost) || 0,
-        retailPrice: parseFloat(p.retail_price) || 0,
-        category: p.category,
-      }));
-
-      // Report any SKUs that were not found
-      const foundSkus = new Set(products.map((p) => p.sku));
-      const missingSkus = skus.filter((s) => !foundSkus.has(s));
-
-      return {
-        success: true,
-        data: {
-          products,
-          found: products.length,
-          requested: skus.length,
-          missingSkus: missingSkus.length > 0 ? missingSkus : undefined,
-        },
-      };
     },
   },
 
+  /**
+   * calculateMargins
+   *
+   * Calculate profit and margin percentage for each product.
+   * Formula: margin = (retailPrice - baseCost - shippingCost) / retailPrice * 100
+   *
+   * Pure computation -- no external API calls.
+   * Cost estimate: Free (pure math)
+   */
   calculateMargins: {
     name: 'calculateMargins',
-    description: 'Calculate profit and margin percentage for each product. Pure computation -- no external API calls.',
+    description: 'Calculate profit and margin percentage for each product. Formula: margin = (retailPrice - baseCost - shippingCost) / retailPrice * 100. Pure computation -- no external API calls.',
     inputSchema: z.object({
       products: z
         .array(
@@ -70,25 +96,33 @@ export const tools = {
             sku: z.string().describe('Product SKU'),
             baseCost: z.number().min(0).describe('Base cost per unit in USD'),
             retailPrice: z.number().min(0).describe('Retail price per unit in USD'),
+            shippingCost: z.number().min(0).default(0).describe('Shipping cost per unit in USD (default 0)'),
           })
         )
         .min(1)
         .describe('Array of products with cost and price data'),
     }),
 
-    /** @param {{ products: Array<{ sku: string, baseCost: number, retailPrice: number }> }} input */
+    /**
+     * @param {{ products: Array<{ sku: string, baseCost: number, retailPrice: number, shippingCost?: number }> }} input
+     * @returns {Promise<{ success: boolean, data: Object }>}
+     */
     async execute({ products }) {
       logger.info({ msg: 'Calculating margins', productCount: products.length });
 
       const results = products.map((product) => {
-        const profit = Math.round((product.retailPrice - product.baseCost) * 100) / 100;
+        const shippingCost = product.shippingCost || 0;
+        const totalCost = product.baseCost + shippingCost;
+        const profit = Math.round((product.retailPrice - totalCost) * 100) / 100;
         const marginPercent = product.retailPrice > 0
-          ? Math.round(((product.retailPrice - product.baseCost) / product.retailPrice) * 10000) / 100
+          ? Math.round(((product.retailPrice - totalCost) / product.retailPrice) * 10000) / 100
           : 0;
 
         return {
           sku: product.sku,
           baseCost: product.baseCost,
+          shippingCost,
+          totalCost: Math.round(totalCost * 100) / 100,
           retailPrice: product.retailPrice,
           profit,
           marginPercent,
@@ -116,44 +150,61 @@ export const tools = {
     },
   },
 
+  /**
+   * projectRevenue
+   *
+   * Project monthly and annual revenue/profit at three configurable sales
+   * volume tiers. Accounts for estimated return rate.
+   *
+   * Pure computation -- no external API calls.
+   * Cost estimate: Free (pure math)
+   */
   projectRevenue: {
     name: 'projectRevenue',
-    description: 'Project monthly and annual revenue/profit at three sales volume tiers. Pure computation -- no external API calls.',
+    description: 'Project monthly and annual revenue/profit at three sales volume tiers (conservative, moderate, aggressive). Accounts for return rate. Pure computation -- no external API calls.',
     inputSchema: z.object({
       products: z
         .array(
           z.object({
             sku: z.string().describe('Product SKU'),
             retailPrice: z.number().min(0).describe('Retail price per unit in USD'),
-            profit: z.number().describe('Profit per unit in USD'),
+            profit: z.number().describe('Profit per unit in USD (after all costs)'),
           })
         )
         .min(1)
         .describe('Array of products with pricing and profit data'),
       tiers: z
         .object({
-          low: z.number().int().min(1).default(10).describe('Conservative units per product per month'),
-          mid: z.number().int().min(1).default(50).describe('Moderate units per product per month'),
-          high: z.number().int().min(1).default(200).describe('Aggressive units per product per month'),
+          low: z.number().int().min(1).default(50).describe('Conservative units per product per month'),
+          mid: z.number().int().min(1).default(200).describe('Moderate units per product per month'),
+          high: z.number().int().min(1).default(500).describe('Aggressive units per product per month'),
         })
         .optional()
-        .describe('Custom sales volume tiers (optional, defaults: low=10, mid=50, high=200)'),
+        .describe('Custom sales volume tiers (optional, defaults: low=50, mid=200, high=500)'),
+      returnRate: z
+        .number()
+        .min(0)
+        .max(0.5)
+        .default(0.05)
+        .describe('Estimated return rate as decimal (default 0.05 = 5%)'),
     }),
 
-    /** @param {{ products: Array<{ sku: string, retailPrice: number, profit: number }>, tiers?: { low: number, mid: number, high: number } }} input */
-    async execute({ products, tiers }) {
+    /**
+     * @param {{ products: Array<{ sku: string, retailPrice: number, profit: number }>, tiers?: { low: number, mid: number, high: number }, returnRate?: number }} input
+     * @returns {Promise<{ success: boolean, data: Object }>}
+     */
+    async execute({ products, tiers, returnRate = 0.05 }) {
       const volumeTiers = {
-        low: tiers?.low ?? 10,
-        mid: tiers?.mid ?? 50,
-        high: tiers?.high ?? 200,
+        low: tiers?.low ?? 50,
+        mid: tiers?.mid ?? 200,
+        high: tiers?.high ?? 500,
       };
-
-      const returnRate = 0.05; // 5% estimated return rate
 
       logger.info({
         msg: 'Projecting revenue',
         productCount: products.length,
         tiers: volumeTiers,
+        returnRate,
       });
 
       /**
@@ -178,6 +229,8 @@ export const tools = {
             unitsPerMonth: effectiveUnits,
             monthlyRevenue: productRevenue,
             monthlyProfit: productProfit,
+            annualRevenue: Math.round(productRevenue * 12 * 100) / 100,
+            annualProfit: Math.round(productProfit * 12 * 100) / 100,
           });
         }
 
@@ -204,7 +257,7 @@ export const tools = {
           projections,
           assumptions: {
             returnRate,
-            returnRatePercent: returnRate * 100,
+            returnRatePercent: Math.round(returnRate * 10000) / 100,
             tiers: volumeTiers,
             productCount: products.length,
           },

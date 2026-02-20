@@ -1,4 +1,8 @@
 // server/src/routes/payments.js
+//
+// Legacy route file -- kept for backward compatibility.
+// The canonical billing routes are in ./billing.js at /api/v1/billing/*.
+// These /api/v1/payments/* routes delegate to the same controllers.
 
 import { Router } from 'express';
 import * as paymentController from '../controllers/payments.js';

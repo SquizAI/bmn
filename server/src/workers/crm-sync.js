@@ -1,11 +1,32 @@
 // server/src/workers/crm-sync.js
 
+/**
+ * CRM Sync Worker -- syncs user/brand events to GoHighLevel.
+ *
+ * Maps application events to GHL API actions:
+ * - wizard.started      -> Upsert contact + tag "wizard-started"
+ * - brand.completed     -> Update custom fields + tag "brand-completed"
+ * - wizard.abandoned    -> Tag "abandoned-step-{stepName}"
+ * - subscription.created -> Tags "subscriber" + "tier-{tierName}"
+ * - logo.generated      -> Update logo_url custom field
+ * - mockup.generated    -> Update brand_status to "mockups-ready"
+ *
+ * Retry: 3 attempts with exponential backoff [1s, 5s, 15s].
+ * On final failure: log to Sentry + dead-letter queue.
+ */
+
 import { Worker } from 'bullmq';
+import * as Sentry from '@sentry/node';
 import { redis } from '../lib/redis.js';
 import { QUEUE_CONFIGS } from '../queues/index.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
+import {
+  upsertContact,
+  addTag,
+  updateCustomFields,
+} from '../services/ghl.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -20,242 +41,206 @@ function getBullRedisConfig() {
   };
 }
 
-// ── GoHighLevel (GHL) OAuth 2.0 API client ──────────────────────────────
-
-const GHL_API_BASE = 'https://services.leadconnectorhq.com';
+// ── Profile Resolution ────────────────────────────────────────────
 
 /**
- * Get a valid GHL access token from the database.
- * Tokens are managed via OAuth 2.0 and refreshed automatically.
+ * Resolve user profile from Supabase for CRM sync.
+ * Returns only the fields needed for GHL -- no passwords, no tokens.
  *
- * @returns {Promise<{accessToken: string, locationId: string}>}
+ * @param {string} userId
+ * @returns {Promise<{ email: string, firstName: string, lastName: string, phone: string | null, ghlContactId: string | null }>}
  */
-async function getGHLCredentials() {
+async function resolveUserProfile(userId) {
   const { data, error } = await supabaseAdmin
-    .from('integrations')
-    .select('access_token, refresh_token, location_id, expires_at')
-    .eq('provider', 'gohighlevel')
-    .eq('is_active', true)
+    .from('profiles')
+    .select('email, full_name, phone, ghl_contact_id')
+    .eq('id', userId)
     .single();
 
   if (error || !data) {
-    throw new Error('GoHighLevel integration not configured or inactive');
+    throw new Error(`Failed to resolve profile for user ${userId}: ${error?.message || 'not found'}`);
   }
 
-  // Check if token is expired (with 5 min buffer)
-  const expiresAt = new Date(data.expires_at).getTime();
-  if (Date.now() > expiresAt - 5 * 60 * 1000) {
-    // Token expired -- refresh it
-    const refreshed = await refreshGHLToken(data.refresh_token);
-    return { accessToken: refreshed.accessToken, locationId: data.location_id };
-  }
-
-  return { accessToken: data.access_token, locationId: data.location_id };
-}
-
-/**
- * Refresh an expired GHL OAuth token.
- * @param {string} refreshToken
- * @returns {Promise<{accessToken: string}>}
- */
-async function refreshGHLToken(refreshToken) {
-  const response = await fetch(`${GHL_API_BASE}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-      client_id: process.env.GHL_CLIENT_ID || '',
-      client_secret: process.env.GHL_CLIENT_SECRET || '',
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`GHL token refresh failed: ${response.status} -- ${await response.text()}`);
-  }
-
-  const tokenData = await response.json();
-
-  // Persist the new tokens
-  await supabaseAdmin
-    .from('integrations')
-    .update({
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-    })
-    .eq('provider', 'gohighlevel');
-
-  return { accessToken: tokenData.access_token };
-}
-
-/**
- * Make an authenticated request to the GHL API.
- *
- * @param {string} method - HTTP method
- * @param {string} path - API path (e.g. '/contacts/')
- * @param {Object} [body] - Request body
- * @returns {Promise<Object>} Response JSON
- */
-async function ghlRequest(method, path, body) {
-  const { accessToken, locationId } = await getGHLCredentials();
-
-  const headers = {
-    'Authorization': `Bearer ${accessToken}`,
-    'Version': '2021-07-28',
-    'Content-Type': 'application/json',
+  const nameParts = (data.full_name || 'Unknown').split(' ');
+  return {
+    email: data.email,
+    firstName: nameParts[0] || 'Unknown',
+    lastName: nameParts.slice(1).join(' ') || '',
+    phone: data.phone || null,
+    ghlContactId: data.ghl_contact_id || null,
   };
-
-  const url = `${GHL_API_BASE}${path}`;
-  const options = { method, headers };
-  if (body) {
-    // Inject locationId into all request bodies
-    options.body = JSON.stringify({ ...body, locationId });
-  }
-
-  const response = await fetch(url, options);
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`GHL API ${method} ${path} failed: ${response.status} -- ${text}`);
-  }
-
-  return response.json();
 }
 
 /**
- * Find a GHL contact by email, or return null.
- * @param {string} email
- * @returns {Promise<Object|null>}
- */
-async function findGHLContact(email) {
-  try {
-    const result = await ghlRequest('GET', `/contacts/lookup?email=${encodeURIComponent(email)}`);
-    return result.contacts?.[0] || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Look up the user's GHL contact ID from our database.
+ * Store GHL contact ID on user profile for future lookups.
+ *
  * @param {string} userId
- * @returns {Promise<string|null>}
+ * @param {string} contactId
+ * @returns {Promise<void>}
  */
-async function getGHLContactId(userId) {
-  const { data } = await supabaseAdmin
+async function storeContactId(userId, contactId) {
+  await supabaseAdmin
     .from('profiles')
-    .select('ghl_contact_id')
-    .eq('id', userId)
-    .single();
-  return data?.ghl_contact_id || null;
+    .update({ ghl_contact_id: contactId })
+    .eq('id', userId);
 }
+
+// ── Event Handlers ────────────────────────────────────────────────
 
 /**
  * Map of event types to their GHL action handlers.
- * Each handler receives the event data and a jobLog and performs the GHL API action.
+ * Each handler receives (userId, eventData, jobLog) and performs the GHL API action.
+ *
+ * @type {Record<string, (userId: string, data: Record<string, any>, jobLog: import('pino').Logger) => Promise<Object>>}
  */
-const GHL_EVENT_HANDLERS = {
-  'user.created': async (data, jobLog) => {
-    jobLog.info({ email: data.email }, 'GHL: Creating contact');
-    const result = await ghlRequest('POST', '/contacts/', {
-      firstName: data.firstName || '',
-      lastName: data.lastName || '',
-      email: data.email,
-      phone: data.phone || '',
-      tags: ['bmn_user'],
-      source: 'Brand Me Now',
-    });
-    const ghlContactId = result.contact?.id;
+const EVENT_HANDLERS = {
+  /**
+   * wizard.started: Upsert contact with email + name, add tag "wizard-started"
+   */
+  'wizard.started': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
+    jobLog.info({ email: profile.email }, 'GHL: Upserting contact for wizard.started');
 
-    // Store the GHL contact ID on the user profile
-    if (ghlContactId && data.userId) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ ghl_contact_id: ghlContactId })
-        .eq('id', data.userId);
+    const { contactId, isNew } = await upsertContact(userId, {
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone,
+      tags: ['wizard-started'],
+    });
+
+    // Cache the GHL contact ID on the profile
+    if (contactId && !profile.ghlContactId) {
+      await storeContactId(userId, contactId);
     }
 
-    return { action: 'create_contact', ghlContactId };
+    return { action: 'upsert_and_tag', contactId, isNew, tag: 'wizard-started' };
   },
 
-  'wizard.started': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) {
-      jobLog.warn('No GHL contact ID found, skipping tag');
-      return { action: 'add_tag', skipped: true };
+  /**
+   * brand.completed: Update custom fields (brand_name, brand_status, logo_url), add tag "brand-completed"
+   */
+  'brand.completed': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
+    jobLog.info({ email: profile.email }, 'GHL: Updating contact for brand.completed');
+
+    const { contactId } = await upsertContact(userId, {
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      tags: ['brand-completed'],
+      customFields: {
+        brand_name: data.brandName || '',
+        brand_status: 'completed',
+        logo_url: data.logoUrl || '',
+        social_handle: data.socialHandle || '',
+      },
+    });
+
+    if (contactId && !profile.ghlContactId) {
+      await storeContactId(userId, contactId);
     }
-    jobLog.info({ contactId }, 'GHL: Adding wizard_started tag');
-    await ghlRequest('POST', `/contacts/${contactId}/tags`, {
-      tags: ['wizard_started'],
-    });
-    return { action: 'add_tag', tag: 'wizard_started' };
+
+    return { action: 'upsert_fields_and_tag', contactId, tag: 'brand-completed' };
   },
 
-  'wizard.step-completed': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) return { action: 'update_field', skipped: true };
-    jobLog.info({ contactId, step: data.step }, 'GHL: Updating wizard step');
-    await ghlRequest('PUT', `/contacts/${contactId}`, {
-      customFields: [{ key: 'wizard_step', value: data.step }],
+  /**
+   * wizard.abandoned: Add tag "abandoned-step-{stepName}" (only the step name, no other data)
+   */
+  'wizard.abandoned': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
+    const stepName = data.lastStep || 'unknown';
+    const tag = `abandoned-step-${stepName}`;
+    jobLog.info({ email: profile.email, stepName }, 'GHL: Adding abandoned tag');
+
+    const { contactId } = await upsertContact(userId, {
+      email: profile.email,
+      tags: [tag],
     });
-    return { action: 'update_field', field: 'wizard_step', value: data.step };
+
+    if (contactId && !profile.ghlContactId) {
+      await storeContactId(userId, contactId);
+    }
+
+    return { action: 'tag', contactId, tag };
   },
 
-  'wizard.abandoned': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) return { action: 'add_tag', skipped: true };
-    jobLog.info({ contactId, lastStep: data.lastStep }, 'GHL: Adding wizard_abandoned tag');
-    await ghlRequest('POST', `/contacts/${contactId}/tags`, {
-      tags: ['wizard_abandoned'],
+  /**
+   * subscription.created: Add tags "subscriber", "tier-{tierName}"
+   */
+  'subscription.created': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
+    const tierName = data.tier || data.tierName || 'unknown';
+    const tags = ['subscriber', `tier-${tierName}`];
+    jobLog.info({ email: profile.email, tierName }, 'GHL: Adding subscription tags');
+
+    const { contactId } = await upsertContact(userId, {
+      email: profile.email,
+      tags,
     });
-    return { action: 'add_tag', tag: 'wizard_abandoned' };
+
+    if (contactId && !profile.ghlContactId) {
+      await storeContactId(userId, contactId);
+    }
+
+    return { action: 'tag', contactId, tags };
   },
 
-  'brand.completed': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) return { action: 'add_tag', skipped: true };
-    jobLog.info({ contactId }, 'GHL: Adding brand_complete tag');
-    await ghlRequest('POST', `/contacts/${contactId}/tags`, {
-      tags: ['brand_complete'],
+  /**
+   * logo.generated: Update logo_url custom field
+   */
+  'logo.generated': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
+
+    if (!profile.ghlContactId) {
+      jobLog.warn('No GHL contact ID found for logo.generated, upserting first');
+      const { contactId } = await upsertContact(userId, {
+        email: profile.email,
+        customFields: {
+          logo_url: data.logoUrl || '',
+        },
+      });
+      if (contactId) await storeContactId(userId, contactId);
+      return { action: 'upsert_and_update_field', contactId, field: 'logo_url' };
+    }
+
+    await updateCustomFields(profile.ghlContactId, {
+      logo_url: data.logoUrl || '',
     });
-    return { action: 'add_tag', tag: 'brand_complete' };
+
+    return { action: 'update_field', contactId: profile.ghlContactId, field: 'logo_url' };
   },
 
-  'subscription.created': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) return { action: 'update_subscription', skipped: true };
-    jobLog.info({ contactId, tier: data.tier }, 'GHL: Updating subscription');
-    await ghlRequest('PUT', `/contacts/${contactId}`, {
-      customFields: [
-        { key: 'subscription_tier', value: data.tier },
-        { key: 'subscription_status', value: 'active' },
-      ],
-    });
-    await ghlRequest('POST', `/contacts/${contactId}/tags`, {
-      tags: [`plan_${data.tier}`, 'paying_customer'],
-    });
-    return { action: 'update_subscription', tier: data.tier };
-  },
+  /**
+   * mockup.generated: Update brand_status to "mockups-ready"
+   */
+  'mockup.generated': async (userId, data, jobLog) => {
+    const profile = await resolveUserProfile(userId);
 
-  'subscription.cancelled': async (data, jobLog) => {
-    const contactId = await getGHLContactId(data.userId);
-    if (!contactId) return { action: 'add_tag', skipped: true };
-    jobLog.info({ contactId }, 'GHL: Adding subscription_cancelled tag');
-    await ghlRequest('PUT', `/contacts/${contactId}`, {
-      customFields: [{ key: 'subscription_status', value: 'cancelled' }],
+    if (!profile.ghlContactId) {
+      jobLog.warn('No GHL contact ID found for mockup.generated, upserting first');
+      const { contactId } = await upsertContact(userId, {
+        email: profile.email,
+        customFields: {
+          brand_status: 'mockups-ready',
+        },
+      });
+      if (contactId) await storeContactId(userId, contactId);
+      return { action: 'upsert_and_update_field', contactId, field: 'brand_status' };
+    }
+
+    await updateCustomFields(profile.ghlContactId, {
+      brand_status: 'mockups-ready',
     });
-    await ghlRequest('POST', `/contacts/${contactId}/tags`, {
-      tags: ['subscription_cancelled'],
-    });
-    return { action: 'add_tag', tag: 'subscription_cancelled' };
+
+    return { action: 'update_field', contactId: profile.ghlContactId, field: 'brand_status' };
   },
 };
 
+// ── Worker ────────────────────────────────────────────────────────
+
 /**
  * CRM Sync worker -- syncs user/brand events to GoHighLevel.
- * Maps application events to GHL API actions (create contact, add tags,
- * update custom fields, create opportunities).
  *
  * @param {import('socket.io').Server} io
  * @returns {Worker}
@@ -266,19 +251,19 @@ export function initCRMSyncWorker(io) {
   const worker = new Worker(
     'crm-sync',
     async (job) => {
-      const { userId, eventType, data } = job.data;
+      const { userId, eventType, data = {} } = job.data;
       const jobLog = createJobLogger(job, 'crm-sync');
 
       jobLog.info({ eventType }, 'CRM sync started');
 
-      const handler = GHL_EVENT_HANDLERS[eventType];
+      const handler = EVENT_HANDLERS[eventType];
       if (!handler) {
         jobLog.warn({ eventType }, 'Unknown CRM event type, skipping');
         return { synced: false, reason: `Unknown event type: ${eventType}` };
       }
 
       try {
-        const result = await handler(data, jobLog);
+        const result = await handler(userId, data, jobLog);
 
         // Log sync attempt to ghl_sync_log table
         await supabaseAdmin.from('ghl_sync_log').insert({
@@ -307,17 +292,40 @@ export function initCRMSyncWorker(io) {
           jobLog.error({ err: dbErr }, 'Failed to log CRM sync failure to ghl_sync_log');
         });
 
+        // Sentry alert on final attempt (3 retries)
+        if (job.attemptsMade + 1 >= 3) {
+          Sentry.captureException(error, {
+            tags: {
+              integration: 'ghl',
+              eventType,
+              queue: 'crm-sync',
+            },
+            extra: {
+              userId,
+              attempts: job.attemptsMade + 1,
+              data,
+            },
+          });
+        }
+
         throw error;
       }
     },
     {
       connection: getBullRedisConfig(),
       concurrency: queueConfig.concurrency,
+      limiter: {
+        max: 10,        // Max 10 jobs per second (GHL rate limit)
+        duration: 1000,
+      },
     }
   );
 
   worker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, err, attempts: job?.attemptsMade }, 'CRM sync worker: job failed');
+    logger.error(
+      { jobId: job?.id, err, attempts: job?.attemptsMade },
+      'CRM sync worker: job failed'
+    );
   });
 
   worker.on('error', (err) => {

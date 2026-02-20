@@ -7,21 +7,49 @@ import { LoadingSpinner } from '@/components/ui/spinner';
 import { requireAuth, requireAdmin, redirectIfAuthed } from '@/lib/route-guards';
 
 // --- Lazy route imports (code-split per route) ---
+
+// Layouts
 const RootLayout = lazy(() => import('@/routes/root-layout'));
+const WizardLayout = lazy(() => import('@/routes/wizard/index'));
+const DashboardLayout = lazy(() => import('@/routes/dashboard/layout'));
+const AdminLayout = lazy(() => import('@/routes/admin/layout'));
+
+// Auth
 const Login = lazy(() => import('@/routes/auth/login'));
 const AuthCallback = lazy(() => import('@/routes/auth/callback'));
-const WizardLayout = lazy(() => import('@/routes/wizard/index'));
+
+// Wizard steps
 const Onboarding = lazy(() => import('@/routes/wizard/onboarding'));
-const DashboardLayout = lazy(() => import('@/routes/dashboard/layout'));
-const DashboardPage = lazy(() => import('@/routes/dashboard/index'));
+const SocialAnalysis = lazy(() => import('@/routes/wizard/social-analysis'));
+const BrandIdentity = lazy(() => import('@/routes/wizard/brand-identity'));
+const LogoGeneration = lazy(() => import('@/routes/wizard/logo-generation'));
+const ProductSelection = lazy(() => import('@/routes/wizard/product-selection'));
+const MockupReview = lazy(() => import('@/routes/wizard/mockup-review'));
+const ProfitProjection = lazy(() => import('@/routes/wizard/profit-projection'));
+const Completion = lazy(() => import('@/routes/wizard/completion'));
+
+// Dashboard
+const BrandsPage = lazy(() => import('@/routes/dashboard/brands'));
+const BrandDetailPage = lazy(() => import('@/routes/dashboard/brand-detail'));
+const SettingsPage = lazy(() => import('@/routes/dashboard/settings'));
+
+// Admin
+const AdminUsersPage = lazy(() => import('@/routes/admin/users'));
+const AdminProductsPage = lazy(() => import('@/routes/admin/products'));
+const AdminJobsPage = lazy(() => import('@/routes/admin/jobs'));
+
+// --- Suspense wrapper helper ---
+function SuspenseRoute({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<LoadingSpinner fullPage />}>{children}</Suspense>;
+}
 
 // --- Route Tree ---
 const router = createBrowserRouter([
   {
     element: (
-      <Suspense fallback={<LoadingSpinner fullPage />}>
+      <SuspenseRoute>
         <RootLayout />
-      </Suspense>
+      </SuspenseRoute>
     ),
     children: [
       // --- Auth routes (redirect if already logged in) ---
@@ -31,9 +59,9 @@ const router = createBrowserRouter([
           {
             path: '/login',
             element: (
-              <Suspense fallback={<LoadingSpinner fullPage />}>
+              <SuspenseRoute>
                 <Login />
-              </Suspense>
+              </SuspenseRoute>
             ),
           },
         ],
@@ -41,9 +69,9 @@ const router = createBrowserRouter([
       {
         path: '/auth/callback',
         element: (
-          <Suspense fallback={<LoadingSpinner fullPage />}>
+          <SuspenseRoute>
             <AuthCallback />
-          </Suspense>
+          </SuspenseRoute>
         ),
       },
 
@@ -52,31 +80,83 @@ const router = createBrowserRouter([
         path: '/wizard',
         loader: requireAuth,
         element: (
-          <Suspense fallback={<LoadingSpinner fullPage />}>
+          <SuspenseRoute>
             <WizardLayout />
-          </Suspense>
+          </SuspenseRoute>
         ),
         children: [
           {
             index: true,
             element: (
-              <Suspense fallback={<LoadingSpinner fullPage />}>
+              <SuspenseRoute>
                 <Onboarding />
-              </Suspense>
+              </SuspenseRoute>
             ),
           },
           {
             path: 'onboarding',
             element: (
-              <Suspense fallback={<LoadingSpinner fullPage />}>
+              <SuspenseRoute>
                 <Onboarding />
-              </Suspense>
+              </SuspenseRoute>
             ),
           },
-          // Additional wizard steps will be added here as they are built:
-          // social-analysis, brand-identity, customization, logo-generation,
-          // logo-refinement, product-selection, mockup-review, bundle-builder,
-          // profit-calculator, checkout, complete
+          {
+            path: 'social-analysis',
+            element: (
+              <SuspenseRoute>
+                <SocialAnalysis />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'brand-identity',
+            element: (
+              <SuspenseRoute>
+                <BrandIdentity />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'logo-generation',
+            element: (
+              <SuspenseRoute>
+                <LogoGeneration />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'product-selection',
+            element: (
+              <SuspenseRoute>
+                <ProductSelection />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'mockup-review',
+            element: (
+              <SuspenseRoute>
+                <MockupReview />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'profit-calculator',
+            element: (
+              <SuspenseRoute>
+                <ProfitProjection />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'complete',
+            element: (
+              <SuspenseRoute>
+                <Completion />
+              </SuspenseRoute>
+            ),
+          },
         ],
       },
 
@@ -85,22 +165,35 @@ const router = createBrowserRouter([
         path: '/dashboard',
         loader: requireAuth,
         element: (
-          <Suspense fallback={<LoadingSpinner fullPage />}>
+          <SuspenseRoute>
             <DashboardLayout />
-          </Suspense>
+          </SuspenseRoute>
         ),
         children: [
           {
             index: true,
             element: (
-              <Suspense fallback={<LoadingSpinner fullPage />}>
-                <DashboardPage />
-              </Suspense>
+              <SuspenseRoute>
+                <BrandsPage />
+              </SuspenseRoute>
             ),
           },
-          // Additional dashboard routes:
-          // { path: 'brands/:brandId', element: <BrandDetail /> },
-          // { path: 'settings', element: <Settings /> },
+          {
+            path: 'brands/:brandId',
+            element: (
+              <SuspenseRoute>
+                <BrandDetailPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'settings',
+            element: (
+              <SuspenseRoute>
+                <SettingsPage />
+              </SuspenseRoute>
+            ),
+          },
         ],
       },
 
@@ -108,13 +201,44 @@ const router = createBrowserRouter([
       {
         path: '/admin',
         loader: requireAdmin,
+        element: (
+          <SuspenseRoute>
+            <AdminLayout />
+          </SuspenseRoute>
+        ),
         children: [
-          // { index: true, element: <AdminUsers /> },
-          // { path: 'users', element: <AdminUsers /> },
-          // { path: 'products', element: <AdminProducts /> },
-          // { path: 'jobs', element: <AdminJobs /> },
-          // { path: 'moderation', element: <AdminModeration /> },
-          // { path: 'health', element: <AdminHealth /> },
+          {
+            index: true,
+            element: (
+              <SuspenseRoute>
+                <AdminUsersPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'users',
+            element: (
+              <SuspenseRoute>
+                <AdminUsersPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'products',
+            element: (
+              <SuspenseRoute>
+                <AdminProductsPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'jobs',
+            element: (
+              <SuspenseRoute>
+                <AdminJobsPage />
+              </SuspenseRoute>
+            ),
+          },
         ],
       },
 
@@ -122,9 +246,9 @@ const router = createBrowserRouter([
       {
         path: '*',
         element: (
-          <Suspense fallback={<LoadingSpinner fullPage />}>
-            <DashboardPage />
-          </Suspense>
+          <SuspenseRoute>
+            <BrandsPage />
+          </SuspenseRoute>
         ),
       },
     ],

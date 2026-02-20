@@ -181,8 +181,7 @@ export default function SocialAnalysisPage() {
                   Aesthetic
                 </p>
                 <p className="mt-1 text-sm text-text">
-                  {(generation.result as Record<string, unknown>)?.aesthetic as string ||
-                    'Analyzed'}
+                  {String((generation.result as Record<string, unknown>)?.aesthetic ?? 'Analyzed')}
                 </p>
               </div>
 
@@ -198,7 +197,7 @@ export default function SocialAnalysisPage() {
                     ? ((generation.result as Record<string, unknown>)
                         ?.themes as string[])
                         .slice(0, 3)
-                        .join(', ')
+                        .join(', ') as string
                     : 'Identified'}
                 </p>
               </div>
@@ -209,8 +208,7 @@ export default function SocialAnalysisPage() {
                   Target Audience
                 </p>
                 <p className="mt-1 text-sm text-text">
-                  {(generation.result as Record<string, unknown>)?.audience as string ||
-                    'Identified'}
+                  {String((generation.result as Record<string, unknown>)?.audience ?? 'Identified')}
                 </p>
               </div>
             </div>

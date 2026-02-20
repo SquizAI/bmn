@@ -1,11 +1,27 @@
 // server/src/workers/email-send.js
 
+/**
+ * Email Send Worker -- sends transactional email via Resend.
+ *
+ * Features:
+ * - Template-based rendering via the template registry
+ * - User email lookup from Supabase profiles
+ * - Per-user rate limiting (5 emails/min via Redis)
+ * - Retry 3 times with exponential backoff
+ * - Dead-letter queue with Sentry alert on final failure
+ * - HTML sanitization of all user-provided data
+ */
+
 import { Worker } from 'bullmq';
+import * as Sentry from '@sentry/node';
 import { redis } from '../lib/redis.js';
 import { QUEUE_CONFIGS } from '../queues/index.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
 import { config } from '../config/index.js';
+import { sendEmail, escapeHtml } from '../services/email.js';
+import { getTemplate } from '../emails/index.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -20,105 +36,90 @@ function getBullRedisConfig() {
   };
 }
 
-/**
- * Template subject line mapping.
- * @type {Record<string, string>}
- */
-const TEMPLATE_SUBJECTS = {
-  'welcome': 'Welcome to Brand Me Now!',
-  'brand-complete': 'Your brand is ready!',
-  'wizard-abandoned': 'Your brand is waiting for you',
-  'password-reset': 'Reset your password',
-  'subscription-confirmed': 'Subscription confirmed',
-  'subscription-cancelled': 'Subscription cancelled',
-  'generation-failed': 'Generation issue -- we are on it',
-  'support-ticket': 'Support ticket received',
-};
+// ── Rate Limiting ─────────────────────────────────────────────────
 
 /**
- * Lazily loaded Resend client singleton.
- * @type {import('resend').Resend | null}
+ * Check if sending this email would exceed the per-user rate limit.
+ * Limit: 5 emails per minute per user.
+ *
+ * @param {string} userId - User ID for rate limiting
+ * @returns {Promise<boolean>} True if within limit, false if rate limited
  */
-let _resend = null;
+async function checkRateLimit(userId) {
+  if (!userId) return true;
+
+  try {
+    const key = `email:rate:${userId}`;
+    const count = await redis.incr(key);
+
+    if (count === 1) {
+      await redis.expire(key, 60); // 60-second window
+    }
+
+    if (count > 5) {
+      logger.warn({ userId, count }, 'Email rate limit exceeded');
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    // If Redis is down, allow the email through
+    logger.warn({ err }, 'Rate limit check failed, allowing email');
+    return true;
+  }
+}
+
+// ── Profile Lookup ────────────────────────────────────────────────
 
 /**
- * Get the Resend client (lazy singleton).
- * @returns {Promise<import('resend').Resend>}
+ * Look up a user's email from the profiles table.
+ *
+ * @param {string} userId
+ * @returns {Promise<string | null>}
  */
-async function getResendClient() {
-  if (!_resend) {
-    try {
-      const { Resend } = await import('resend');
-      _resend = new Resend(config.RESEND_API_KEY);
-    } catch {
-      throw new Error(
-        'Resend SDK is not installed. Run: npm install resend'
-      );
+async function lookupUserEmail(userId) {
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('email')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data?.email) {
+    logger.warn({ userId, error }, 'Failed to look up user email');
+    return null;
+  }
+
+  return data.email;
+}
+
+// ── Data Sanitization ─────────────────────────────────────────────
+
+/**
+ * Sanitize all string values in a data object to prevent XSS.
+ *
+ * @param {Record<string, any>} data
+ * @returns {Record<string, any>}
+ */
+function sanitizeTemplateData(data) {
+  if (!data || typeof data !== 'object') return {};
+
+  const sanitized = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (typeof value === 'string') {
+      sanitized[key] = escapeHtml(value);
+    } else {
+      sanitized[key] = value;
     }
   }
-  return _resend;
+  return sanitized;
 }
 
-/**
- * Render a simple HTML email body from template name and data.
- * In production, this should use React Email components.
- * For now, produces clean HTML with the template data interpolated.
- *
- * @param {string} template
- * @param {Object} data
- * @returns {string} HTML string
- */
-function renderEmailHtml(template, data) {
-  const name = data.name || data.brandName || 'there';
-  const appUrl = config.APP_URL;
-
-  const templates = {
-    'welcome': `<h1>Welcome to Brand Me Now!</h1><p>Hi ${name}, your account is ready. <a href="${appUrl}/wizard">Start building your brand</a>.</p>`,
-    'brand-complete': `<h1>Your brand is ready!</h1><p>Hi ${name}, your brand "${data.brandName || ''}" is complete. <a href="${appUrl}/dashboard">View your brand</a>.</p>`,
-    'wizard-abandoned': `<h1>Your brand is waiting</h1><p>Hi ${name}, you left off at step "${data.lastStep || ''}". <a href="${appUrl}/wizard/resume">Pick up where you left off</a>.</p>`,
-    'password-reset': `<h1>Reset your password</h1><p>Click <a href="${data.resetUrl || '#'}">here</a> to reset your password. This link expires in 1 hour.</p>`,
-    'subscription-confirmed': `<h1>Subscription confirmed</h1><p>Hi ${name}, your ${data.tier || ''} plan is now active.</p>`,
-    'subscription-cancelled': `<h1>Subscription cancelled</h1><p>Hi ${name}, your subscription has been cancelled. You can resubscribe any time.</p>`,
-    'generation-failed': `<h1>Generation issue</h1><p>Hi ${name}, we encountered an issue generating your ${data.assetType || 'asset'}. Our team is looking into it.</p>`,
-    'support-ticket': `<h1>Support ticket received</h1><p>Hi ${name}, we received your support request and will respond within 24 hours.</p>`,
-  };
-
-  const body = templates[template] || `<p>${JSON.stringify(data)}</p>`;
-  return `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px;">${body}<hr><p style="color:#888;font-size:12px;">Brand Me Now</p></body></html>`;
-}
-
-/**
- * Send an email via Resend API.
- *
- * @param {Object} params
- * @param {string} params.to
- * @param {string} params.subject
- * @param {string} params.template
- * @param {Object} params.data
- * @returns {Promise<{id: string}>}
- */
-async function sendEmail({ to, subject, template, data }) {
-  const resend = await getResendClient();
-  const html = renderEmailHtml(template, data);
-
-  const { data: result, error } = await resend.emails.send({
-    from: config.FROM_EMAIL,
-    to,
-    subject,
-    html,
-  });
-
-  if (error) {
-    throw new Error(`Resend error: ${error.message}`);
-  }
-
-  return result;
-}
+// ── Worker ────────────────────────────────────────────────────────
 
 /**
  * Email Send worker -- sends transactional email via Resend.
  *
- * @param {import('socket.io').Server} _io - Not used for email, but kept for consistent interface
+ * @param {import('socket.io').Server} _io - Not used for email, kept for consistent interface
  * @returns {Worker}
  */
 export function initEmailSendWorker(_io) {
@@ -127,26 +128,97 @@ export function initEmailSendWorker(_io) {
   const worker = new Worker(
     'email-send',
     async (job) => {
-      const { to, template, data, userId } = job.data;
+      const { to, template: templateId, data = {}, userId } = job.data;
       const jobLog = createJobLogger(job, 'email-send');
 
-      const subject = TEMPLATE_SUBJECTS[template] || 'Brand Me Now notification';
+      jobLog.info({ to, templateId, userId }, 'Email send started');
 
-      jobLog.info({ to, template, subject }, 'Email send started');
+      // Step 1: Resolve recipient email
+      let recipientEmail = to;
+      if (!recipientEmail && userId) {
+        recipientEmail = await lookupUserEmail(userId);
+        if (!recipientEmail) {
+          throw new Error(`No email address found for userId: ${userId}`);
+        }
+      }
+      if (!recipientEmail) {
+        throw new Error('No recipient email address provided');
+      }
 
+      // Step 2: Look up template
+      const templateEntry = getTemplate(templateId);
+      if (!templateEntry) {
+        jobLog.warn({ templateId }, 'Unknown email template, using fallback');
+        // Fallback: send a simple notification
+        const result = await sendEmail({
+          to: recipientEmail,
+          subject: data.subject || 'Brand Me Now notification',
+          html: `<p>${escapeHtml(JSON.stringify(data))}</p>`,
+        });
+        return { sent: true, emailId: result.id, to: recipientEmail, templateId };
+      }
+
+      // Step 3: Rate limit check
+      const rateLimitUser = userId || recipientEmail;
+      const withinLimit = await checkRateLimit(rateLimitUser);
+      if (!withinLimit) {
+        jobLog.warn({ userId: rateLimitUser, templateId }, 'Email skipped due to rate limit');
+        return { sent: false, skipped: true, reason: 'rate_limited', to: recipientEmail, templateId };
+      }
+
+      // Step 4: Sanitize template data
+      const sanitizedData = sanitizeTemplateData(data);
+
+      // Step 5: Build the email from the template
+      const { subject, html } = templateEntry.build(sanitizedData);
+
+      // Step 6: Determine final recipient (support emails go to support inbox)
+      const finalRecipient = templateEntry.overrideTo || recipientEmail;
+
+      // Step 7: Determine reply-to
+      const replyTo = typeof templateEntry.replyTo === 'function'
+        ? templateEntry.replyTo(data) // Use unsanitized data for email address
+        : undefined;
+
+      // Step 8: Send via Resend
       try {
-        const result = await sendEmail({ to, subject, template, data });
+        const result = await sendEmail({
+          to: finalRecipient,
+          subject,
+          html,
+          replyTo,
+          tag: templateEntry.tag,
+        });
 
-        jobLog.info({ to, template, emailId: result.id }, 'Email sent successfully');
+        jobLog.info(
+          { to: finalRecipient, templateId, emailId: result.id },
+          'Email sent successfully'
+        );
 
         return {
           sent: true,
           emailId: result.id,
-          to,
-          template,
+          to: finalRecipient,
+          templateId,
         };
       } catch (error) {
-        jobLog.error({ err: error, to, template }, 'Email send failed');
+        jobLog.error({ err: error, to: finalRecipient, templateId }, 'Email send failed');
+
+        // Sentry alert on final attempt (3 retries)
+        if (job.attemptsMade + 1 >= 3) {
+          Sentry.captureException(error, {
+            tags: {
+              integration: 'resend',
+              template: templateId,
+              queue: 'email-send',
+            },
+            extra: {
+              to: finalRecipient,
+              attempts: job.attemptsMade + 1,
+            },
+          });
+        }
+
         throw error;
       }
     },
@@ -157,7 +229,10 @@ export function initEmailSendWorker(_io) {
   );
 
   worker.on('failed', (job, err) => {
-    logger.error({ jobId: job?.id, err, attempts: job?.attemptsMade }, 'Email send worker: job failed');
+    logger.error(
+      { jobId: job?.id, err, attempts: job?.attemptsMade },
+      'Email send worker: job failed'
+    );
   });
 
   worker.on('error', (err) => {

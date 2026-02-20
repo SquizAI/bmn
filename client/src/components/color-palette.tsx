@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Check, Pipette, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 // ------ Types ------
