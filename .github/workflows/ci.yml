@@ -79,8 +79,8 @@ jobs:
         working-directory: client
         run: npm run build
         env:
-          VITE_API_URL: https://api.brandmenow.com
-          VITE_WS_URL: wss://api.brandmenow.com
+          VITE_API_URL: https://api.prznl.com
+          VITE_WS_URL: wss://api.prznl.com
           VITE_SUPABASE_URL: https://placeholder.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder
 
@@ -107,10 +107,11 @@ jobs:
       - name: Build client image
         run: |
           docker build \
-            --build-arg VITE_API_URL=https://api.brandmenow.com \
-            --build-arg VITE_WS_URL=wss://api.brandmenow.com \
+            -f client/Dockerfile \
+            --build-arg VITE_API_URL=https://api.prznl.com \
+            --build-arg VITE_WS_URL=wss://api.prznl.com \
             -t bmn-client:${{ github.sha }} \
-            ./client
+            .
 
       - name: Verify images
         run: |

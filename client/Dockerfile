@@ -12,11 +12,12 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Copy dependency files
-COPY client/package.json client/package-lock.json* ./
+# Copy dependency files (workspace uses root lock file)
+COPY client/package.json ./
+COPY package-lock.json ../package-lock.json
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Copy client source code
 COPY client/ .
