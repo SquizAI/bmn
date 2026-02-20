@@ -60,8 +60,8 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${API_URL:-https://api.brandmenow.com}
-        VITE_WS_URL: ${WS_URL:-wss://api.brandmenow.com}
+        VITE_API_URL: ${API_URL:-https://api.prznl.com}
+        VITE_WS_URL: ${WS_URL:-wss://api.prznl.com}
         VITE_SUPABASE_URL: ${SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
         VITE_POSTHOG_KEY: ${POSTHOG_API_KEY}
