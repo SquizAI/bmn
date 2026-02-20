@@ -41,6 +41,27 @@ wizardRoutes.post(
   wizardController.generateIdentity
 );
 
+// POST /api/v1/wizard/:brandId/generate-names -- Queue brand name generation
+wizardRoutes.post(
+  '/:brandId/generate-names',
+  generationLimiter,
+  wizardController.generateNames
+);
+
+// POST /api/v1/wizard/:brandId/recommend-products -- Get AI product recommendations
+wizardRoutes.post(
+  '/:brandId/recommend-products',
+  generationLimiter,
+  wizardController.recommendProducts
+);
+
+// POST /api/v1/wizard/:brandId/generate-mockups -- Queue mockup generation
+wizardRoutes.post(
+  '/:brandId/generate-mockups',
+  generationLimiter,
+  wizardController.generateMockups
+);
+
 // POST /api/v1/wizard/resume -- Resume wizard from HMAC-signed token
 wizardRoutes.post(
   '/resume',

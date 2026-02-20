@@ -37,7 +37,69 @@ interface BundleDef {
   compositionUrl?: string;
 }
 
+// ------ Dossier Types ------
+
+interface DossierProfile {
+  displayName: string | null;
+  bio: string | null;
+  profilePhotoUrl: string | null;
+  totalFollowers: number;
+  totalFollowing: number;
+  engagementRate: number;
+}
+
+interface DossierNiche {
+  primary: string | null;
+  secondary: string[];
+  confidence: number;
+  marketSize: string | null;
+}
+
+interface DossierReadiness {
+  score: number;
+  breakdown: Record<string, number>;
+  tips: string[];
+}
+
+interface NameOption {
+  name: string;
+  domainAvailable: boolean | null;
+  instagramAvailable: boolean | null;
+  tiktokAvailable: boolean | null;
+  trademarkRisk: 'low' | 'medium' | 'high' | null;
+  reasoning: string;
+}
+
+interface BrandDirection {
+  id: string;
+  label: string;
+  archetype: string;
+  colorPalette: Array<{ hex: string; name: string; role: string }>;
+  fontPrimary: string;
+  fontSecondary: string;
+  voiceTone: string;
+  tagline: string;
+}
+
 // ------ Slices ------
+
+interface DossierSlice {
+  profile: DossierProfile | null;
+  niche: DossierNiche | null;
+  readiness: DossierReadiness | null;
+  contentThemes: string[];
+  feedColors: string[];
+  audienceDemo: Record<string, unknown> | null;
+  topPosts: Array<{ url: string; engagement: number; type: string }>;
+}
+
+interface NameGenSlice {
+  options: NameOption[];
+  selectedName: string | null;
+  customName: string | null;
+  directions: BrandDirection[];
+  selectedDirectionId: string | null;
+}
 
 interface BrandSlice {
   name: string | null;
@@ -45,6 +107,8 @@ interface BrandSlice {
   archetype: string | null;
   values: string[];
   targetAudience: string | null;
+  voiceTone: Record<string, number> | null;
+  taglines: string[];
 }
 
 interface DesignSlice {
@@ -75,6 +139,8 @@ interface MetaSlice {
 // ------ Store Interface ------
 
 interface WizardState {
+  dossier: DossierSlice;
+  nameGen: NameGenSlice;
   brand: BrandSlice;
   design: DesignSlice;
   assets: AssetsSlice;
@@ -82,6 +148,8 @@ interface WizardState {
   meta: MetaSlice;
 
   // Slice setters
+  setDossier: (data: Partial<DossierSlice>) => void;
+  setNameGen: (data: Partial<NameGenSlice>) => void;
   setBrand: (data: Partial<BrandSlice>) => void;
   setDesign: (data: Partial<DesignSlice>) => void;
   setAssets: (data: Partial<AssetsSlice>) => void;
@@ -108,12 +176,32 @@ interface WizardState {
   reset: () => void;
 }
 
+const initialDossier: DossierSlice = {
+  profile: null,
+  niche: null,
+  readiness: null,
+  contentThemes: [],
+  feedColors: [],
+  audienceDemo: null,
+  topPosts: [],
+};
+
+const initialNameGen: NameGenSlice = {
+  options: [],
+  selectedName: null,
+  customName: null,
+  directions: [],
+  selectedDirectionId: null,
+};
+
 const initialBrand: BrandSlice = {
   name: null,
   vision: null,
   archetype: null,
   values: [],
   targetAudience: null,
+  voiceTone: null,
+  taglines: [],
 };
 
 const initialDesign: DesignSlice = {
@@ -146,6 +234,8 @@ export const useWizardStore = create<WizardState>()(
     persist(
       (set) => ({
         // === Slices ===
+        dossier: { ...initialDossier },
+        nameGen: { ...initialNameGen },
         brand: { ...initialBrand },
         design: { ...initialDesign },
         assets: { ...initialAssets },
@@ -153,6 +243,12 @@ export const useWizardStore = create<WizardState>()(
         meta: { ...initialMeta },
 
         // === Slice Setters ===
+        setDossier: (data) =>
+          set((state) => ({ dossier: { ...state.dossier, ...data } }), false, 'setDossier'),
+
+        setNameGen: (data) =>
+          set((state) => ({ nameGen: { ...state.nameGen, ...data } }), false, 'setNameGen'),
+
         setBrand: (data) =>
           set((state) => ({ brand: { ...state.brand, ...data } }), false, 'setBrand'),
 
@@ -257,6 +353,8 @@ export const useWizardStore = create<WizardState>()(
         reset: () =>
           set(
             {
+              dossier: { ...initialDossier },
+              nameGen: { ...initialNameGen },
               brand: { ...initialBrand },
               design: { ...initialDesign },
               assets: { ...initialAssets },
@@ -269,8 +367,10 @@ export const useWizardStore = create<WizardState>()(
       }),
       {
         name: 'bmn-wizard',
-        version: 1,
+        version: 2,
         partialize: (state) => ({
+          dossier: state.dossier,
+          nameGen: state.nameGen,
           brand: state.brand,
           design: state.design,
           products: state.products,

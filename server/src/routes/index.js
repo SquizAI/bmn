@@ -9,6 +9,7 @@ import { billingRoutes } from './billing.js';
 import { adminRoutes } from './admin.js';
 import { webhookRoutes } from './webhooks.js';
 import { healthRoute } from './health.js';
+import { dashboardRoutes } from './api/v1/dashboard/index.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
 
@@ -40,6 +41,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/products', requireAuth, productRoutes);
   app.use('/api/v1/billing', requireAuth, billingRoutes);
   app.use('/api/v1/payments', requireAuth, paymentRoutes);
+
+  // -- Dashboard routes --
+  app.use('/api/v1/dashboard', requireAuth, dashboardRoutes);
 
   // -- Admin routes (auth + admin role) --
   app.use('/api/v1/admin', requireAuth, requireAdmin, adminRoutes);

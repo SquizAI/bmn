@@ -2,16 +2,23 @@ import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { motion } from 'motion/react';
-import { Instagram, ArrowRight, Search, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Instagram,
+  Youtube,
+  Facebook,
+  Twitter,
+  ArrowRight,
+  Sparkles,
+  ScanSearch,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { GenerationProgress } from '@/components/generation-progress';
 import { useWizardStore } from '@/stores/wizard-store';
-import { useGenerationProgress } from '@/hooks/use-generation-progress';
-import { useDispatchSocialAnalysis } from '@/hooks/use-wizard-actions';
+import { useSocialScrape } from '@/hooks/use-social-scrape';
+import { useDossier } from '@/hooks/use-dossier';
 import { ROUTES } from '@/lib/constants';
+import DossierLoadingSequence from '@/components/dossier/DossierLoadingSequence';
 
 // ------ Schema ------
 
@@ -27,13 +34,67 @@ const socialHandlesSchema = z
       .regex(/^@?[\w.]+$/, 'Invalid TikTok handle')
       .optional()
       .or(z.literal('')),
+    youtube: z
+      .string()
+      .regex(/^@?[\w.]+$/, 'Invalid YouTube handle')
+      .optional()
+      .or(z.literal('')),
+    twitter: z
+      .string()
+      .regex(/^@?[\w.]+$/, 'Invalid X handle')
+      .optional()
+      .or(z.literal('')),
+    facebook: z
+      .string()
+      .min(1)
+      .optional()
+      .or(z.literal('')),
   })
-  .refine((data) => data.instagram || data.tiktok, {
-    message: 'Please enter at least one social media handle',
-    path: ['instagram'],
-  });
+  .refine(
+    (data) => data.instagram || data.tiktok || data.youtube || data.twitter || data.facebook,
+    { message: 'Enter at least one social media handle', path: ['instagram'] }
+  );
 
 type SocialHandlesForm = z.infer<typeof socialHandlesSchema>;
+
+// ------ Platform Input Config ------
+
+const PLATFORM_FIELDS = [
+  {
+    name: 'instagram' as const,
+    label: 'Instagram',
+    placeholder: '@yourbrand',
+    icon: <Instagram className="h-4 w-4" />,
+  },
+  {
+    name: 'tiktok' as const,
+    label: 'TikTok',
+    placeholder: '@yourbrand',
+    icon: (
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.52a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.43v-7.15a8.16 8.16 0 005.58 2.09V11.1a4.83 4.83 0 01-3.77-1.58V6.69z" />
+      </svg>
+    ),
+  },
+  {
+    name: 'youtube' as const,
+    label: 'YouTube',
+    placeholder: '@yourchannel',
+    icon: <Youtube className="h-4 w-4" />,
+  },
+  {
+    name: 'twitter' as const,
+    label: 'X / Twitter',
+    placeholder: '@yourhandle',
+    icon: <Twitter className="h-4 w-4" />,
+  },
+  {
+    name: 'facebook' as const,
+    label: 'Facebook',
+    placeholder: 'yourpage',
+    icon: <Facebook className="h-4 w-4" />,
+  },
+];
 
 // ------ Component ------
 
@@ -45,8 +106,9 @@ export default function SocialAnalysisPage() {
   const setDesign = useWizardStore((s) => s.setDesign);
   const setStep = useWizardStore((s) => s.setStep);
 
-  const dispatchAnalysis = useDispatchSocialAnalysis();
-  const generation = useGenerationProgress(activeJobId);
+  const dispatchScrape = useSocialScrape();
+  const { dossier, phase, progress, message, isComplete, isError, error } =
+    useDossier(activeJobId);
 
   const {
     register,
@@ -54,39 +116,54 @@ export default function SocialAnalysisPage() {
     formState: { errors, isSubmitting },
   } = useForm<SocialHandlesForm>({
     resolver: zodResolver(socialHandlesSchema),
-    defaultValues: { instagram: '', tiktok: '' },
+    defaultValues: {
+      instagram: '',
+      tiktok: '',
+      youtube: '',
+      twitter: '',
+      facebook: '',
+    },
   });
 
   const onSubmit = async (data: SocialHandlesForm) => {
     if (!brandId) return;
-    await dispatchAnalysis.mutateAsync({
+    await dispatchScrape.mutateAsync({
       brandId,
       handles: {
         instagram: data.instagram || undefined,
         tiktok: data.tiktok || undefined,
+        youtube: data.youtube || undefined,
+        twitter: data.twitter || undefined,
+        facebook: data.facebook || undefined,
       },
     });
   };
 
-  // When generation completes, store results and move forward
   const handleContinue = () => {
-    if (generation.result && typeof generation.result === 'object') {
-      const result = generation.result as Record<string, unknown>;
-
-      if (result.brand) {
-        setBrand(result.brand as Record<string, unknown>);
+    if (dossier) {
+      if (dossier.personality) {
+        setBrand({
+          archetype: dossier.personality.archetype,
+          values: dossier.personality.values,
+          targetAudience: dossier.audience?.estimatedAgeRange || null,
+        });
       }
-      if (result.design) {
-        setDesign(result.design as Record<string, unknown>);
+      if (dossier.aesthetic) {
+        setDesign({
+          colorPalette: dossier.aesthetic.dominantColors.map((c, i) => ({
+            hex: c.hex,
+            name: c.name,
+            role: i === 0 ? 'primary' : i === 1 ? 'secondary' : i === 2 ? 'accent' : 'custom',
+          })),
+        });
       }
     }
-
     setStep('brand-identity');
     navigate(ROUTES.WIZARD_BRAND_IDENTITY);
   };
 
-  const isAnalyzing =
-    generation.status === 'pending' || generation.status === 'processing';
+  const isAnalyzing = phase !== 'idle' && phase !== 'complete' && phase !== 'error';
+  const showForm = !isAnalyzing && !isComplete;
 
   return (
     <motion.div
@@ -95,135 +172,161 @@ export default function SocialAnalysisPage() {
       exit={{ opacity: 0, x: -20 }}
       className="flex flex-col gap-8"
     >
-      {/* Header */}
-      <div className="text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-light">
-          <Search className="h-7 w-7 text-primary" />
-        </div>
-        <h2 className="text-2xl font-bold text-text">Social Media Analysis</h2>
-        <p className="mt-2 text-text-secondary">
-          Enter your social media handles and our AI will analyze your presence to create a
-          personalized brand identity.
-        </p>
-      </div>
+      <AnimatePresence mode="wait">
+        {/* ---- HERO: Social Handle Input ---- */}
+        {showForm && (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex flex-col items-center"
+          >
+            {/* Hero Icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+              className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--bmn-color-primary)] to-[var(--bmn-color-accent)]"
+            >
+              <ScanSearch className="h-10 w-10 text-white" />
+            </motion.div>
 
-      {/* Form */}
-      {!isAnalyzing && !generation.isComplete ? (
-        <Card variant="outlined" padding="lg">
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-              <Input
-                label="Instagram Handle"
-                placeholder="@yourbrand"
-                leftAddon={<Instagram className="h-4 w-4" />}
-                error={errors.instagram?.message}
-                {...register('instagram')}
-              />
+            {/* Hero Text */}
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-center text-3xl font-bold tracking-tight text-[var(--bmn-color-text)]"
+            >
+              Discover Your Brand DNA
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-2 max-w-md text-center text-[var(--bmn-color-text-secondary)]"
+            >
+              Enter your social handles and our AI will analyze your content, audience,
+              aesthetic, and niche to build your personalized Creator Dossier.
+            </motion.p>
 
-              <Input
-                label="TikTok Handle"
-                placeholder="@yourbrand"
-                leftAddon={
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.52a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.43v-7.15a8.16 8.16 0 005.58 2.09V11.1a4.83 4.83 0 01-3.77-1.58V6.69z" />
-                  </svg>
-                }
-                error={errors.tiktok?.message}
-                {...register('tiktok')}
-              />
+            {/* Form */}
+            <motion.form
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              onSubmit={handleSubmit(onSubmit)}
+              className="mt-8 w-full max-w-lg space-y-4"
+            >
+              {PLATFORM_FIELDS.map((field, i) => (
+                <motion.div
+                  key={field.name}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.45 + i * 0.06 }}
+                >
+                  <Input
+                    label={field.label}
+                    placeholder={field.placeholder}
+                    leftAddon={field.icon}
+                    error={errors[field.name]?.message}
+                    {...register(field.name)}
+                  />
+                </motion.div>
+              ))}
 
-              <p className="text-xs text-text-muted">
-                Enter at least one social media handle. We will analyze your posts, aesthetics,
-                audience, and themes to generate your brand identity.
-              </p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="text-center text-xs text-[var(--bmn-color-text-muted)]"
+              >
+                Enter at least one handle. More platforms = richer brand insights.
+              </motion.p>
 
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.85 }}
+              >
+                <Button
+                  type="submit"
+                  size="lg"
+                  loading={isSubmitting || dispatchScrape.isPending}
+                  rightIcon={<Sparkles className="h-5 w-5" />}
+                  fullWidth
+                >
+                  Build My Creator Dossier
+                </Button>
+              </motion.div>
+            </motion.form>
+          </motion.div>
+        )}
+
+        {/* ---- CINEMATIC LOADING: Dossier reveal ---- */}
+        {isAnalyzing && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <DossierLoadingSequence
+              dossier={dossier}
+              phase={phase}
+              progress={progress}
+              message={message}
+            />
+          </motion.div>
+        )}
+
+        {/* ---- ERROR STATE ---- */}
+        {isError && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-2xl border border-[var(--bmn-color-error-border)] bg-[var(--bmn-color-error-bg)] p-6 text-center"
+          >
+            <p className="text-sm font-medium text-[var(--bmn-color-error)]">
+              {error || 'Analysis failed. Please try again.'}
+            </p>
+          </motion.div>
+        )}
+
+        {/* ---- COMPLETE: Show full dossier + continue ---- */}
+        {isComplete && dossier && (
+          <motion.div
+            key="complete"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col gap-6"
+          >
+            <DossierLoadingSequence
+              dossier={dossier}
+              phase="complete"
+              progress={100}
+              message="Your Creator Dossier is ready!"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
               <Button
-                type="submit"
                 size="lg"
-                loading={isSubmitting || dispatchAnalysis.isPending}
-                rightIcon={<Sparkles className="h-5 w-5" />}
+                onClick={handleContinue}
+                rightIcon={<ArrowRight className="h-5 w-5" />}
                 fullWidth
               >
-                Analyze My Social Presence
+                Continue to Brand Identity
               </Button>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Progress */}
-      {(isAnalyzing || generation.isError) && (
-        <GenerationProgress
-          progress={generation.progress}
-          status={generation.status}
-          message={generation.message}
-          error={generation.error}
-        />
-      )}
-
-      {/* Results preview */}
-      {generation.isComplete && generation.result != null ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4"
-        >
-          <Card variant="elevated" padding="lg">
-            <CardTitle>Analysis Complete</CardTitle>
-            <CardDescription className="mt-1">
-              We have analyzed your social presence and generated initial brand insights.
-            </CardDescription>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {/* Aesthetic preview */}
-              <div className="rounded-lg bg-surface-hover p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Aesthetic
-                </p>
-                <p className="mt-1 text-sm text-text">
-                  {String((generation.result as Record<string, unknown>)?.aesthetic ?? 'Analyzed')}
-                </p>
-              </div>
-
-              {/* Themes */}
-              <div className="rounded-lg bg-surface-hover p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Key Themes
-                </p>
-                <p className="mt-1 text-sm text-text">
-                  {Array.isArray(
-                    (generation.result as Record<string, unknown>)?.themes,
-                  )
-                    ? ((generation.result as Record<string, unknown>)
-                        ?.themes as string[])
-                        .slice(0, 3)
-                        .join(', ') as string
-                    : 'Identified'}
-                </p>
-              </div>
-
-              {/* Audience */}
-              <div className="rounded-lg bg-surface-hover p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Target Audience
-                </p>
-                <p className="mt-1 text-sm text-text">
-                  {String((generation.result as Record<string, unknown>)?.audience ?? 'Identified')}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Button
-            size="lg"
-            onClick={handleContinue}
-            rightIcon={<ArrowRight className="h-5 w-5" />}
-            fullWidth
-          >
-            Continue to Brand Identity
-          </Button>
-        </motion.div>
-      ) : null}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

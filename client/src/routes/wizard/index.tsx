@@ -20,7 +20,7 @@ export default function WizardLayout() {
 
   // Determine current phase
   const currentPhase = WIZARD_PHASES.find((phase) =>
-    phase.steps.includes(pathStep),
+    (phase.steps as readonly string[]).includes(pathStep),
   );
   const currentPhaseIndex = currentPhase
     ? WIZARD_PHASES.indexOf(currentPhase)

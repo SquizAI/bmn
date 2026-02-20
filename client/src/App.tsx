@@ -21,16 +21,23 @@ const AuthCallback = lazy(() => import('@/routes/auth/callback'));
 // Wizard steps
 const Onboarding = lazy(() => import('@/routes/wizard/onboarding'));
 const SocialAnalysis = lazy(() => import('@/routes/wizard/social-analysis'));
+const BrandName = lazy(() => import('@/routes/wizard/brand-name'));
 const BrandIdentity = lazy(() => import('@/routes/wizard/brand-identity'));
 const LogoGeneration = lazy(() => import('@/routes/wizard/logo-generation'));
 const ProductSelection = lazy(() => import('@/routes/wizard/product-selection'));
 const MockupReview = lazy(() => import('@/routes/wizard/mockup-review'));
+const BundleBuilder = lazy(() => import('@/routes/wizard/bundle-builder'));
 const ProfitProjection = lazy(() => import('@/routes/wizard/profit-projection'));
 const Completion = lazy(() => import('@/routes/wizard/completion'));
 
 // Dashboard
 const BrandsPage = lazy(() => import('@/routes/dashboard/brands'));
 const BrandDetailPage = lazy(() => import('@/routes/dashboard/brand-detail'));
+const DashboardOverview = lazy(() => import('@/routes/dashboard/overview'));
+const DashboardContent = lazy(() => import('@/routes/dashboard/content'));
+const DashboardAnalytics = lazy(() => import('@/routes/dashboard/analytics'));
+const DashboardReferrals = lazy(() => import('@/routes/dashboard/referrals'));
+const DashboardIntegrations = lazy(() => import('@/routes/dashboard/integrations'));
 const SettingsPage = lazy(() => import('@/routes/dashboard/settings'));
 
 // Admin
@@ -110,6 +117,14 @@ const router = createBrowserRouter([
             ),
           },
           {
+            path: 'brand-name',
+            element: (
+              <SuspenseRoute>
+                <BrandName />
+              </SuspenseRoute>
+            ),
+          },
+          {
             path: 'brand-identity',
             element: (
               <SuspenseRoute>
@@ -138,6 +153,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <MockupReview />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'bundle-builder',
+            element: (
+              <SuspenseRoute>
+                <BundleBuilder />
               </SuspenseRoute>
             ),
           },
@@ -174,6 +197,14 @@ const router = createBrowserRouter([
             index: true,
             element: (
               <SuspenseRoute>
+                <DashboardOverview />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'brands',
+            element: (
+              <SuspenseRoute>
                 <BrandsPage />
               </SuspenseRoute>
             ),
@@ -183,6 +214,38 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <BrandDetailPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'content',
+            element: (
+              <SuspenseRoute>
+                <DashboardContent />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'analytics',
+            element: (
+              <SuspenseRoute>
+                <DashboardAnalytics />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'referrals',
+            element: (
+              <SuspenseRoute>
+                <DashboardReferrals />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'integrations',
+            element: (
+              <SuspenseRoute>
+                <DashboardIntegrations />
               </SuspenseRoute>
             ),
           },

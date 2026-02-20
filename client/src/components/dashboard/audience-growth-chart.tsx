@@ -79,8 +79,8 @@ function AudienceGrowthChart({
                 borderRadius: '6px',
                 fontSize: '12px',
               }}
-              labelFormatter={(val: string) =>
-                new Date(val).toLocaleDateString('en-US', {
+              labelFormatter={(val) =>
+                new Date(String(val)).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
                 })

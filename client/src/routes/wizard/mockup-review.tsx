@@ -1,19 +1,39 @@
 import { useNavigate } from 'react-router';
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'motion/react';
-import { ArrowRight, ArrowLeft, Image as ImageIcon, CheckCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ArrowRight,
+  ArrowLeft,
+  Image as ImageIcon,
+  CheckCheck,
+  SlidersHorizontal,
+  ArrowLeftRight,
+  RefreshCw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
 import { GenerationProgress } from '@/components/generation-progress';
+import { MockupEditor } from '@/components/products/MockupEditor';
+import { MockupComparison } from '@/components/products/MockupComparison';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import {
   useDispatchMockupGeneration,
   useSaveMockupApprovals,
 } from '@/hooks/use-wizard-actions';
+import {
+  useMockupDetails,
+  useSaveMockupPosition,
+  useRegenerateMockup,
+} from '@/hooks/use-mockup-generation';
 import { ROUTES } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
+import { cn } from '@/lib/utils';
+
+// ------ Types ------
+
+type ViewMode = 'gallery' | 'editor' | 'comparison';
 
 // ------ Component ------
 
@@ -22,6 +42,8 @@ export default function MockupReviewPage() {
   const brandId = useWizardStore((s) => s.meta.brandId);
   const activeJobId = useWizardStore((s) => s.meta.activeJobId);
   const mockups = useWizardStore((s) => s.assets.mockups);
+  const selectedLogoId = useWizardStore((s) => s.assets.selectedLogoId);
+  const logos = useWizardStore((s) => s.assets.logos);
   const setMockupStatus = useWizardStore((s) => s.setMockupStatus);
   const setAssets = useWizardStore((s) => s.setAssets);
   const setStep = useWizardStore((s) => s.setStep);
@@ -29,9 +51,19 @@ export default function MockupReviewPage() {
 
   const dispatchMockups = useDispatchMockupGeneration();
   const saveMockupApprovals = useSaveMockupApprovals();
+  const saveMockupPosition = useSaveMockupPosition();
+  const regenerateMockup = useRegenerateMockup();
   const generation = useGenerationProgress(activeJobId);
+  const { data: mockupDetails } = useMockupDetails(brandId);
 
   const [hasStartedGeneration, setHasStartedGeneration] = useState(mockups.length > 0);
+  const [viewMode, setViewMode] = useState<ViewMode>('gallery');
+  const [editingMockupId, setEditingMockupId] = useState<string | null>(null);
+  const [comparingMockupId, setComparingMockupId] = useState<string | null>(null);
+
+  // Get the selected logo URL for the editor
+  const selectedLogo = logos.find((l) => l.id === selectedLogoId);
+  const logoUrl = selectedLogo?.url || '';
 
   // Auto-start generation if no mockups exist
   useEffect(() => {
@@ -93,6 +125,40 @@ export default function MockupReviewPage() {
     });
   };
 
+  const handleOpenEditor = (mockupId: string) => {
+    setEditingMockupId(mockupId);
+    setViewMode('editor');
+  };
+
+  const handleOpenComparison = (mockupId: string) => {
+    setComparingMockupId(mockupId);
+    setViewMode('comparison');
+  };
+
+  const handleSavePosition = async (position: { x: number; y: number; scale: number; opacity: number }) => {
+    if (!brandId || !editingMockupId) return;
+    try {
+      await saveMockupPosition.mutateAsync({
+        brandId,
+        mockupId: editingMockupId,
+        position,
+      });
+      addToast({ type: 'success', title: 'Mockup position saved' });
+    } catch {
+      addToast({ type: 'error', title: 'Failed to save position' });
+    }
+  };
+
+  const handleRegenerateMockup = async (mockupId: string) => {
+    if (!brandId) return;
+    try {
+      await regenerateMockup.mutateAsync({ brandId, mockupId });
+      addToast({ type: 'info', title: 'Regenerating mockup...' });
+    } catch {
+      addToast({ type: 'error', title: 'Failed to regenerate mockup' });
+    }
+  };
+
   const galleryImages: GalleryImage[] = mockups.map((m) => ({
     id: m.id,
     url: m.url,
@@ -102,6 +168,10 @@ export default function MockupReviewPage() {
 
   const approvedCount = mockups.filter((m) => m.status === 'approved').length;
   const allReviewed = mockups.every((m) => m.status !== 'pending');
+
+  const editingMockup = mockups.find((m) => m.id === editingMockupId);
+  const comparingMockup = mockups.find((m) => m.id === comparingMockupId);
+  const comparingDetail = mockupDetails?.find((d) => d.id === comparingMockupId);
 
   const handleContinue = async () => {
     if (!brandId) return;
@@ -120,8 +190,8 @@ export default function MockupReviewPage() {
       return;
     }
 
-    setStep('profit-calculator');
-    navigate(ROUTES.WIZARD_PROFIT_CALCULATOR);
+    setStep('bundle-builder');
+    navigate(ROUTES.WIZARD_BUNDLE_BUILDER);
   };
 
   const handleBack = () => {
@@ -147,7 +217,7 @@ export default function MockupReviewPage() {
         </div>
         <h2 className="text-2xl font-bold text-text">Mockup Review</h2>
         <p className="mt-2 text-text-secondary">
-          Review your product mockups. Approve the ones you love, reject any that need changes.
+          Review your product mockups. Edit logo placement, compare before/after, and approve your favorites.
         </p>
       </div>
 
@@ -161,11 +231,56 @@ export default function MockupReviewPage() {
         />
       )}
 
-      {/* Mockup Gallery */}
+      {/* View mode tabs */}
       {hasMockups && !isGenerating && (
-        <>
-          {/* Stats + Bulk approve */}
-          <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 rounded-lg bg-surface-hover p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('gallery')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'gallery'
+                  ? 'bg-surface text-text shadow-sm'
+                  : 'text-text-muted hover:text-text',
+              )}
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              Gallery
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (mockups.length > 0) handleOpenEditor(mockups[0].id);
+              }}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'editor'
+                  ? 'bg-surface text-text shadow-sm'
+                  : 'text-text-muted hover:text-text',
+              )}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (mockups.length > 0) handleOpenComparison(mockups[0].id);
+              }}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                viewMode === 'comparison'
+                  ? 'bg-surface text-text shadow-sm'
+                  : 'text-text-muted hover:text-text',
+              )}
+            >
+              <ArrowLeftRight className="h-3.5 w-3.5" />
+              Before/After
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
             <p className="text-sm text-text-secondary">
               {approvedCount} of {mockups.length} approved
             </p>
@@ -178,14 +293,132 @@ export default function MockupReviewPage() {
               Approve All
             </Button>
           </div>
+        </div>
+      )}
 
+      {/* Gallery View */}
+      {hasMockups && !isGenerating && viewMode === 'gallery' && (
+        <>
           <ImageGallery
             images={galleryImages}
             onApprove={handleApprove}
             onReject={handleReject}
             columns={3}
           />
+
+          {/* Quick actions per mockup */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {mockups.map((mockup) => (
+              <div
+                key={mockup.id}
+                className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2"
+              >
+                <span className="text-xs font-medium text-text truncate">
+                  {mockup.productSku}
+                </span>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenEditor(mockup.id)}
+                    className="text-xs"
+                  >
+                    <SlidersHorizontal className="mr-1 h-3 w-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenComparison(mockup.id)}
+                    className="text-xs"
+                  >
+                    <ArrowLeftRight className="mr-1 h-3 w-3" />
+                    Compare
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRegenerateMockup(mockup.id)}
+                    loading={regenerateMockup.isPending}
+                    className="text-xs"
+                  >
+                    <RefreshCw className="mr-1 h-3 w-3" />
+                    Redo
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </>
+      )}
+
+      {/* Editor View */}
+      {hasMockups && !isGenerating && viewMode === 'editor' && editingMockup && (
+        <div className="space-y-4">
+          {/* Mockup selector tabs */}
+          <div className="flex flex-wrap gap-2">
+            {mockups.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setEditingMockupId(m.id)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  m.id === editingMockupId
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-hover text-text-secondary hover:text-text',
+                )}
+              >
+                {m.productSku}
+              </button>
+            ))}
+          </div>
+
+          <div className="mx-auto max-w-lg">
+            <MockupEditor
+              mockupUrl={editingMockup.url}
+              logoUrl={logoUrl}
+              productName={editingMockup.productSku}
+              onSave={handleSavePosition}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Comparison View */}
+      {hasMockups && !isGenerating && viewMode === 'comparison' && comparingMockup && (
+        <div className="space-y-4">
+          {/* Mockup selector tabs */}
+          <div className="flex flex-wrap gap-2">
+            {mockups.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setComparingMockupId(m.id)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  m.id === comparingMockupId
+                    ? 'bg-primary text-white'
+                    : 'bg-surface-hover text-text-secondary hover:text-text',
+                )}
+              >
+                {m.productSku}
+              </button>
+            ))}
+          </div>
+
+          <div className="mx-auto max-w-lg">
+            <MockupComparison
+              beforeUrl={comparingDetail?.beforeUrl || comparingMockup.url}
+              afterUrl={comparingMockup.url}
+              beforeLabel="Raw Product"
+              afterLabel="Your Brand"
+            />
+            <p className="mt-4 text-center text-sm font-medium text-text">
+              This is what YOUR brand did to this product
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Empty state during initial loading */}

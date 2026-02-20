@@ -1,17 +1,34 @@
 import { useNavigate } from 'react-router';
-import { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { ArrowRight, ArrowLeft, Package, Check, ShoppingBag } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ArrowRight,
+  ArrowLeft,
+  Package,
+  ShoppingBag,
+  Sparkles,
+  BarChart3,
+  Columns,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { useProducts } from '@/hooks/use-products';
+import { RecommendedProductGrid } from '@/components/products/RecommendedProductGrid';
+import { ProductDetailModal } from '@/components/products/ProductDetailModal';
+import { ProductCompare } from '@/components/products/ProductCompare';
+import { RevenueEstimate } from '@/components/products/RevenueEstimate';
+import {
+  useProducts,
+  useProductRecommendations,
+  useGenerateRecommendations,
+} from '@/hooks/use-products';
 import { useSaveProductSelections } from '@/hooks/use-wizard-actions';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import type { RecommendedProduct } from '@/components/products/ProductRecommendationCard';
 
 // ------ Component ------
 
@@ -23,23 +40,27 @@ export default function ProductSelectionPage() {
   const setStep = useWizardStore((s) => s.setStep);
   const addToast = useUIStore((s) => s.addToast);
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSkus, setSelectedSkus] = useState<Set<string>>(new Set(storedSkus));
+  const [detailProduct, setDetailProduct] = useState<RecommendedProduct | null>(null);
+  const [compareProducts, setCompareProducts] = useState<RecommendedProduct[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
+  const [view, setView] = useState<'recommendations' | 'catalog'>('recommendations');
 
-  const { data: productsData, isLoading } = useProducts(
-    selectedCategory === 'all' ? undefined : selectedCategory,
-  );
+  // Data fetching
+  const { data: productsData, isLoading: catalogLoading } = useProducts();
+  const {
+    data: recommendations,
+    isLoading: recsLoading,
+    isError: recsError,
+  } = useProductRecommendations(brandId);
+  const generateRecs = useGenerateRecommendations();
   const saveSelections = useSaveProductSelections();
 
-  const products = productsData?.items || [];
-  const categories = productsData?.categories || [];
+  const hasRecommendations = !!recommendations?.recommendations?.length;
+  const isLoading = view === 'recommendations' ? recsLoading : catalogLoading;
 
-  const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'all') return products;
-    return products.filter((p) => p.category === selectedCategory);
-  }, [products, selectedCategory]);
-
-  const toggleProduct = (sku: string) => {
+  // Toggle product selection
+  const toggleProduct = useCallback((sku: string) => {
     setSelectedSkus((prev) => {
       const next = new Set(prev);
       if (next.has(sku)) {
@@ -49,7 +70,63 @@ export default function ProductSelectionPage() {
       }
       return next;
     });
-  };
+  }, []);
+
+  // View product detail
+  const handleViewDetail = useCallback(
+    (sku: string) => {
+      const product = recommendations?.recommendations.find((r) => r.sku === sku);
+      if (product) setDetailProduct(product);
+    },
+    [recommendations],
+  );
+
+  // Revenue summary from selected products
+  const revenueSummary = useMemo(() => {
+    if (!recommendations?.recommendations) return null;
+
+    const selected = recommendations.recommendations.filter((r) =>
+      selectedSkus.has(r.sku),
+    );
+    if (selected.length === 0) return null;
+
+    const totals = { conservative: 0, moderate: 0, aggressive: 0 };
+    for (const product of selected) {
+      for (const tier of product.revenue.tiers) {
+        const key = tier.label as keyof typeof totals;
+        if (totals[key] !== undefined) {
+          totals[key] += tier.monthlyRevenue;
+        }
+      }
+    }
+
+    return [
+      {
+        label: 'conservative' as const,
+        unitsPerMonth: 0,
+        monthlyRevenue: Math.round(totals.conservative * 100) / 100,
+        monthlyProfit: Math.round(totals.conservative * 0.6 * 100) / 100,
+        annualRevenue: Math.round(totals.conservative * 12 * 100) / 100,
+        annualProfit: Math.round(totals.conservative * 0.6 * 12 * 100) / 100,
+      },
+      {
+        label: 'moderate' as const,
+        unitsPerMonth: 0,
+        monthlyRevenue: Math.round(totals.moderate * 100) / 100,
+        monthlyProfit: Math.round(totals.moderate * 0.6 * 100) / 100,
+        annualRevenue: Math.round(totals.moderate * 12 * 100) / 100,
+        annualProfit: Math.round(totals.moderate * 0.6 * 12 * 100) / 100,
+      },
+      {
+        label: 'aggressive' as const,
+        unitsPerMonth: 0,
+        monthlyRevenue: Math.round(totals.aggressive * 100) / 100,
+        monthlyProfit: Math.round(totals.aggressive * 0.6 * 100) / 100,
+        annualRevenue: Math.round(totals.aggressive * 12 * 100) / 100,
+        annualProfit: Math.round(totals.aggressive * 0.6 * 12 * 100) / 100,
+      },
+    ];
+  }, [recommendations, selectedSkus]);
 
   const handleContinue = async () => {
     if (selectedSkus.size === 0 || !brandId) return;
@@ -87,75 +164,118 @@ export default function ProductSelectionPage() {
         </div>
         <h2 className="text-2xl font-bold text-text">Product Selection</h2>
         <p className="mt-2 text-text-secondary">
-          Choose the products you want to brand. We will generate mockups for each selected
-          product.
+          {hasRecommendations
+            ? 'AI has analyzed your brand and ranked the best products for you.'
+            : 'Choose the products you want to brand. We will generate mockups for each selected product.'}
         </p>
       </div>
 
-      {/* Selected count badge */}
+      {/* Selection summary bar */}
       {selectedSkus.size > 0 && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex items-center justify-center gap-2 rounded-full bg-primary-light px-4 py-2 mx-auto"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-light px-5 py-3"
         >
-          <ShoppingBag className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-primary">
-            {selectedSkus.size} product{selectedSkus.size !== 1 ? 's' : ''} selected
-          </span>
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-primary">
+              {selectedSkus.size} product{selectedSkus.size !== 1 ? 's' : ''} selected
+            </span>
+          </div>
+
+          {revenueSummary && (
+            <div className="flex items-center gap-1.5 text-sm text-primary">
+              <BarChart3 className="h-4 w-4" />
+              <span className="font-medium">
+                Est. {formatCurrency(revenueSummary[1].monthlyRevenue)}/mo
+              </span>
+            </div>
+          )}
+
+          {/* Compare button */}
+          {selectedSkus.size >= 2 && selectedSkus.size <= 4 && recommendations && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const prods = recommendations.recommendations.filter((r) =>
+                  selectedSkus.has(r.sku),
+                );
+                setCompareProducts(prods);
+                setShowCompare(true);
+              }}
+              leftIcon={<Columns className="h-3.5 w-3.5" />}
+            >
+              Compare
+            </Button>
+          )}
         </motion.div>
       )}
 
-      {/* Category filter tabs */}
-      {categories.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory('all')}
-            className={cn(
-              'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-              selectedCategory === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-surface-hover text-text-secondary hover:text-text',
-            )}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setSelectedCategory(cat)}
-              className={cn(
-                'rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors',
-                selectedCategory === cat
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-hover text-text-secondary hover:text-text',
-              )}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+      {/* View toggle: AI Recommendations vs Full Catalog */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setView('recommendations')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            view === 'recommendations'
+              ? 'bg-primary text-white'
+              : 'bg-surface-hover text-text-secondary hover:text-text',
+          )}
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          AI Recommendations
+        </button>
+        <button
+          type="button"
+          onClick={() => setView('catalog')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            view === 'catalog'
+              ? 'bg-primary text-white'
+              : 'bg-surface-hover text-text-secondary hover:text-text',
+          )}
+        >
+          <Package className="h-3.5 w-3.5" />
+          Full Catalog
+        </button>
+      </div>
+
+      {/* Revenue estimate for selected products */}
+      {revenueSummary && selectedSkus.size > 0 && (
+        <RevenueEstimate tiers={revenueSummary} />
       )}
 
-      {/* Product grid */}
+      {/* Main content */}
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner size="lg" />
         </div>
-      ) : filteredProducts.length === 0 ? (
+      ) : view === 'recommendations' && hasRecommendations ? (
+        <RecommendedProductGrid
+          recommendations={recommendations!.recommendations}
+          selectedSkus={selectedSkus}
+          onToggleProduct={toggleProduct}
+          onViewDetail={handleViewDetail}
+        />
+      ) : view === 'recommendations' && !hasRecommendations ? (
         <Card variant="outlined" padding="lg" className="text-center">
-          <CardTitle>No products found</CardTitle>
-          <CardDescription>
-            Try selecting a different category or check back later.
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-light">
+            <Sparkles className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle>No Recommendations Yet</CardTitle>
+          <CardDescription className="mt-2">
+            AI product recommendations are generated from your Creator Dossier.
+            Switch to the Full Catalog to browse all products manually.
           </CardDescription>
         </Card>
       ) : (
+        /* Full catalog fallback -- simple grid */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProducts.map((product) => {
+          {(productsData?.items || []).map((product) => {
             const isSelected = selectedSkus.has(product.sku);
-
             return (
               <motion.div key={product.sku} layout>
                 <Card
@@ -168,15 +288,21 @@ export default function ProductSelectionPage() {
                   onClick={() => toggleProduct(product.sku)}
                 >
                   <div className="relative">
-                    <img
-                      src={product.imageUrl}
-                      alt={product.name}
-                      className="aspect-square w-full object-cover"
-                      loading="lazy"
-                    />
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="aspect-square w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex aspect-square w-full items-center justify-center bg-surface-hover">
+                        <Package className="h-12 w-12 text-text-muted" />
+                      </div>
+                    )}
                     {isSelected && (
                       <div className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-md">
-                        <Check className="h-4 w-4" />
+                        <span className="text-sm font-bold">✓</span>
                       </div>
                     )}
                   </div>
@@ -205,6 +331,49 @@ export default function ProductSelectionPage() {
           })}
         </div>
       )}
+
+      {/* Compare overlay */}
+      <AnimatePresence>
+        {showCompare && compareProducts.length >= 2 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+            onClick={() => setShowCompare(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface p-6 shadow-xl"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-text">Compare Products</h3>
+                <Button variant="ghost" size="sm" onClick={() => setShowCompare(false)}>
+                  Close
+                </Button>
+              </div>
+              <ProductCompare
+                products={compareProducts}
+                onRemove={(sku) =>
+                  setCompareProducts((prev) => prev.filter((p) => p.sku !== sku))
+                }
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={detailProduct}
+        isOpen={!!detailProduct}
+        onClose={() => setDetailProduct(null)}
+        isSelected={detailProduct ? selectedSkus.has(detailProduct.sku) : false}
+        onToggle={toggleProduct}
+      />
 
       {/* Actions */}
       <div className="flex gap-3">
