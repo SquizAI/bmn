@@ -62,19 +62,19 @@ export default function SettingsPage() {
   // Fetch profile
   const { data: profile } = useQuery({
     queryKey: QUERY_KEYS.userProfile(),
-    queryFn: () => apiClient.get<UserProfile>('/api/v1/users/me'),
+    queryFn: () => apiClient.get<UserProfile>('/api/v1/auth/me'),
   });
 
   // Fetch subscription
   const { data: subscription } = useQuery({
     queryKey: QUERY_KEYS.userSubscription(),
-    queryFn: () => apiClient.get<UserSubscription>('/api/v1/users/me/subscription'),
+    queryFn: () => apiClient.get<UserSubscription>('/api/v1/payments/subscription'),
   });
 
   // Update profile mutation
   const updateProfile = useMutation({
     mutationFn: (data: ProfileForm) =>
-      apiClient.patch('/api/v1/users/me', data),
+      apiClient.put('/api/v1/auth/me', data),
     onSuccess: () => {
       addToast({ type: 'success', title: 'Profile updated!' });
     },
@@ -101,7 +101,7 @@ export default function SettingsPage() {
 
   const handleOpenBillingPortal = async () => {
     try {
-      const data = await apiClient.post<{ url: string }>('/api/v1/payments/billing-portal');
+      const data = await apiClient.post<{ url: string }>('/api/v1/payments/portal');
       window.open(data.url, '_blank');
     } catch {
       addToast({ type: 'error', title: 'Failed to open billing portal' });

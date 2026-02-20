@@ -68,7 +68,17 @@ export function useDispatchNameGeneration() {
 
   return useMutation({
     mutationFn: (payload: GenerateNamesPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/name-generation', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/wizard/${payload.brandId}/generate-names`,
+        {
+          archetype: payload.archetype,
+          traits: payload.traits,
+          industry: payload.industry,
+          targetAudience: payload.targetAudience,
+          style: payload.style,
+          keywords: payload.keywords,
+        },
+      ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
@@ -84,7 +94,10 @@ export function useSelectBrandName() {
 
   return useMutation({
     mutationFn: ({ brandId, name, isCustom = false }: SelectNamePayload) =>
-      apiClient.post('/api/v1/wizard/name-generation/select', { brandId, name, isCustom }),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'brand-name',
+        data: { name, isCustom },
+      }),
     onSuccess: (_data, variables) => {
       setBrand({ name: variables.name });
       queryClient.invalidateQueries({

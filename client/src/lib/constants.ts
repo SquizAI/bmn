@@ -9,7 +9,7 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   AUTH_CALLBACK: '/auth/callback',
   DASHBOARD: '/dashboard',
-  DASHBOARD_BRANDS: '/dashboard',
+  DASHBOARD_BRANDS: '/dashboard/brands',
   DASHBOARD_BRAND_DETAIL: (brandId: string) => `/dashboard/brands/${brandId}` as const,
   DASHBOARD_OVERVIEW: '/dashboard',
   DASHBOARD_CONTENT: '/dashboard/content',
@@ -45,14 +45,11 @@ export const WIZARD_STEPS = [
   { key: 'social-analysis', label: 'Social Analysis', path: 'social-analysis' },
   { key: 'brand-name', label: 'Brand Name', path: 'brand-name' },
   { key: 'brand-identity', label: 'Brand Identity', path: 'brand-identity' },
-  { key: 'customization', label: 'Customization', path: 'customization' },
   { key: 'logo-generation', label: 'Logo Generation', path: 'logo-generation' },
-  { key: 'logo-refinement', label: 'Logo Refinement', path: 'logo-refinement' },
   { key: 'product-selection', label: 'Product Selection', path: 'product-selection' },
   { key: 'mockup-review', label: 'Mockup Review', path: 'mockup-review' },
   { key: 'bundle-builder', label: 'Bundle Builder', path: 'bundle-builder' },
   { key: 'profit-calculator', label: 'Profit Calculator', path: 'profit-calculator' },
-  { key: 'checkout', label: 'Checkout', path: 'checkout' },
   { key: 'complete', label: 'Complete', path: 'complete' },
 ] as const;
 
@@ -68,12 +65,12 @@ export const WIZARD_PHASES = [
   {
     id: 'design',
     label: 'Design',
-    steps: ['brand-name', 'brand-identity', 'customization', 'logo-generation', 'logo-refinement'],
+    steps: ['brand-name', 'brand-identity', 'logo-generation'],
   },
   {
     id: 'launch',
     label: 'Launch',
-    steps: ['product-selection', 'mockup-review', 'bundle-builder', 'profit-calculator', 'checkout', 'complete'],
+    steps: ['product-selection', 'mockup-review', 'bundle-builder', 'profit-calculator', 'complete'],
   },
 ] as const;
 

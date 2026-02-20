@@ -171,8 +171,8 @@ export default function SocialAnalysisPage() {
         });
       }
     }
-    setStep('brand-identity');
-    navigate(ROUTES.WIZARD_BRAND_IDENTITY);
+    setStep('brand-name');
+    navigate(ROUTES.WIZARD_BRAND_NAME);
   };
 
   const isAnalyzing = phase !== 'idle' && phase !== 'complete' && phase !== 'error';

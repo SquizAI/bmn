@@ -10,6 +10,7 @@ import { adminRoutes } from './admin.js';
 import { webhookRoutes } from './webhooks.js';
 import { healthRoute } from './health.js';
 import { dashboardRoutes } from './api/v1/dashboard/index.js';
+import { analyticsRoutes } from './analytics.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
 
@@ -44,6 +45,9 @@ export function registerRoutes(app) {
 
   // -- Dashboard routes --
   app.use('/api/v1/dashboard', requireAuth, dashboardRoutes);
+
+  // -- Analytics routes --
+  app.use('/api/v1/analytics', requireAuth, analyticsRoutes);
 
   // -- Admin routes (auth + admin role) --
   app.use('/api/v1/admin', requireAuth, requireAdmin, adminRoutes);

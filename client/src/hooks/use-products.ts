@@ -101,7 +101,8 @@ export function useProductRecommendations(brandId: string | null) {
     queryKey: ['product-recommendations', brandId],
     queryFn: () =>
       apiClient.get<RecommendationResult>(
-        `/api/v1/products/recommendations/${brandId}`,
+        `/api/v1/brands/${brandId}/assets`,
+        { params: { type: 'recommendations' } },
       ),
     enabled: !!brandId,
     staleTime: 1000 * 60 * 5, // 5 min cache
@@ -116,8 +117,8 @@ export function useGenerateRecommendations() {
   return useMutation({
     mutationFn: ({ brandId, dossier }: GenerateRecommendationsPayload) =>
       apiClient.post<RecommendationResult>(
-        '/api/v1/products/recommendations',
-        { brandId, dossier },
+        `/api/v1/wizard/${brandId}/recommend-products`,
+        { dossier },
       ),
   });
 }

@@ -81,7 +81,9 @@ export function useDispatchBrandGeneration() {
 
   return useMutation({
     mutationFn: (payload: GenerateDirectionsPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/generate-identity', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/wizard/${payload.brandId}/generate-identity`,
+      ),
     onSuccess: (data) => {
       if (data?.jobId) {
         setActiveJob(data.jobId);
@@ -100,10 +102,10 @@ export function useSelectBrandDirection() {
 
   return useMutation({
     mutationFn: ({ brandId, directionId, direction }: SelectDirectionPayload) =>
-      apiClient.post(`/api/v1/wizard/select-direction`, {
-        brandId,
-        directionId,
-        identity: {
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'brand-identity',
+        data: {
+          directionId,
           vision: direction.vision,
           archetype: direction.archetype.name,
           values: direction.values,

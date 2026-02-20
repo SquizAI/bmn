@@ -41,31 +41,34 @@ interface DispatchJobResponse {
 // ------ Hooks ------
 
 /**
- * Fetch mockup details for a brand including before/after URLs.
+ * Fetch mockup details for a brand from the brand assets endpoint.
  */
 export function useMockupDetails(brandId: string | null) {
   return useQuery({
     queryKey: ['mockup-details', brandId],
     queryFn: () =>
-      apiClient.get<MockupDetail[]>(`/api/v1/brands/${brandId}/mockups`),
+      apiClient.get<MockupDetail[]>(`/api/v1/brands/${brandId}/assets`, {
+        params: { type: 'mockup' },
+      }),
     enabled: !!brandId,
   });
 }
 
 /**
- * Save a mockup's logo position after interactive editing.
+ * Save a mockup's logo position via wizard step update.
  */
 export function useSaveMockupPosition() {
   return useMutation({
     mutationFn: ({ brandId, mockupId, position }: SaveMockupPositionPayload) =>
-      apiClient.put(`/api/v1/brands/${brandId}/mockups/${mockupId}/position`, {
-        position,
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'mockup-review',
+        data: { mockupId, position },
       }),
   });
 }
 
 /**
- * Regenerate a single mockup with optional adjustment notes.
+ * Regenerate a single mockup by dispatching a new mockup generation job.
  */
 export function useRegenerateMockup() {
   const setActiveJob = useWizardStore((s) => s.setActiveJob);
@@ -73,8 +76,8 @@ export function useRegenerateMockup() {
   return useMutation({
     mutationFn: ({ brandId, mockupId, adjustments }: RegenerateMockupPayload) =>
       apiClient.post<DispatchJobResponse>(
-        `/api/v1/brands/${brandId}/mockups/${mockupId}/regenerate`,
-        { adjustments },
+        `/api/v1/brands/${brandId}/generate/mockups`,
+        { regenerateMockupId: mockupId, adjustments },
       ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);

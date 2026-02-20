@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router';
-import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity, Eye } from 'lucide-react';
+import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { ROUTES } from '@/lib/constants';
@@ -21,8 +21,6 @@ const adminNav: NavItem[] = [
   { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <Users className="h-4 w-4" /> },
   { label: 'Products', path: ROUTES.ADMIN_PRODUCTS, icon: <Package className="h-4 w-4" /> },
   { label: 'Jobs', path: ROUTES.ADMIN_JOBS, icon: <Activity className="h-4 w-4" /> },
-  { label: 'Moderation', path: ROUTES.ADMIN_MODERATION, icon: <Eye className="h-4 w-4" /> },
-  { label: 'Health', path: ROUTES.ADMIN_HEALTH, icon: <ShieldCheck className="h-4 w-4" /> },
 ];
 
 function Sidebar() {

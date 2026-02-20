@@ -77,7 +77,10 @@ export function useDispatchSocialAnalysis() {
 
   return useMutation({
     mutationFn: (payload: SocialAnalysisPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/social-analysis', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/wizard/${payload.brandId}/analyze-social`,
+        payload.handles,
+      ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
@@ -86,13 +89,17 @@ export function useDispatchSocialAnalysis() {
 
 /**
  * Save the brand identity (vision, values, colors, fonts).
+ * Uses wizard step save + brand update.
  */
 export function useSaveBrandIdentity() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ brandId, identity }: SaveBrandIdentityPayload) =>
-      apiClient.put(`/api/v1/brands/${brandId}/identity`, identity),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'brand-identity',
+        data: identity,
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.brand(variables.brandId),
@@ -109,7 +116,10 @@ export function useDispatchLogoGeneration() {
 
   return useMutation({
     mutationFn: (payload: GenerateLogosPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/logo-generation', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/brands/${payload.brandId}/generate/logos`,
+        { style: payload.style },
+      ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
@@ -125,8 +135,8 @@ export function useRegenerateLogo() {
   return useMutation({
     mutationFn: (payload: RegenerateLogoPayload) =>
       apiClient.post<DispatchJobResponse>(
-        `/api/v1/wizard/logo-generation/${payload.logoId}/regenerate`,
-        { brandId: payload.brandId },
+        `/api/v1/brands/${payload.brandId}/generate/logos`,
+        { regenerateLogoId: payload.logoId },
       ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
@@ -142,7 +152,10 @@ export function useSelectLogo() {
 
   return useMutation({
     mutationFn: ({ brandId, logoId }: SelectLogoPayload) =>
-      apiClient.post(`/api/v1/brands/${brandId}/logos/${logoId}/select`),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'logo-generation',
+        data: { selectedLogoId: logoId },
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.brand(variables.brandId),
@@ -159,7 +172,10 @@ export function useSaveProductSelections() {
 
   return useMutation({
     mutationFn: ({ brandId, productSkus }: SelectProductsPayload) =>
-      apiClient.put(`/api/v1/brands/${brandId}/products`, { productSkus }),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'product-selection',
+        data: { productSkus },
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.brand(variables.brandId),
@@ -176,7 +192,9 @@ export function useDispatchMockupGeneration() {
 
   return useMutation({
     mutationFn: (payload: GenerateMockupsPayload) =>
-      apiClient.post<DispatchJobResponse>('/api/v1/wizard/mockup-generation', payload),
+      apiClient.post<DispatchJobResponse>(
+        `/api/v1/wizard/${payload.brandId}/generate-mockups`,
+      ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
@@ -191,7 +209,10 @@ export function useSaveMockupApprovals() {
 
   return useMutation({
     mutationFn: ({ brandId, approvals }: ApproveMockupsPayload) =>
-      apiClient.put(`/api/v1/brands/${brandId}/mockups/approvals`, { approvals }),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'mockup-review',
+        data: { approvals },
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.brand(variables.brandId),
@@ -208,7 +229,10 @@ export function useSaveProjections() {
 
   return useMutation({
     mutationFn: ({ brandId, projections }: SaveProjectionsPayload) =>
-      apiClient.put(`/api/v1/brands/${brandId}/projections`, { projections }),
+      apiClient.patch(`/api/v1/wizard/${brandId}/step`, {
+        step: 'profit-calculator',
+        data: { projections },
+      }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.brand(variables.brandId),

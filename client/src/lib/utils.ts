@@ -1,11 +1,12 @@
 import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
- * Merge Tailwind CSS classes with conflict resolution via clsx.
- * Equivalent to the popular `cn` utility.
+ * Merge Tailwind CSS classes with conflict resolution.
+ * Uses clsx for conditional joining + twMerge for deduplication.
  */
 export function cn(...inputs: ClassValue[]): string {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
 /**

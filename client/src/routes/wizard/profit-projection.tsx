@@ -99,8 +99,8 @@ export default function ProfitProjectionPage() {
   };
 
   const handleBack = () => {
-    setStep('mockup-review');
-    navigate(ROUTES.WIZARD_MOCKUP_REVIEW);
+    setStep('bundle-builder');
+    navigate(ROUTES.WIZARD_BUNDLE_BUILDER);
   };
 
   return (
