@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
 
 # Install production dependencies only
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # ============================================
 # Stage 2: Build (if needed for future TS/build step)
@@ -21,7 +21,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json* pnpm-lock.yaml* ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY src/ ./src/
