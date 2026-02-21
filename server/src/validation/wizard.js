@@ -13,7 +13,7 @@ export const wizardStartSchema = z.object({
  * PATCH /api/v1/wizard/:brandId/step
  */
 export const wizardStepUpdateSchema = z.object({
-  step: z.number().int().min(0).max(12),
+  step: z.string().min(1).max(50),
   data: z.record(z.unknown()),
 });
 
