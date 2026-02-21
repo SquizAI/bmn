@@ -9,6 +9,9 @@ import {
   Sparkles,
   BarChart3,
   Columns,
+  Zap,
+  Check,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -61,7 +64,7 @@ export default function ProductSelectionPage() {
   const [detailProduct, setDetailProduct] = useState<RecommendedProduct | null>(null);
   const [compareProducts, setCompareProducts] = useState<RecommendedProduct[]>([]);
   const [showCompare, setShowCompare] = useState(false);
-  const [view, setView] = useState<'recommendations' | 'catalog'>('recommendations');
+  const [view, setView] = useState<'recommendations' | 'catalog' | 'quick-launch'>('recommendations');
 
   // Data fetching
   const { data: productsData, isLoading: catalogLoading } = useProducts();
@@ -76,7 +79,17 @@ export default function ProductSelectionPage() {
   const hasRecommendations = !!recommendations?.products?.length;
   const isLoading = view === 'recommendations'
     ? (recsLoading || generateRecs.isPending)
-    : catalogLoading;
+    : (view === 'catalog' || view === 'quick-launch')
+      ? catalogLoading
+      : false;
+
+  // Filter TruvaNutra / quick-launch products from the catalog
+  const quickLaunchProducts = useMemo(() => {
+    if (!productsData?.items) return [];
+    return productsData.items.filter(
+      (p) => p.isTruvanutra === true || p.is_truvanutra === true,
+    );
+  }, [productsData]);
 
   // Auto-generate recommendations when none exist and brand has a dossier
   const hasTriggeredGeneration = useRef(false);
@@ -276,6 +289,7 @@ export default function ProductSelectionPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-light px-5 py-3"
+          aria-live="polite"
         >
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-primary" />
@@ -313,10 +327,12 @@ export default function ProductSelectionPage() {
         </motion.div>
       )}
 
-      {/* View toggle: AI Recommendations vs Full Catalog */}
-      <div className="flex gap-2">
+      {/* View toggle: AI Recommendations vs Full Catalog vs Quick Launch */}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Product view options">
         <button
           type="button"
+          role="tab"
+          aria-selected={view === 'recommendations'}
           onClick={() => setView('recommendations')}
           className={cn(
             'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
@@ -330,6 +346,8 @@ export default function ProductSelectionPage() {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={view === 'catalog'}
           onClick={() => setView('catalog')}
           className={cn(
             'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
@@ -340,6 +358,21 @@ export default function ProductSelectionPage() {
         >
           <Package className="h-3.5 w-3.5" />
           Full Catalog
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'quick-launch'}
+          onClick={() => setView('quick-launch')}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            view === 'quick-launch'
+              ? 'bg-accent text-white'
+              : 'bg-surface-hover text-text-secondary hover:text-text',
+          )}
+        >
+          <Zap className="h-3.5 w-3.5" />
+          Quick Launch
         </button>
       </div>
 
@@ -371,6 +404,138 @@ export default function ProductSelectionPage() {
             Switch to the Full Catalog to browse all products manually.
           </CardDescription>
         </Card>
+      ) : view === 'quick-launch' ? (
+        /* Quick Launch -- TruvaNutra ready-to-ship products */
+        <div className="flex flex-col gap-6">
+          {/* Quick Launch banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-accent/30 bg-linear-to-r from-accent/5 to-accent/10 p-5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+                <Zap className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-text">
+                  Start selling today with our ready-to-ship products
+                </h3>
+                <p className="mt-1 text-sm text-text-secondary">
+                  TruvaNutra products are pre-manufactured and ready to ship under your brand.
+                  Earn commissions on every sale while your custom products are being finalized.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {quickLaunchProducts.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {quickLaunchProducts.map((product) => {
+                const isSelected = selectedSkus.has(product.sku);
+                const commissionRate = 25; // Default commission rate for TruvaNutra
+                const commissionAmount = product.suggestedRetail * (commissionRate / 100);
+                return (
+                  <motion.div key={product.sku} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                    <Card
+                      variant="interactive"
+                      padding="none"
+                      className={cn(
+                        'overflow-hidden transition-all',
+                        isSelected && 'ring-2 ring-accent border-accent',
+                      )}
+                    >
+                      <div className="relative">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="aspect-square w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex aspect-square w-full items-center justify-center bg-surface-hover">
+                            <Package className="h-12 w-12 text-text-muted" />
+                          </div>
+                        )}
+                        {/* TruvaNutra badge */}
+                        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-bold text-white shadow-md">
+                          <Zap className="h-3 w-3" />
+                          Ready to Ship
+                        </div>
+                        {isSelected && (
+                          <div className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-accent text-white shadow-md">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-text">{product.name}</h3>
+                        <p className="mt-1 text-xs capitalize text-text-muted">{product.category}</p>
+
+                        {/* Commission-based pricing */}
+                        <div className="mt-3 rounded-lg bg-accent/5 p-2.5">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-text-secondary">Retail Price</span>
+                            <span className="font-bold text-text">
+                              {formatCurrency(product.suggestedRetail)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between text-sm">
+                            <span className="text-text-secondary">Your Commission ({commissionRate}%)</span>
+                            <span className="font-bold text-accent">
+                              {formatCurrency(commissionAmount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Certifications */}
+                        {product.certifications && product.certifications.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {product.certifications.map((cert) => (
+                              <span
+                                key={cert}
+                                className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success"
+                              >
+                                {cert}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Add to Store button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleProduct(product.sku)}
+                          className={cn(
+                            'mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all',
+                            isSelected
+                              ? 'bg-accent text-white'
+                              : 'bg-surface-hover text-text hover:bg-accent/10 hover:text-accent',
+                          )}
+                        >
+                          <Store className="h-3.5 w-3.5" />
+                          {isSelected ? 'Added to Store' : 'Add to Store'}
+                        </button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <Card variant="outlined" padding="lg" className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
+                <Zap className="h-6 w-6 text-accent" />
+              </div>
+              <CardTitle>Quick Launch Products Coming Soon</CardTitle>
+              <CardDescription className="mt-2">
+                TruvaNutra ready-to-ship products will be available here shortly.
+                In the meantime, check out the AI Recommendations or Full Catalog tabs.
+              </CardDescription>
+            </Card>
+          )}
+        </div>
       ) : (
         /* Full catalog fallback -- simple grid */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

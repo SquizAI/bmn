@@ -19,6 +19,9 @@ export interface Product {
   materials: string | null;
   certifications: string[];
   available: boolean;
+  isTruvanutra?: boolean;
+  commissionRate?: number;
+  is_truvanutra?: boolean;
 }
 
 interface ProductsResponse {

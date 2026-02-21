@@ -157,12 +157,14 @@ export default function LogoGenerationPage() {
 
       {/* Progress */}
       {isGenerating && (
-        <GenerationProgress
-          progress={generation.progress}
-          status={generation.status}
-          message={generation.message}
-          error={generation.error}
-        />
+        <div role="status" aria-busy="true" aria-live="polite">
+          <GenerationProgress
+            progress={generation.progress}
+            status={generation.status}
+            message={generation.message}
+            error={generation.error}
+          />
+        </div>
       )}
 
       {/* Logo Gallery */}
@@ -174,6 +176,7 @@ export default function LogoGenerationPage() {
             selectable
             onSelect={handleSelect}
             columns={2}
+            aria-label="Generated logo options"
           />
 
           {/* Regenerate individual logos */}

@@ -441,6 +441,9 @@ export default function BrandIdentityPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex flex-col items-center gap-8 py-16"
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
           >
             {/* Animated icon */}
             <motion.div
@@ -493,6 +496,14 @@ export default function BrandIdentityPage() {
                     )}%`,
                   }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
+                  role="progressbar"
+                  aria-valuenow={Math.round(Math.max(
+                    brandGen.progress > 0 ? brandGen.progress : 0,
+                    Math.min(5 + loadingMessageIndex * 14, 95),
+                  ))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Brand direction generation progress"
                 />
               </div>
             </div>
@@ -545,6 +556,7 @@ export default function BrandIdentityPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-6 py-16"
+            role="alert"
           >
             <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-error/10">
               <AlertCircle className="h-10 w-10 text-error" />
@@ -791,6 +803,7 @@ export default function BrandIdentityPage() {
                   <textarea
                     className="min-h-24 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     placeholder="Describe your brand vision..."
+                    aria-label="Brand vision"
                     {...register('vision')}
                   />
                   {errors.vision?.message && (
@@ -872,6 +885,7 @@ export default function BrandIdentityPage() {
                   <textarea
                     className="min-h-20 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     placeholder="Describe your target audience..."
+                    aria-label="Target audience"
                     {...register('targetAudience')}
                   />
                   {errors.targetAudience?.message && (

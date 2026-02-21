@@ -507,7 +507,7 @@ function QuestionWords({
 }) {
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Brand personality words">
         {WORD_OPTIONS.map((option) => {
           const isSelected = selected.includes(option.id);
           const isDisabled = !isSelected && selected.length >= 3;
@@ -517,6 +517,7 @@ function QuestionWords({
               type="button"
               disabled={isDisabled}
               onClick={() => onToggle(option.id)}
+              aria-pressed={isSelected}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -533,7 +534,7 @@ function QuestionWords({
           );
         })}
       </div>
-      <p className="text-xs text-text-muted">
+      <p className="text-xs text-text-muted" aria-live="polite">
         {selected.length}/3 selected
       </p>
     </div>
@@ -550,7 +551,7 @@ function QuestionProduct({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Product type options">
       {PRODUCT_OPTIONS.map((option) => (
         <Card
           key={option.id}
@@ -563,6 +564,9 @@ function QuestionProduct({
               : 'hover:border-border-hover',
           )}
           onClick={() => onSelect(option.id)}
+          role="radio"
+          aria-checked={selected === option.id}
+          aria-label={option.label}
         >
           <span className="text-3xl">{option.emoji}</span>
           <span className="text-sm font-medium text-text">{option.label}</span>
@@ -592,7 +596,7 @@ function QuestionColors({
 }) {
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="group" aria-label="Color palette options">
         {COLOR_PALETTE_OPTIONS.map((option) => {
           const isSelected = selected.includes(option.id);
           const isDisabled = !isSelected && selected.length >= 3;
@@ -602,6 +606,8 @@ function QuestionColors({
               type="button"
               disabled={isDisabled}
               onClick={() => onToggle(option.id)}
+              aria-pressed={isSelected}
+              aria-label={`${option.label} color palette`}
               className={cn(
                 'group flex flex-col items-center gap-2 rounded-lg border p-4 transition-all duration-200',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
@@ -636,7 +642,7 @@ function QuestionColors({
           );
         })}
       </div>
-      <p className="text-xs text-text-muted">
+      <p className="text-xs text-text-muted" aria-live="polite">
         {selected.length}/3 selected (pick 2-3)
       </p>
     </div>

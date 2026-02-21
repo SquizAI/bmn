@@ -36,6 +36,11 @@ export interface RecommendedProduct {
   selectedByCount?: number;
   isTopSelling?: boolean;
   niche?: string;
+  ingredients?: string | null;
+  materials?: string | Record<string, unknown> | null;
+  certifications?: string[] | null;
+  isTruvanutra?: boolean;
+  commissionRate?: number;
 }
 
 interface ProductRecommendationCardProps {
