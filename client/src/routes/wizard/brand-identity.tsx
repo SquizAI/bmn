@@ -113,6 +113,71 @@ const FINALIZING_EXPLAINERS = [
 
 type Phase = 'loading' | 'choose-direction' | 'review-narrative' | 'customize';
 
+// ── Skeleton card shown during generation ───────────────────────
+
+function BrandDirectionCardSkeleton({ delay = 0 }: { delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+      className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface/80 p-6 shadow-sm"
+    >
+      {/* Shimmer overlay */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"
+        animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+        transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+      />
+
+      {/* Direction label */}
+      <div className="h-5 w-32 rounded bg-border/30 animate-pulse" />
+
+      {/* Tagline */}
+      <div className="mt-2 h-4 w-48 max-w-full rounded bg-border/25 animate-pulse" style={{ animationDelay: '0.1s' }} />
+
+      {/* Archetype badge */}
+      <div className="mt-4 flex items-center gap-2">
+        <div className="h-8 w-8 rounded-full bg-accent/15 animate-pulse" style={{ animationDelay: '0.15s' }} />
+        <div className="h-4 w-20 rounded bg-border/25 animate-pulse" style={{ animationDelay: '0.2s' }} />
+      </div>
+
+      {/* Vision text lines */}
+      <div className="mt-4 space-y-2">
+        <div className="h-3 w-full rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.25s' }} />
+        <div className="h-3 w-5/6 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.3s' }} />
+        <div className="h-3 w-3/4 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.35s' }} />
+      </div>
+
+      {/* Values pills */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-6 w-16 rounded-full bg-primary/10 animate-pulse" style={{ animationDelay: `${0.4 + i * 0.08}s` }} />
+        ))}
+      </div>
+
+      {/* Color palette strip */}
+      <div className="mt-4 flex gap-1">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-8 flex-1 rounded-md bg-border/25 animate-pulse" style={{ animationDelay: `${0.55 + i * 0.06}s` }} />
+        ))}
+      </div>
+
+      {/* Font pairing */}
+      <div className="mt-3 flex gap-3">
+        <div className="h-4 w-24 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.85s' }} />
+        <div className="h-4 w-20 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.9s' }} />
+      </div>
+
+      {/* Voice sample */}
+      <div className="mt-3 space-y-1.5">
+        <div className="h-3 w-full rounded bg-border/15 animate-pulse" style={{ animationDelay: '0.95s' }} />
+        <div className="h-3 w-2/3 rounded bg-border/15 animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────
 
 export default function BrandIdentityPage() {
@@ -482,54 +547,34 @@ export default function BrandIdentityPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col items-center gap-8 py-16"
+            className="flex flex-col gap-6 py-8"
             role="status"
             aria-busy="true"
             aria-live="polite"
           >
-            {/* Animated icon */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="relative"
-            >
-              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--bmn-color-primary)] to-[var(--bmn-color-accent)]">
-                <Sparkles className="h-12 w-12 text-white" />
+            {/* Compact progress header */}
+            <div className="mb-2 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={loadingMessageIndex >= GENERATION_MESSAGES.length - 1 ? `explainer-${explainerIndex}` : `msg-${loadingMessageIndex}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {loadingMessageIndex >= GENERATION_MESSAGES.length - 1
+                      ? FINALIZING_EXPLAINERS[explainerIndex]
+                      : brandGen.message || GENERATION_MESSAGES[loadingMessageIndex]}
+                  </motion.span>
+                </AnimatePresence>
               </div>
-              <motion.div
-                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-surface border-2 border-border"
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
-              >
-                <Loader2 className="h-4 w-4 text-primary" />
-              </motion.div>
-            </motion.div>
 
-            {/* Title */}
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-text">
-                Crafting Your Brand Directions
-              </h2>
-              <p className="mt-2 max-w-md text-text-secondary">
-                Our AI is analyzing your social presence and creating three unique
-                brand identity directions tailored just for you.
-              </p>
-            </div>
-
-            {/* Progress indicator */}
-            <div className="w-full max-w-md">
-              <div className="mb-2 flex justify-between text-xs text-text-muted">
-                <span>
-                  {brandGen.message || GENERATION_MESSAGES[loadingMessageIndex]}
-                </span>
-                {brandGen.progress > 0 && (
-                  <span>{Math.round(brandGen.progress)}%</span>
-                )}
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-surface-hover">
+              {/* Progress bar */}
+              <div className="h-1.5 w-full max-w-md overflow-hidden rounded-full bg-border/40">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+                  className="h-full rounded-full bg-gradient-to-r from-accent to-primary"
                   initial={{ width: '5%' }}
                   animate={{
                     width: `${Math.max(
@@ -537,7 +582,7 @@ export default function BrandIdentityPage() {
                       Math.min(5 + loadingMessageIndex * 7 + creepProgress, 95),
                     )}%`,
                   }}
-                  transition={{ duration: 1.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
                   role="progressbar"
                   aria-valuenow={Math.round(Math.max(
                     brandGen.progress > 0 ? brandGen.progress : 0,
@@ -548,68 +593,27 @@ export default function BrandIdentityPage() {
                   aria-label="Brand direction generation progress"
                 />
               </div>
+
+              {/* Percentage */}
+              <span className="text-xs text-text-muted">
+                {Math.round(Math.max(
+                  brandGen.progress > 0 ? brandGen.progress : 0,
+                  Math.min(5 + loadingMessageIndex * 7 + creepProgress, 95),
+                ))}%
+              </span>
             </div>
 
-            {/* Animated loading steps */}
-            <div className="flex flex-col gap-2 text-sm">
-              {GENERATION_MESSAGES.slice(0, loadingMessageIndex + 1).map(
-                (msg, i) => (
-                  <motion.div
-                    key={msg}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2"
-                  >
-                    {i < loadingMessageIndex ? (
-                      <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                      </div>
-                    ) : (
-                      <motion.div
-                        className="h-4 w-4 rounded-full border-2 border-primary"
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ repeat: Infinity, duration: 1.5 }}
-                      />
-                    )}
-                    <span
-                      className={
-                        i < loadingMessageIndex
-                          ? 'text-text-muted line-through'
-                          : 'text-text-secondary font-medium'
-                      }
-                    >
-                      {msg}
-                    </span>
-                  </motion.div>
-                ),
-              )}
+            {/* Skeleton direction cards — mirrors the 3-card layout */}
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <BrandDirectionCardSkeleton key={i} delay={i * 0.2} />
+              ))}
             </div>
 
-            {/* Finalizing explainer — appears when messages are exhausted */}
-            {loadingMessageIndex >= GENERATION_MESSAGES.length - 1 && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="mx-auto max-w-md text-center"
-              >
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={explainerIndex}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="text-sm leading-relaxed text-text-muted"
-                  >
-                    {FINALIZING_EXPLAINERS[explainerIndex]}
-                  </motion.p>
-                </AnimatePresence>
-              </motion.div>
-            )}
-
-            {/* Educational tips while loading */}
-            <LoadingTip />
+            {/* Loading tip at bottom */}
+            <div className="mt-2">
+              <LoadingTip />
+            </div>
           </motion.div>
         )}
 

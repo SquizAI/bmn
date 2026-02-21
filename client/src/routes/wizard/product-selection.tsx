@@ -12,10 +12,10 @@ import {
   Zap,
   Check,
   Store,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
 import { RecommendedProductGrid } from '@/components/products/RecommendedProductGrid';
 import { ProductDetailModal } from '@/components/products/ProductDetailModal';
 import { ConfettiBurst } from '@/components/animations/ConfettiBurst';
@@ -36,6 +36,82 @@ import { SeasonalBadge } from '@/components/products/SeasonalBadge';
 import { SocialProofBadge } from '@/components/products/SocialProofBadge';
 import { CustomProductRequest } from '@/components/products/CustomProductRequest';
 import type { RecommendedProduct } from '@/components/products/ProductRecommendationCard';
+
+// ------ Skeleton Loader ------
+
+function ProductGridSkeleton() {
+  return (
+    <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading products">
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span>Loading product recommendations...</span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: i * 0.1 }}
+            className="relative overflow-hidden rounded-xl border border-border/50 bg-surface/80 shadow-sm"
+          >
+            {/* Shimmer */}
+            <motion.div
+              className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/6 to-transparent"
+              animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+            />
+
+            {/* Product image */}
+            <div
+              className="aspect-4/3 bg-border/15 animate-pulse flex items-center justify-center"
+              style={{ animationDelay: `${i * 0.12}s` }}
+            >
+              <ShoppingBag className="h-8 w-8 text-text-muted/15" />
+            </div>
+
+            {/* Product info */}
+            <div className="p-4 space-y-2.5">
+              {/* Category badge */}
+              <div
+                className="h-5 w-20 rounded-full bg-accent/10 animate-pulse"
+                style={{ animationDelay: `${i * 0.12 + 0.05}s` }}
+              />
+              {/* Name */}
+              <div
+                className="h-4 w-3/4 rounded bg-border/30 animate-pulse"
+                style={{ animationDelay: `${i * 0.12 + 0.1}s` }}
+              />
+              {/* Description lines */}
+              <div className="space-y-1.5">
+                <div
+                  className="h-3 w-full rounded bg-border/20 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.15}s` }}
+                />
+                <div
+                  className="h-3 w-2/3 rounded bg-border/20 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.2}s` }}
+                />
+              </div>
+              {/* Price + select row */}
+              <div className="flex items-center justify-between pt-1">
+                <div
+                  className="h-5 w-16 rounded bg-border/25 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.25}s` }}
+                />
+                <div
+                  className="h-8 w-20 rounded-md bg-primary/10 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.3}s` }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ------ Component ------
 
@@ -383,9 +459,7 @@ export default function ProductSelectionPage() {
 
       {/* Main content */}
       {isLoading ? (
-        <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="Loading products">
-          <Spinner size="lg" />
-        </div>
+        <ProductGridSkeleton />
       ) : view === 'recommendations' && hasRecommendations ? (
         <RecommendedProductGrid
           recommendations={recommendations!.products}

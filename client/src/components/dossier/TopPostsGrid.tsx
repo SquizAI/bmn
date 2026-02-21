@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Heart, MessageCircle, Eye, Play } from 'lucide-react';
 import type { PostData } from '@/lib/dossier-types';
+import { proxyImageUrl } from '@/lib/utils';
 
 interface TopPostsGridProps {
   posts: PostData[];
@@ -36,7 +37,7 @@ export default function TopPostsGrid({ posts }: TopPostsGridProps) {
           >
             {(post.imageUrl || post.thumbnailUrl) ? (
               <img
-                src={post.imageUrl || post.thumbnailUrl || ''}
+                src={proxyImageUrl(post.imageUrl) || proxyImageUrl(post.thumbnailUrl) || ''}
                 alt={post.caption?.slice(0, 40) || 'Post'}
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"

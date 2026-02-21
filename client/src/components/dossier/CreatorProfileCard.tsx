@@ -9,6 +9,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { CreatorProfile, PlatformData, Platform } from '@/lib/dossier-types';
+import { proxyImageUrl } from '@/lib/utils';
 
 interface CreatorProfileCardProps {
   profile: CreatorProfile;
@@ -48,7 +49,7 @@ export default function CreatorProfileCard({ profile, platforms }: CreatorProfil
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5, type: 'spring', stiffness: 200 }}
-            src={profile.profilePicUrl}
+            src={proxyImageUrl(profile.profilePicUrl) || ''}
             alt={profile.displayName || 'Creator'}
             className="h-16 w-16 rounded-full object-cover ring-2 ring-[var(--bmn-color-accent)] ring-offset-2 ring-offset-[var(--bmn-color-surface)]"
           />

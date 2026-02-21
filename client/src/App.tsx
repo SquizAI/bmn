@@ -8,50 +8,72 @@ import { SkipLink } from '@/components/ui/skip-link';
 import { OfflineIndicator } from '@/components/ui/offline-indicator';
 import { requireAuth, requireAdmin, redirectIfAuthed } from '@/lib/route-guards';
 
+/**
+ * Wrap React.lazy with auto-reload on chunk load failure.
+ * After a deploy, old chunk hashes no longer exist on the server.
+ * This catches "Failed to fetch dynamically imported module" errors and
+ * reloads once to get the fresh index.html with current hashes.
+ */
+function lazyRetry(factory: () => Promise<{ default: React.ComponentType }>) {
+  return lazy(() =>
+    factory().catch(() => {
+      const key = 'bmn-chunk-retry';
+      const lastRetry = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (!lastRetry || now - Number(lastRetry) > 30_000) {
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+      }
+      return { default: (() => null) as React.FC };
+    }),
+  );
+}
+
 // --- Lazy route imports (code-split per route) ---
 
 // Layouts
-const RootLayout = lazy(() => import('@/routes/root-layout'));
-const WizardLayout = lazy(() => import('@/routes/wizard/index'));
-const DashboardLayout = lazy(() => import('@/routes/dashboard/layout'));
-const AdminLayout = lazy(() => import('@/routes/admin/layout'));
+const RootLayout = lazyRetry(() => import('@/routes/root-layout'));
+const WizardLayout = lazyRetry(() => import('@/routes/wizard/index'));
+const DashboardLayout = lazyRetry(() => import('@/routes/dashboard/layout'));
+const AdminLayout = lazyRetry(() => import('@/routes/admin/layout'));
 
 // Auth
-const Login = lazy(() => import('@/routes/auth/login'));
-const Signup = lazy(() => import('@/routes/auth/signup'));
-const ForgotPassword = lazy(() => import('@/routes/auth/forgot-password'));
-const AuthCallback = lazy(() => import('@/routes/auth/callback'));
+const Login = lazyRetry(() => import('@/routes/auth/login'));
+const Signup = lazyRetry(() => import('@/routes/auth/signup'));
+const ForgotPassword = lazyRetry(() => import('@/routes/auth/forgot-password'));
+const AuthCallback = lazyRetry(() => import('@/routes/auth/callback'));
 
 // Wizard steps
-const Onboarding = lazy(() => import('@/routes/wizard/onboarding'));
-const SocialAnalysis = lazy(() => import('@/routes/wizard/social-analysis'));
-const BrandName = lazy(() => import('@/routes/wizard/brand-name'));
-const BrandIdentity = lazy(() => import('@/routes/wizard/brand-identity'));
-const LogoGeneration = lazy(() => import('@/routes/wizard/logo-generation'));
-const ProductSelection = lazy(() => import('@/routes/wizard/product-selection'));
-const MockupReview = lazy(() => import('@/routes/wizard/mockup-review'));
-const BundleBuilder = lazy(() => import('@/routes/wizard/bundle-builder'));
-const ProfitProjection = lazy(() => import('@/routes/wizard/profit-projection'));
-const BrandQuiz = lazy(() => import('@/routes/wizard/brand-quiz'));
-const Completion = lazy(() => import('@/routes/wizard/completion'));
+const Onboarding = lazyRetry(() => import('@/routes/wizard/onboarding'));
+const SocialAnalysis = lazyRetry(() => import('@/routes/wizard/social-analysis'));
+const BrandName = lazyRetry(() => import('@/routes/wizard/brand-name'));
+const BrandIdentity = lazyRetry(() => import('@/routes/wizard/brand-identity'));
+const LogoGeneration = lazyRetry(() => import('@/routes/wizard/logo-generation'));
+const ProductSelection = lazyRetry(() => import('@/routes/wizard/product-selection'));
+const MockupReview = lazyRetry(() => import('@/routes/wizard/mockup-review'));
+const BundleBuilder = lazyRetry(() => import('@/routes/wizard/bundle-builder'));
+const ProfitProjection = lazyRetry(() => import('@/routes/wizard/profit-projection'));
+const BrandQuiz = lazyRetry(() => import('@/routes/wizard/brand-quiz'));
+const Completion = lazyRetry(() => import('@/routes/wizard/completion'));
 
 // Dashboard
-const BrandsPage = lazy(() => import('@/routes/dashboard/brands'));
-const BrandDetailPage = lazy(() => import('@/routes/dashboard/brand-detail'));
-const DashboardOverview = lazy(() => import('@/routes/dashboard/overview'));
-const DashboardContent = lazy(() => import('@/routes/dashboard/content'));
-const DashboardAnalytics = lazy(() => import('@/routes/dashboard/analytics'));
-const DashboardReferrals = lazy(() => import('@/routes/dashboard/referrals'));
-const DashboardIntegrations = lazy(() => import('@/routes/dashboard/integrations'));
-const SettingsPage = lazy(() => import('@/routes/dashboard/settings'));
-const OrganizationPage = lazy(() => import('@/routes/dashboard/organization'));
+const BrandsPage = lazyRetry(() => import('@/routes/dashboard/brands'));
+const BrandDetailPage = lazyRetry(() => import('@/routes/dashboard/brand-detail'));
+const DashboardOverview = lazyRetry(() => import('@/routes/dashboard/overview'));
+const DashboardContent = lazyRetry(() => import('@/routes/dashboard/content'));
+const DashboardAnalytics = lazyRetry(() => import('@/routes/dashboard/analytics'));
+const DashboardReferrals = lazyRetry(() => import('@/routes/dashboard/referrals'));
+const DashboardIntegrations = lazyRetry(() => import('@/routes/dashboard/integrations'));
+const SettingsPage = lazyRetry(() => import('@/routes/dashboard/settings'));
+const OrganizationPage = lazyRetry(() => import('@/routes/dashboard/organization'));
+const ProductCatalogPage = lazyRetry(() => import('@/routes/dashboard/product-catalog'));
 
 // Admin
-const AdminUsersPage = lazy(() => import('@/routes/admin/users'));
-const AdminProductsPage = lazy(() => import('@/routes/admin/products'));
-const AdminJobsPage = lazy(() => import('@/routes/admin/jobs'));
-const AdminTemplatesPage = lazy(() => import('@/routes/admin/templates'));
-const AdminProductTiersPage = lazy(() => import('@/routes/admin/product-tiers'));
+const AdminUsersPage = lazyRetry(() => import('@/routes/admin/users'));
+const AdminProductsPage = lazyRetry(() => import('@/routes/admin/products'));
+const AdminJobsPage = lazyRetry(() => import('@/routes/admin/jobs'));
+const AdminTemplatesPage = lazyRetry(() => import('@/routes/admin/templates'));
+const AdminProductTiersPage = lazyRetry(() => import('@/routes/admin/product-tiers'));
 
 // --- Suspense wrapper helper ---
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
@@ -295,6 +317,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <OrganizationPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'products',
+            element: (
+              <SuspenseRoute>
+                <ProductCatalogPage />
               </SuspenseRoute>
             ),
           },

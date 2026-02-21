@@ -18,6 +18,7 @@ export const ROUTES = {
   DASHBOARD_INTEGRATIONS: '/dashboard/integrations',
   DASHBOARD_SETTINGS: '/dashboard/settings',
   DASHBOARD_ORGANIZATION: '/dashboard/organization',
+  DASHBOARD_PRODUCTS: '/dashboard/products',
   WIZARD: '/wizard',
   WIZARD_ONBOARDING: '/wizard/onboarding',
   WIZARD_SOCIAL_ANALYSIS: '/wizard/social-analysis',
@@ -141,6 +142,7 @@ export const QUERY_KEYS = {
   brandAssets: (brandId: string, assetType: string) =>
     ['brand-assets', brandId, assetType] as const,
   products: (filter?: string) => ['products', filter] as const,
+  browseProducts: (filters?: Record<string, unknown>) => ['browse-products', filters] as const,
   productRecommendations: (brandId: string) => ['product-recommendations', brandId] as const,
   nameOptions: (brandId: string) => ['name-options', brandId] as const,
   dossier: (brandId: string) => ['dossier', brandId] as const,

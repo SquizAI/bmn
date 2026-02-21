@@ -6,7 +6,7 @@
 //   - Static assets (/assets/*): cache-first, background revalidate
 //   - HTML navigation: stale-while-revalidate
 
-const CACHE_NAME = 'bmn-shell-v1';
+const CACHE_NAME = 'bmn-shell-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -134,15 +134,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets (Vite hashed bundles): cache-first with background update
+  // Static assets (Vite hashed bundles): network-first
+  // Vite content-hashes every chunk, so a given filename is always correct if it exists.
+  // Using cache-first here caused stale index.html to request old chunk hashes after deploys.
   if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(networkFirst(request));
     return;
   }
 
-  // HTML navigation: stale-while-revalidate
+  // HTML navigation: network-first to always get the latest index.html after deploys
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(staleWhileRevalidate(request));
+    event.respondWith(networkFirst(request));
     return;
   }
 

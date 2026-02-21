@@ -7,10 +7,11 @@ import {
   Gift,
   TrendingUp,
   SkipForward,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
 import {
   BundleBuilderComponent,
   type BundleSuggestion,
@@ -22,6 +23,112 @@ import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
 import { formatCurrency } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
+
+// ------ Skeleton Loader ------
+
+function BundleBuilderSkeleton() {
+  return (
+    <div className="space-y-4" role="status" aria-busy="true" aria-label="Loading bundle suggestions">
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span>Loading bundle suggestions...</span>
+      </div>
+
+      <div className="space-y-4">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.15 }}
+            className="relative overflow-hidden rounded-xl border border-border/50 bg-surface/80 p-5 shadow-sm"
+          >
+            {/* Shimmer */}
+            <motion.div
+              className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/6 to-transparent"
+              animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+            />
+
+            {/* Bundle header */}
+            <div className="flex items-center justify-between">
+              <div
+                className="h-5 w-36 rounded bg-border/30 animate-pulse"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              />
+              <div
+                className="h-5 w-20 rounded bg-accent/15 animate-pulse"
+                style={{ animationDelay: `${i * 0.1 + 0.05}s` }}
+              />
+            </div>
+
+            {/* Product thumbnails row */}
+            <div className="mt-3 flex gap-3">
+              {[1, 2, 3].map((j) => (
+                <div
+                  key={j}
+                  className="h-16 w-16 shrink-0 rounded-lg bg-border/20 animate-pulse flex items-center justify-center"
+                  style={{ animationDelay: `${i * 0.1 + j * 0.08}s` }}
+                >
+                  <Package className="h-5 w-5 text-text-muted/15" />
+                </div>
+              ))}
+              <div className="flex-1 space-y-2 py-1">
+                <div
+                  className="h-3 w-full rounded bg-border/15 animate-pulse"
+                  style={{ animationDelay: `${i * 0.1 + 0.3}s` }}
+                />
+                <div
+                  className="h-3 w-3/4 rounded bg-border/15 animate-pulse"
+                  style={{ animationDelay: `${i * 0.1 + 0.35}s` }}
+                />
+              </div>
+            </div>
+
+            {/* Price + action row */}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="space-y-1">
+                <div
+                  className="h-4 w-24 rounded bg-border/25 animate-pulse"
+                  style={{ animationDelay: `${i * 0.1 + 0.4}s` }}
+                />
+                <div
+                  className="h-3 w-16 rounded bg-border/15 animate-pulse"
+                  style={{ animationDelay: `${i * 0.1 + 0.45}s` }}
+                />
+              </div>
+              <div
+                className="h-9 w-24 rounded-lg bg-primary/10 animate-pulse"
+                style={{ animationDelay: `${i * 0.1 + 0.5}s` }}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Revenue summary skeleton */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="relative overflow-hidden rounded-xl border border-border/50 bg-surface/80 p-4 shadow-sm"
+      >
+        <motion.div
+          className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/6 to-transparent"
+          animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+          transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+        />
+        <div className="flex items-center justify-between">
+          <div className="h-4 w-32 rounded bg-border/25 animate-pulse" />
+          <div
+            className="h-5 w-24 rounded bg-accent/15 animate-pulse"
+            style={{ animationDelay: '0.1s' }}
+          />
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 // ------ Component ------
 
@@ -196,9 +303,7 @@ export default function BundleBuilderPage() {
 
       {/* Bundle builder content */}
       {recsLoading ? (
-        <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="Loading bundle suggestions">
-          <Spinner size="lg" />
-        </div>
+        <BundleBuilderSkeleton />
       ) : (
         <BundleBuilderComponent
           suggestedBundles={suggestedBundles}

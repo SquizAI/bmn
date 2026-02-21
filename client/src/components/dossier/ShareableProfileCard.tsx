@@ -23,6 +23,7 @@ import type {
   AestheticProfile,
   Platform,
 } from '@/lib/dossier-types';
+import { proxyImageUrl } from '@/lib/utils';
 
 interface ShareableProfileCardProps {
   profile: CreatorProfile;
@@ -171,7 +172,7 @@ export default function ShareableProfileCard({
           <div className="flex items-center gap-4">
             {profile.profilePicUrl ? (
               <img
-                src={profile.profilePicUrl}
+                src={proxyImageUrl(profile.profilePicUrl) || ''}
                 alt={profile.displayName || 'Creator'}
                 className="h-14 w-14 rounded-full object-cover ring-2 ring-[var(--bmn-color-accent)] ring-offset-2 ring-offset-[var(--bmn-color-surface)]"
                 loading="lazy"

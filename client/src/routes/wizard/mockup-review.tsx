@@ -10,10 +10,14 @@ import {
   ArrowLeftRight,
   RefreshCw,
   Printer,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
+// Retained for potential error-state display in future iterations
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { GenerationProgress } from '@/components/generation-progress';
 import { MockupEditor } from '@/components/products/MockupEditor';
 import { MockupComparison } from '@/components/products/MockupComparison';
@@ -36,6 +40,69 @@ import { cn } from '@/lib/utils';
 // ------ Types ------
 
 type ViewMode = 'gallery' | 'editor' | 'comparison';
+
+// ------ Skeleton Loader ------
+
+function MockupGallerySkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span>Creating product mockups...</span>
+      </div>
+
+      {/* Mockup grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({ length: count }).map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.15 }}
+            className="relative overflow-hidden rounded-xl border border-border/50 bg-surface/80 shadow-sm"
+          >
+            {/* Shimmer */}
+            <motion.div
+              className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.06] to-transparent"
+              animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+            />
+
+            {/* Product image placeholder */}
+            <div
+              className="aspect-[4/3] bg-border/15 animate-pulse flex items-center justify-center"
+              style={{ animationDelay: `${i * 0.12}s` }}
+            >
+              <Package className="h-10 w-10 text-text-muted/20" />
+            </div>
+
+            {/* Product info */}
+            <div className="p-4 space-y-2">
+              <div
+                className="h-4 w-32 rounded bg-border/25 animate-pulse"
+                style={{ animationDelay: `${i * 0.12 + 0.1}s` }}
+              />
+              <div
+                className="h-3 w-20 rounded bg-border/20 animate-pulse"
+                style={{ animationDelay: `${i * 0.12 + 0.15}s` }}
+              />
+              <div className="flex gap-2 mt-2">
+                <div
+                  className="h-7 w-20 rounded-md bg-success/10 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.2}s` }}
+                />
+                <div
+                  className="h-7 w-16 rounded-md bg-border/15 animate-pulse"
+                  style={{ animationDelay: `${i * 0.12 + 0.25}s` }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ------ Component ------
 
@@ -225,15 +292,33 @@ export default function MockupReviewPage() {
         </p>
       </div>
 
-      {/* Progress */}
+      {/* Progress + Skeleton */}
       {isGenerating && (
-        <div role="status" aria-busy="true" aria-live="polite">
-          <GenerationProgress
-            progress={generation.progress}
-            status={generation.status}
-            message={generation.message}
-            error={generation.error}
-          />
+        <div className="space-y-5" role="status" aria-busy="true" aria-live="polite">
+          {/* Progress header */}
+          <div className="flex flex-col items-center gap-2.5">
+            <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
+              <Loader2 className="h-4 w-4 animate-spin text-accent" />
+              <span>{generation.message || 'Starting mockup generation...'}</span>
+            </div>
+            <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-border/40">
+              {generation.progress > 0 ? (
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-accent to-primary"
+                  animate={{ width: `${generation.progress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              ) : (
+                <motion.div
+                  className="h-full w-1/4 rounded-full bg-accent/50"
+                  animate={{ x: ['0%', '300%', '0%'] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              )}
+            </div>
+          </div>
+
+          <MockupGallerySkeleton count={mockups.length || 4} />
         </div>
       )}
 

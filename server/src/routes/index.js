@@ -18,6 +18,7 @@ import { organizationRoutes } from './organizations.js';
 import { userWebhookRoutes } from './api/v1/webhooks-user.js';
 import { apiKeyRoutes } from './api/v1/api-keys.js';
 import { publicApiRoutes } from './api/v1/public-api.js';
+import { proxyRoutes } from './proxy.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { apiKeyAuth } from '../middleware/api-key-auth.js';
 import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
@@ -47,6 +48,9 @@ export function registerRoutes(app) {
   app.use('/health', healthRoute);
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
+
+  // -- Proxy routes (authenticated, for CORS bypass on external images) --
+  app.use('/api/v1/proxy', requireAuth, proxyRoutes);
 
   // -- Authenticated routes --
   app.use('/api/v1/packaging-templates', requireAuth, packagingTemplateRoutes);

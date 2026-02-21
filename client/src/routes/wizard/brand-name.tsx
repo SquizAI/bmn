@@ -10,6 +10,7 @@ import {
   Type,
   AlertCircle,
   BadgeCheck,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,69 @@ import {
 import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import { ROUTES } from '@/lib/constants';
 import type { NameSuggestion } from '@/hooks/use-name-generation';
+
+// ── Rotating status messages for generation loading ────────────
+
+const NAME_GEN_MESSAGES = [
+  'Brainstorming creative names...',
+  'Checking domain availability...',
+  'Scanning social handle conflicts...',
+  'Running trademark screening...',
+  'Ranking by memorability & brandability...',
+  'Polishing final suggestions...',
+];
+
+// ── Skeleton card that mirrors BrandNameCard layout ────────────
+
+function BrandNameCardSkeleton({ delay = 0 }: { delay?: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface/80 p-5 shadow-sm"
+    >
+      {/* Shimmer overlay */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/6 to-transparent"
+        animate={{ translateX: ['calc(-100%)', 'calc(100%)'] }}
+        transition={{ repeat: Infinity, duration: 2.5, ease: 'linear', repeatDelay: 0.5 }}
+      />
+
+      {/* Name heading placeholder */}
+      <div className="h-6 w-36 rounded bg-border/30 animate-pulse" />
+
+      {/* Technique badge */}
+      <div className="mt-2 h-5 w-20 rounded-full bg-accent/10 animate-pulse" style={{ animationDelay: '0.1s' }} />
+
+      {/* Rationale text lines */}
+      <div className="mt-3 space-y-2">
+        <div className="h-3 w-full rounded bg-border/25 animate-pulse" style={{ animationDelay: '0.15s' }} />
+        <div className="h-3 w-4/5 rounded bg-border/25 animate-pulse" style={{ animationDelay: '0.2s' }} />
+      </div>
+
+      {/* Domain availability row */}
+      <div className="mt-4 flex gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-6 w-14 rounded-md bg-border/20 animate-pulse" style={{ animationDelay: `${0.25 + i * 0.08}s` }} />
+        ))}
+      </div>
+
+      {/* Social handles row */}
+      <div className="mt-2 flex gap-2">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-5 w-5 rounded-full bg-border/20 animate-pulse" style={{ animationDelay: `${0.4 + i * 0.08}s` }} />
+        ))}
+      </div>
+
+      {/* Score bars */}
+      <div className="mt-3 flex gap-3">
+        <div className="h-4 w-24 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.55s' }} />
+        <div className="h-4 w-24 rounded bg-border/20 animate-pulse" style={{ animationDelay: '0.6s' }} />
+      </div>
+    </motion.div>
+  );
+}
 
 // ── Component ──────────────────────────────────────────────────
 
@@ -85,6 +149,7 @@ export default function BrandNamePage() {
   const [customName, setCustomName] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
   const dispatchMutation = useDispatchNameGeneration();
   const selectMutation = useSelectBrandName();
@@ -93,6 +158,18 @@ export default function BrandNamePage() {
   const generation = useGenerationProgress(activeJobId);
   const isGenerating =
     generation.status === 'pending' || generation.status === 'processing';
+
+  // Rotate loading messages every 6 seconds while generating
+  useEffect(() => {
+    if (!isGenerating) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % NAME_GEN_MESSAGES.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
 
   // Track whether we already processed this job's result
   const processedJobRef = useRef<string | null>(null);
@@ -294,34 +371,63 @@ export default function BrandNamePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-4 py-16"
+            className="flex flex-col gap-6"
             role="status"
             aria-busy="true"
             aria-live="polite"
           >
-            <div className="relative">
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
-              <Sparkles className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-accent" />
-            </div>
-            <p className="text-sm text-text-secondary">
-              {generation.message || 'Brainstorming creative names...'}
-            </p>
-            <p className="text-xs text-text-muted">Checking domains, social handles, and trademarks</p>
-            {generation.progress > 0 && (
-              <div className="mt-2 h-1.5 w-full max-w-48 overflow-hidden rounded-full bg-border">
-                <motion.div
-                  className="h-full rounded-full bg-accent"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${generation.progress}%` }}
-                  transition={{ duration: 0.3 }}
-                  role="progressbar"
-                  aria-valuenow={Math.round(generation.progress)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Name generation progress"
-                />
+            {/* Progress header */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={loadingMessageIndex}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {generation.message || NAME_GEN_MESSAGES[loadingMessageIndex]}
+                  </motion.span>
+                </AnimatePresence>
               </div>
-            )}
+
+              {/* Progress bar - always visible */}
+              <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-border/50">
+                {generation.progress > 0 ? (
+                  <motion.div
+                    className="h-full rounded-full bg-linear-to-r from-accent to-primary"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${generation.progress}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                    role="progressbar"
+                    aria-valuenow={Math.round(generation.progress)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  />
+                ) : (
+                  <motion.div
+                    className="h-full w-1/4 rounded-full bg-accent/50"
+                    animate={{ x: ['0%', '300%', '0%'] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Skeleton grid - mirrors the final 2-column layout */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[0, 1, 2, 3].map((i) => (
+                <BrandNameCardSkeleton key={i} delay={i * 0.15} />
+              ))}
+            </div>
+
+            {/* Building indicator */}
+            <div className="flex items-center justify-center gap-2 text-xs text-text-muted">
+              <Sparkles className="h-3 w-3 animate-pulse text-accent/60" />
+              <span>Building your brand names...</span>
+            </div>
           </motion.div>
         ) : suggestions.length === 0 && hasGenerated ? (
           <motion.div
@@ -351,15 +457,39 @@ export default function BrandNamePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex flex-col items-center gap-4 py-16"
+            className="flex flex-col gap-6"
             role="status"
             aria-busy="true"
           >
-            <div className="relative">
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
-              <Sparkles className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 text-accent" />
+            {/* Progress header */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-text-secondary">
+                <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                <span>Preparing name generation...</span>
+              </div>
+
+              {/* Indeterminate progress bar */}
+              <div className="h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-border/50">
+                <motion.div
+                  className="h-full w-1/4 rounded-full bg-accent/50"
+                  animate={{ x: ['0%', '300%', '0%'] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                />
+              </div>
             </div>
-            <p className="text-sm text-text-secondary">Preparing name generation...</p>
+
+            {/* Skeleton grid - mirrors the final 2-column layout */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[0, 1, 2, 3].map((i) => (
+                <BrandNameCardSkeleton key={i} delay={i * 0.15} />
+              ))}
+            </div>
+
+            {/* Building indicator */}
+            <div className="flex items-center justify-center gap-2 text-xs text-text-muted">
+              <Sparkles className="h-3 w-3 animate-pulse text-accent/60" />
+              <span>Building your brand names...</span>
+            </div>
           </motion.div>
         ) : (
           <motion.div

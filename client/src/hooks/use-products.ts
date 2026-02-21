@@ -6,7 +6,18 @@ import type { BundleSuggestion } from '@/components/products/BundleBuilder';
 
 // ------ Types ------
 
+export interface ProductTierInfo {
+  id: string;
+  slug: string;
+  name: string;
+  display_name: string;
+  badge_color: string;
+  badge_label: string;
+  min_subscription_tier?: string;
+}
+
 export interface Product {
+  id?: string;
   sku: string;
   name: string;
   category: string;
@@ -22,11 +33,29 @@ export interface Product {
   isTruvanutra?: boolean;
   commissionRate?: number;
   is_truvanutra?: boolean;
+  // Snake-case aliases from API
+  base_cost?: number;
+  retail_price?: number;
+  image_url?: string | null;
+  sort_order?: number;
+  // Tier & subscription gating
+  tier: ProductTierInfo | null;
+  accessible: boolean;
+}
+
+export interface ProductFilters {
+  category?: string;
+  tier?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 interface ProductsResponse {
   items: Product[];
   total: number;
+  page?: number;
+  limit?: number;
   categories: string[];
 }
 
@@ -66,6 +95,27 @@ export function useProducts(category?: string) {
       apiClient.get<ProductsResponse>('/api/v1/products', {
         params: category ? { category } : undefined,
       }),
+  });
+}
+
+/**
+ * Fetch the product catalog with rich filtering for the browse page.
+ */
+export function useBrowseProducts(filters: ProductFilters = {}) {
+  const params: Record<string, string | number> = {};
+  if (filters.category) params.category = filters.category;
+  if (filters.tier) params.tier = filters.tier;
+  if (filters.search) params.search = filters.search;
+  if (filters.page) params.page = filters.page;
+  if (filters.limit) params.limit = filters.limit;
+
+  return useQuery({
+    queryKey: QUERY_KEYS.browseProducts(filters as Record<string, unknown>),
+    queryFn: () =>
+      apiClient.get<ProductsResponse>('/api/v1/products', {
+        params: Object.keys(params).length > 0 ? params : undefined,
+      }),
+    staleTime: 1000 * 60 * 5,
   });
 }
 

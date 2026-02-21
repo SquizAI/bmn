@@ -3,7 +3,7 @@ import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { CreatorDossier, Platform } from '@/lib/dossier-types';
 import { normalizeFormats, getPostingFrequencyLabel } from '@/lib/dossier-types';
-import { formatCurrency, formatNumber, capitalize } from '@/lib/utils';
+import { formatCurrency, formatNumber, capitalize, proxyImageUrl } from '@/lib/utils';
 
 interface DossierPdfExportProps {
   dossier: CreatorDossier;
@@ -69,33 +69,45 @@ async function imageToBase64(url: string): Promise<string | null> {
 // ── Build the print-friendly HTML document ──────────────────────
 
 function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | null): string {
-  const { profile, platforms, content, aesthetic, niche, readinessScore, personality, revenueEstimate } = dossier;
-  const formatsArray = normalizeFormats(content.formats);
-  const frequencyLabel = getPostingFrequencyLabel(content.postingFrequency) || 'N/A';
-  const generatedDate = new Date(dossier.createdAt).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const {
+    profile,
+    platforms = [],
+    content,
+    aesthetic,
+    niche,
+    readinessScore,
+    personality,
+    revenueEstimate,
+  } = dossier as CreatorDossier & Record<string, unknown>;
+  const formatsArray = content ? normalizeFormats(content.formats) : [];
+  const frequencyLabel = content ? (getPostingFrequencyLabel(content.postingFrequency) || 'N/A') : 'N/A';
+  const generatedDate = dossier.createdAt
+    ? new Date(dossier.createdAt).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const tierColor = tierColors[readinessScore.tier] || '#d97706';
-  const palette = aesthetic?.naturalPalette || aesthetic?.dominantColors.map((c) => c.hex) || [];
+  const tierColor = readinessScore ? (tierColors[readinessScore.tier] || '#d97706') : '#d97706';
+  const palette = aesthetic?.naturalPalette || aesthetic?.dominantColors?.map((c: { hex: string }) => c.hex) || [];
 
   // Compute total engagement rate across platforms
-  const engagementRates = platforms
-    .map((p) => p.metrics.engagementRate)
-    .filter((r): r is number => r !== null);
+  const safePlatforms = Array.isArray(platforms) ? platforms : [];
+  const engagementRates = safePlatforms
+    .map((p) => p.metrics?.engagementRate)
+    .filter((r): r is number => r != null);
   const avgEngagement =
     engagementRates.length > 0
       ? (engagementRates.reduce((a, b) => a + b, 0) / engagementRates.length * 100).toFixed(1)
       : 'N/A';
 
   // Top 3 content themes
-  const topThemes = content.themes.slice(0, 5);
+  const topThemes = content?.themes?.slice(0, 5) || [];
   const maxThemeFreq = Math.max(...topThemes.map((t) => t.frequency), 0.01);
 
   // Product categories from niche keywords
-  const productCategories = niche.primaryNiche.relatedKeywords.slice(0, 3);
+  const productCategories = niche?.primaryNiche?.relatedKeywords?.slice(0, 3) || [];
 
   // Profile image HTML
   const profileImageHtml = profileImageBase64
@@ -583,12 +595,12 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
 
     <div class="cover-name">${profile.displayName || 'Creator'}</div>
     <div class="cover-handle">
-      @${platforms[0]?.handle || 'unknown'} &middot; ${formatFollowers(profile.totalFollowers)} followers across ${platforms.length} platform${platforms.length !== 1 ? 's' : ''}
+      @${safePlatforms[0]?.handle || 'unknown'} &middot; ${formatFollowers(profile?.totalFollowers || 0)} followers across ${safePlatforms.length} platform${safePlatforms.length !== 1 ? 's' : ''}
     </div>
 
     <div class="cover-score-container">
-      <div class="cover-score">${readinessScore.totalScore}</div>
-      <div class="cover-score-label">${tierLabels[readinessScore.tier] || 'Emerging'}</div>
+      <div class="cover-score">${readinessScore?.totalScore ?? '--'}</div>
+      <div class="cover-score-label">${readinessScore ? (tierLabels[readinessScore.tier] || 'Emerging') : 'Analyzing'}</div>
       <div class="cover-score-sublabel">Brand Readiness Score</div>
     </div>
 
@@ -616,16 +628,16 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         </tr>
       </thead>
       <tbody>
-        ${platforms
+        ${safePlatforms
           .map(
             (p) => `
           <tr>
-            <td style="font-weight:600;">${platformLabels[p.platform]}</td>
+            <td style="font-weight:600;">${platformLabels[p.platform] || p.platform}</td>
             <td>@${p.handle}</td>
-            <td>${formatNumber(p.metrics.followers)}</td>
-            <td>${p.metrics.postCount !== null ? formatNumber(p.metrics.postCount) : '-'}</td>
-            <td>${p.metrics.engagementRate !== null ? `${(p.metrics.engagementRate * 100).toFixed(1)}%` : '-'}</td>
-            <td>${p.metrics.avgLikes !== null ? formatNumber(p.metrics.avgLikes) : '-'}</td>
+            <td>${formatNumber(p.metrics?.followers || 0)}</td>
+            <td>${p.metrics?.postCount != null ? formatNumber(p.metrics.postCount) : '-'}</td>
+            <td>${p.metrics?.engagementRate != null ? `${(p.metrics.engagementRate * 100).toFixed(1)}%` : '-'}</td>
+            <td>${p.metrics?.avgLikes != null ? formatNumber(p.metrics.avgLikes) : '-'}</td>
           </tr>
         `,
           )
@@ -635,7 +647,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
 
     <div class="stat-row" style="margin-top:24px;">
       <div class="stat-card">
-        <div class="stat-value">${formatFollowers(profile.totalFollowers)}</div>
+        <div class="stat-value">${formatFollowers(profile?.totalFollowers || 0)}</div>
         <div class="stat-label">Total Followers</div>
       </div>
       <div class="stat-card">
@@ -643,7 +655,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         <div class="stat-label">Avg Engagement</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">${platforms.length}</div>
+        <div class="stat-value">${safePlatforms.length}</div>
         <div class="stat-label">Active Platforms</div>
       </div>
       <div class="stat-card">
@@ -691,7 +703,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
     }
 
     <div class="page-footer">
-      <span>${profile.displayName || 'Creator'} - Intelligence Report</span>
+      <span>${profile?.displayName || 'Creator'} - Intelligence Report</span>
       <span>brandmenow.ai</span>
     </div>
   </div>
@@ -707,19 +719,19 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
       <div>
         <div class="section-title">Primary Niche</div>
         <div class="info-block">
-          <div class="info-block-value" style="text-transform:capitalize;">${niche.primaryNiche.name}</div>
+          <div class="info-block-value" style="text-transform:capitalize;">${niche?.primaryNiche?.name || 'N/A'}</div>
           <div class="info-block-desc">
-            Confidence: ${confidenceLabel(niche.primaryNiche.confidence)} (${Math.round(niche.primaryNiche.confidence * 100)}%)
-            ${niche.primaryNiche.marketSize ? `&middot; ${capitalize(niche.primaryNiche.marketSize)} market` : ''}
+            Confidence: ${niche?.primaryNiche ? `${confidenceLabel(niche.primaryNiche.confidence)} (${Math.round(niche.primaryNiche.confidence * 100)}%)` : 'N/A'}
+            ${niche?.primaryNiche?.marketSize ? `&middot; ${capitalize(niche.primaryNiche.marketSize)} market` : ''}
           </div>
         </div>
 
         ${
-          niche.secondaryNiches.length > 0
+          (niche?.secondaryNiches?.length || 0) > 0
             ? `
           <div class="info-block-label" style="margin-top:12px;">Secondary Niches</div>
           <div class="tag-list" style="margin-top:4px;">
-            ${niche.secondaryNiches.map((n) => `<span class="tag">${capitalize(n.name)}</span>`).join('')}
+            ${niche!.secondaryNiches.map((n) => `<span class="tag">${capitalize(n.name)}</span>`).join('')}
           </div>
         `
             : ''
@@ -728,21 +740,21 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         <div class="section-title">Brand Personality</div>
         <div class="info-block">
           <div class="info-block-label">Archetype</div>
-          <div class="info-block-value">${capitalize(personality.archetype)}</div>
+          <div class="info-block-value">${personality ? capitalize(personality.archetype) : 'N/A'}</div>
         </div>
         <div class="info-block">
           <div class="info-block-label">Voice &amp; Tone</div>
-          <div class="info-block-value">${personality.voiceTone}</div>
+          <div class="info-block-value">${personality?.voiceTone || 'N/A'}</div>
         </div>
 
         <div class="info-block-label" style="margin-top:12px;">Values</div>
         <div class="tag-list" style="margin-top:4px;">
-          ${personality.values.map((v) => `<span class="tag">${capitalize(v)}</span>`).join('')}
+          ${(personality?.values || []).map((v) => `<span class="tag">${capitalize(v)}</span>`).join('')}
         </div>
 
         <div class="info-block-label" style="margin-top:12px;">Traits</div>
         <div class="tag-list" style="margin-top:4px;">
-          ${personality.traits.map((t) => `<span class="tag">${capitalize(t)}</span>`).join('')}
+          ${(personality?.traits || []).map((t) => `<span class="tag">${capitalize(t)}</span>`).join('')}
         </div>
       </div>
 
@@ -813,7 +825,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         }
 
         <div class="section-title">Readiness Breakdown</div>
-        ${readinessScore.factors
+        ${(readinessScore?.factors || [])
           .map(
             (f) => `
           <div style="margin-bottom:8px;">
@@ -832,7 +844,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
     </div>
 
     <div class="page-footer">
-      <span>${profile.displayName || 'Creator'} - Intelligence Report</span>
+      <span>${profile?.displayName || 'Creator'} - Intelligence Report</span>
       <span>brandmenow.ai</span>
     </div>
   </div>
@@ -860,10 +872,10 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         : `
       <div class="rec-card">
         <span class="rec-card-num">1</span>
-        <span class="rec-card-title">${capitalize(niche.primaryNiche.name)} Products</span>
+        <span class="rec-card-title">${capitalize(niche?.primaryNiche?.name || 'Niche')} Products</span>
       </div>
       ${
-        niche.secondaryNiches[0]
+        niche?.secondaryNiches?.[0]
           ? `
         <div class="rec-card">
           <span class="rec-card-num">2</span>
@@ -873,7 +885,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
           : ''
       }
       <div class="rec-card">
-        <span class="rec-card-num">${niche.secondaryNiches[0] ? '3' : '2'}</span>
+        <span class="rec-card-num">${niche?.secondaryNiches?.[0] ? '3' : '2'}</span>
         <span class="rec-card-title">Branded Merchandise</span>
       </div>
     `
@@ -881,32 +893,32 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
 
     <div class="revenue-highlight">
       <div class="revenue-label">Estimated Monthly Revenue Potential</div>
-      <div class="revenue-value">${formatCurrency(revenueEstimate.estimatedMonthlyRevenue.mid)}</div>
+      <div class="revenue-value">${revenueEstimate ? formatCurrency(revenueEstimate.estimatedMonthlyRevenue.mid) : 'N/A'}</div>
       <div class="revenue-sublabel">
-        Range: ${formatCurrency(revenueEstimate.estimatedMonthlyRevenue.low)} - ${formatCurrency(revenueEstimate.estimatedMonthlyRevenue.high)} / month
+        ${revenueEstimate ? `Range: ${formatCurrency(revenueEstimate.estimatedMonthlyRevenue.low)} - ${formatCurrency(revenueEstimate.estimatedMonthlyRevenue.high)} / month` : 'Calculating...'}
       </div>
     </div>
 
     <div class="stat-row">
       <div class="stat-card">
-        <div class="stat-value" style="font-size:18px;">${formatCurrency(revenueEstimate.estimatedAnnualRevenue.mid)}</div>
+        <div class="stat-value" style="font-size:18px;">${revenueEstimate ? formatCurrency(revenueEstimate.estimatedAnnualRevenue.mid) : 'N/A'}</div>
         <div class="stat-label">Annual Potential</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value" style="font-size:18px;">${(revenueEstimate.conversionRate * 100).toFixed(1)}%</div>
+        <div class="stat-value" style="font-size:18px;">${revenueEstimate ? `${(revenueEstimate.conversionRate * 100).toFixed(1)}%` : 'N/A'}</div>
         <div class="stat-label">Est. Conversion Rate</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value" style="font-size:18px;">${formatCurrency(revenueEstimate.avgOrderValue)}</div>
+        <div class="stat-value" style="font-size:18px;">${revenueEstimate ? formatCurrency(revenueEstimate.avgOrderValue) : 'N/A'}</div>
         <div class="stat-label">Avg Order Value</div>
       </div>
     </div>
 
     ${
-      readinessScore.actionItems.length > 0
+      (readinessScore?.actionItems?.length || 0) > 0
         ? `
       <div class="section-title">Next Steps</div>
-      ${readinessScore.actionItems
+      ${readinessScore!.actionItems
         .slice(0, 4)
         .map(
           (item, i) => `
@@ -928,7 +940,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
     </div>
 
     <div class="page-footer">
-      <span>${profile.displayName || 'Creator'} - Intelligence Report</span>
+      <span>${profile?.displayName || 'Creator'} - Intelligence Report</span>
       <span>brandmenow.ai</span>
     </div>
   </div>
@@ -954,7 +966,10 @@ export default function DossierPdfExport({
       // Attempt to load profile image as base64 for embedding in the report
       let profileImageBase64: string | null = null;
       if (dossier.profile.profilePicUrl) {
-        profileImageBase64 = await imageToBase64(dossier.profile.profilePicUrl);
+        const proxied = proxyImageUrl(dossier.profile.profilePicUrl);
+        if (proxied) {
+          profileImageBase64 = await imageToBase64(proxied);
+        }
       }
 
       const html = buildReportHtml(dossier, profileImageBase64);

@@ -69,3 +69,37 @@ export function generateId(): string {
 export function isDev(): boolean {
   return import.meta.env.DEV;
 }
+
+/**
+ * Hostnames that need to be proxied through the server to avoid CORS blocks.
+ */
+const PROXY_HOSTS = [
+  'instagram.com',
+  'cdninstagram.com',
+  'fbcdn.net',
+  'pbs.twimg.com',
+  'yt3.ggpht.com',
+  'i.ytimg.com',
+  'tiktokcdn.com',
+  'tiktokcdn-us.com',
+];
+
+/**
+ * Wrap an external image URL through the server-side proxy if it's from a
+ * domain that blocks cross-origin requests (e.g. Instagram CDN).
+ * Returns the original URL for non-blocked domains or null/empty values.
+ */
+export function proxyImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const needsProxy = PROXY_HOSTS.some(
+      (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
+    );
+    if (!needsProxy) return url;
+    const base = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+    return `${base}/api/v1/proxy/image?url=${encodeURIComponent(url)}`;
+  } catch {
+    return url;
+  }
+}

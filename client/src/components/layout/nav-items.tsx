@@ -6,6 +6,7 @@ import {
   ShieldCheck,
   Users,
   Package,
+  ShoppingBag,
   Activity,
   Building2,
   Layers,
@@ -22,6 +23,7 @@ export interface NavItem {
 export const dashboardNav: NavItem[] = [
   { label: 'My Brands', path: ROUTES.DASHBOARD_BRANDS, icon: <LayoutDashboard className="h-4 w-4" /> },
   { label: 'Create Brand', path: ROUTES.WIZARD, icon: <Palette className="h-4 w-4" /> },
+  { label: 'Products', path: ROUTES.DASHBOARD_PRODUCTS, icon: <ShoppingBag className="h-4 w-4" /> },
   { label: 'Organization', path: ROUTES.DASHBOARD_ORGANIZATION, icon: <Building2 className="h-4 w-4" /> },
   { label: 'Settings', path: ROUTES.DASHBOARD_SETTINGS, icon: <Settings className="h-4 w-4" /> },
 ];
