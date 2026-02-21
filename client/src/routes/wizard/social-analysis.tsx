@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { Component, useEffect, useRef, useState } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +14,7 @@ import {
   Sparkles,
   ScanSearch,
   LinkIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +33,56 @@ import type { CreatorDossier, DossierPhase } from '@/lib/dossier-types';
 const socialHandlesSchema = SocialHandlesInputSchema;
 
 type SocialHandlesForm = z.infer<typeof socialHandlesSchema>;
+
+// ------ Error Boundary for Dossier Rendering ------
+
+interface DossierErrorBoundaryProps {
+  children: ReactNode;
+  onReset?: () => void;
+}
+
+interface DossierErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class DossierErrorBoundary extends Component<DossierErrorBoundaryProps, DossierErrorBoundaryState> {
+  state: DossierErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Dossier rendering error:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl border border-[var(--bmn-color-error-border)] bg-[var(--bmn-color-error-bg)] p-6 text-center">
+          <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-[var(--bmn-color-error)]" />
+          <p className="text-sm font-medium text-[var(--bmn-color-error)]">
+            Something went wrong displaying the dossier.
+          </p>
+          <p className="mt-1 text-xs text-[var(--bmn-color-text-muted)]">
+            {this.state.error?.message || 'Unknown error'}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              this.props.onReset?.();
+            }}
+            className="mt-4 rounded-lg bg-[var(--bmn-color-primary)] px-4 py-2 text-sm font-medium text-white"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ------ Onboarding Timeline Steps ------
 
@@ -201,6 +253,31 @@ function mapDossierToStore(dossier: Partial<CreatorDossier>) {
   mapped.rawDossier = dossier;
 
   return mapped;
+}
+
+// ------ Dossier Data Safety ------
+
+/**
+ * Sanitize a dossier to ensure no object fields accidentally get rendered
+ * as React children. This catches edge cases where Claude returns unexpected shapes.
+ */
+function sanitizeDossier(d: Partial<CreatorDossier>): Partial<CreatorDossier> {
+  if (!d) return d;
+  const safe = { ...d };
+
+  // Ensure content.postingFrequency is never a bare object that React would choke on.
+  // The dossier-types helpers handle it, but an ErrorBoundary alone isn't enough
+  // if the object reaches a {value} interpolation in JSX before the helper runs.
+  if (safe.content && typeof safe.content.postingFrequency === 'object' && safe.content.postingFrequency !== null) {
+    // Keep it as-is (the typed helper functions handle it) but ensure postsPerWeek is a number
+    const pf = safe.content.postingFrequency;
+    if (!('postsPerWeek' in pf) || typeof pf.postsPerWeek !== 'number') {
+      // Malformed object - convert to a safe string
+      safe.content = { ...safe.content, postingFrequency: 'Unknown frequency' };
+    }
+  }
+
+  return safe;
 }
 
 // ------ Simulated Progress Timeline ------
@@ -375,7 +452,7 @@ export default function SocialAnalysisPage() {
 
       // If the server returned the dossier directly (no BullMQ), use it immediately
       if (response?.dossier) {
-        setDirectDossier(response.dossier as Partial<CreatorDossier>);
+        setDirectDossier(sanitizeDossier(response.dossier as Partial<CreatorDossier>));
         setDirectComplete(true);
       }
     } catch (err) {
@@ -588,12 +665,14 @@ export default function SocialAnalysisPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <DossierLoadingSequence
-              dossier={dossier}
-              phase={phase}
-              progress={progress}
-              message={message}
-            />
+            <DossierErrorBoundary>
+              <DossierLoadingSequence
+                dossier={dossier}
+                phase={phase}
+                progress={progress}
+                message={message}
+              />
+            </DossierErrorBoundary>
           </motion.div>
         )}
 
@@ -619,12 +698,14 @@ export default function SocialAnalysisPage() {
             animate={{ opacity: 1 }}
             className="flex flex-col gap-6"
           >
-            <DossierLoadingSequence
-              dossier={dossier}
-              phase="complete"
-              progress={100}
-              message="Your Creator Dossier is ready!"
-            />
+            <DossierErrorBoundary>
+              <DossierLoadingSequence
+                dossier={dossier}
+                phase="complete"
+                progress={100}
+                message="Your Creator Dossier is ready!"
+              />
+            </DossierErrorBoundary>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}

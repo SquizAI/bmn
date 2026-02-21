@@ -251,8 +251,159 @@ export async function saveStepData(req, res, next) {
 }
 
 /**
+ * Normalize a social handle for comparison (strip @, lowercase).
+ * @param {string|undefined} handle
+ * @returns {string}
+ */
+function normalizeHandle(handle) {
+  return (handle || '').replace(/^@/, '').toLowerCase().trim();
+}
+
+/**
+ * Check if submitted handles match what's already cached.
+ * @param {Object} submitted - The handles from the request body
+ * @param {Object} cached - The socialHandles stored in wizard_state
+ * @returns {boolean}
+ */
+function handlesMatch(submitted, cached) {
+  if (!cached) return false;
+  const platforms = ['instagram', 'tiktok', 'youtube', 'twitter', 'facebook'];
+  return platforms.every(
+    (p) => normalizeHandle(submitted[p]) === normalizeHandle(cached[p]),
+  );
+}
+
+/**
+ * Scrape an Instagram profile via Apify. Returns null if Apify is unavailable.
+ * @param {string} handle
+ * @returns {Promise<Object|null>}
+ */
+async function scrapeInstagramProfile(handle) {
+  try {
+    const { ApifyClient } = await import('apify-client');
+    const { config } = await import('../config/index.js');
+    if (!config.APIFY_API_TOKEN) {
+      logger.warn('No APIFY_API_TOKEN set -- skipping Instagram scrape');
+      return null;
+    }
+    const client = new ApifyClient({ token: config.APIFY_API_TOKEN });
+
+    logger.info({ handle }, 'Scraping Instagram via Apify');
+    const run = await client.actor('apify/instagram-profile-scraper').call(
+      { usernames: [handle], resultsLimit: 20 },
+      { waitSecs: 120 },
+    );
+
+    const { items } = await client.dataset(run.defaultDatasetId).listItems();
+    if (!items || items.length === 0) {
+      logger.warn({ handle }, 'Apify returned no data for Instagram handle');
+      return null;
+    }
+
+    const profile = items[0];
+    return {
+      platform: 'instagram',
+      handle,
+      displayName: profile.fullName || handle,
+      bio: profile.biography || null,
+      followers: profile.followersCount || 0,
+      following: profile.followsCount || 0,
+      postsCount: profile.postsCount || 0,
+      isVerified: profile.verified || false,
+      profilePicUrl: profile.profilePicUrl || profile.profilePicUrlHD || null,
+      externalUrl: profile.externalUrl || null,
+      posts: (profile.latestPosts || []).slice(0, 20).map((post) => ({
+        id: post.id,
+        type: post.type || 'Image',
+        caption: post.caption || '',
+        likes: post.likesCount || 0,
+        comments: post.commentsCount || 0,
+        timestamp: post.timestamp,
+        imageUrl: post.displayUrl || null,
+        videoUrl: post.videoUrl || null,
+        hashtags: post.hashtags || [],
+      })),
+    };
+  } catch (err) {
+    logger.error({ handle, error: err.message }, 'Instagram Apify scrape failed -- will use AI knowledge');
+    return null;
+  }
+}
+
+/**
+ * Scrape a public Instagram page via Firecrawl for rich supplementary context.
+ * Firecrawl is especially good at extracting text content from public profiles.
+ * @param {string} handle - Instagram handle without @
+ * @returns {Promise<Object|null>}
+ */
+async function scrapeWithFirecrawl(handle) {
+  try {
+    const FirecrawlApp = (await import('@mendable/firecrawl-js')).default;
+    const { config } = await import('../config/index.js');
+    if (!config.FIRECRAWL_API_KEY || config.FIRECRAWL_API_KEY === 'placeholder') {
+      logger.debug('No FIRECRAWL_API_KEY set -- skipping Firecrawl enrichment');
+      return null;
+    }
+
+    const firecrawl = new FirecrawlApp({ apiKey: config.FIRECRAWL_API_KEY });
+
+    logger.info({ handle }, 'Enriching profile data via Firecrawl');
+
+    // Scrape the public Instagram profile page
+    const igResult = await firecrawl.scrapeUrl(`https://www.instagram.com/${handle}/`, {
+      formats: ['markdown'],
+      timeout: 30000,
+    });
+
+    if (!igResult.success) {
+      logger.warn({ handle, error: igResult.error }, 'Firecrawl Instagram scrape failed');
+      return null;
+    }
+
+    const result = { instagramPage: igResult.markdown || null, externalLinks: null };
+
+    // If the Apify data had an external URL (linktree, website), scrape that too
+    // (we'll call this separately if we have a URL)
+    logger.info({ handle, hasIgData: !!result.instagramPage }, 'Firecrawl enrichment complete');
+    return result;
+  } catch (err) {
+    logger.warn({ handle, error: err.message }, 'Firecrawl enrichment failed -- continuing without it');
+    return null;
+  }
+}
+
+/**
+ * Scrape external URL (linktree, website) via Firecrawl for brand context.
+ * @param {string} url
+ * @returns {Promise<string|null>}
+ */
+async function scrapeExternalUrl(url) {
+  if (!url) return null;
+  try {
+    const FirecrawlApp = (await import('@mendable/firecrawl-js')).default;
+    const { config } = await import('../config/index.js');
+    if (!config.FIRECRAWL_API_KEY || config.FIRECRAWL_API_KEY === 'placeholder') return null;
+
+    const firecrawl = new FirecrawlApp({ apiKey: config.FIRECRAWL_API_KEY });
+    const result = await firecrawl.scrapeUrl(url, {
+      formats: ['markdown'],
+      timeout: 20000,
+    });
+
+    return result.success ? result.markdown : null;
+  } catch (err) {
+    logger.warn({ url, error: err.message }, 'External URL scrape failed');
+    return null;
+  }
+}
+
+/**
  * POST /api/v1/wizard/:brandId/analyze-social
- * Analyze social media profiles and generate a Creator Dossier via Claude.
+ * Analyze social media profiles and generate a Creator Dossier.
+ * Step 1: Scrape real data from Instagram via Apify (if available).
+ * Step 1b: Enrich with Firecrawl deep scraping of public profile page.
+ * Step 2: Feed all scraped data to Claude for comprehensive analysis.
+ * Fallback: If scrapers are unavailable, Claude uses its training knowledge.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -276,10 +427,16 @@ export async function analyzeSocial(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Return cached dossier if it exists and no regeneration was requested
+    // Return cached dossier ONLY if handles match and no regeneration was requested
     const existingDossier = brand.wizard_state?.['social-analysis'];
-    if (existingDossier && existingDossier.profile && !req.body?.regenerate) {
-      logger.info({ brandId, userId }, 'Returning cached social analysis dossier');
+    const cachedHandles = existingDossier?.socialHandles;
+    if (
+      existingDossier &&
+      existingDossier.profile &&
+      !req.body?.regenerate &&
+      handlesMatch(socialHandles, cachedHandles)
+    ) {
+      logger.info({ brandId, userId }, 'Returning cached social analysis dossier (handles match)');
       return res.json({
         success: true,
         data: {
@@ -303,7 +460,86 @@ export async function analyzeSocial(req, res, next) {
       return res.status(400).json({ success: false, error: 'At least one social handle is required' });
     }
 
-    const systemPrompt = `You are an expert social media analyst working for Brand Me Now, an AI-powered brand creation platform. Your job is to analyze a creator's social media presence and build a comprehensive Creator Dossier -- the raw materials for building their brand identity. Use your knowledge of public social media creators to provide realistic, insightful analysis. Return ONLY valid JSON matching the exact structure specified.`;
+    // ── Step 1: Scrape real data via Apify + Firecrawl in parallel ──
+    let scrapedData = null;
+    let firecrawlData = null;
+    if (socialHandles.instagram) {
+      const igHandle = socialHandles.instagram.replace(/^@/, '');
+      // Run Apify (structured data) and Firecrawl (rich page context) in parallel
+      const [apifyResult, firecrawlResult] = await Promise.allSettled([
+        scrapeInstagramProfile(igHandle),
+        scrapeWithFirecrawl(igHandle),
+      ]);
+      scrapedData = apifyResult.status === 'fulfilled' ? apifyResult.value : null;
+      firecrawlData = firecrawlResult.status === 'fulfilled' ? firecrawlResult.value : null;
+
+      // If Apify found an external URL, scrape that too via Firecrawl
+      if (scrapedData?.externalUrl) {
+        const extContent = await scrapeExternalUrl(scrapedData.externalUrl);
+        if (extContent) {
+          firecrawlData = { ...(firecrawlData || {}), externalLinks: extContent };
+        }
+      }
+    }
+
+    const hasAnyScrapedData = !!(scrapedData || firecrawlData);
+
+    // ── Step 2: Build Claude prompt with real data (or fallback to knowledge) ──
+    const systemPrompt = `You are an expert social media analyst working for Brand Me Now, an AI-powered brand creation platform. Your job is to analyze a creator's social media presence and build a comprehensive Creator Dossier -- the raw materials for building their brand identity.
+
+${hasAnyScrapedData ? 'You have been provided with REAL scraped data from the creator\'s social media profiles and linked websites. Use this data as the ground truth for your analysis. Derive all metrics, themes, and insights from this actual data.' : 'No scraped data is available. Use your knowledge of public social media creators to provide the most accurate analysis possible. If you recognize the handle, use real publicly known information.'}
+
+Return ONLY valid JSON matching the exact structure specified.`;
+
+    // Build the scraped data section for the prompt
+    let scrapedDataSection = '';
+    if (scrapedData) {
+      // Summarize posts for the prompt (full posts would be too long)
+      const postSummaries = (scrapedData.posts || []).map((p, i) => ({
+        idx: i + 1,
+        type: p.type,
+        caption: (p.caption || '').slice(0, 200),
+        likes: p.likes,
+        comments: p.comments,
+        hashtags: p.hashtags?.slice(0, 10),
+      }));
+
+      scrapedDataSection = `
+<scraped_instagram_data>
+Display Name: ${scrapedData.displayName}
+Handle: @${scrapedData.handle}
+Bio: ${scrapedData.bio || 'N/A'}
+Followers: ${scrapedData.followers.toLocaleString()}
+Following: ${scrapedData.following.toLocaleString()}
+Post Count: ${scrapedData.postsCount.toLocaleString()}
+Verified: ${scrapedData.isVerified}
+Profile Pic URL: ${scrapedData.profilePicUrl || 'N/A'}
+External URL: ${scrapedData.externalUrl || 'N/A'}
+
+Recent Posts (${postSummaries.length}):
+${postSummaries.map((p) => `  ${p.idx}. [${p.type}] Likes: ${p.likes}, Comments: ${p.comments}${p.hashtags?.length ? ` | Tags: ${p.hashtags.join(', ')}` : ''}
+     Caption: ${p.caption || '(no caption)'}
+`).join('')}
+</scraped_instagram_data>`;
+    }
+
+    // Add Firecrawl enrichment data (public profile page content + external links)
+    let firecrawlSection = '';
+    if (firecrawlData?.instagramPage) {
+      // Truncate to keep prompt reasonable (first 3000 chars of page content)
+      const pageContent = firecrawlData.instagramPage.slice(0, 3000);
+      firecrawlSection += `
+<instagram_page_content>
+${pageContent}
+</instagram_page_content>`;
+    }
+    if (firecrawlData?.externalLinks) {
+      const linkContent = firecrawlData.externalLinks.slice(0, 2000);
+      firecrawlSection += `
+<external_website_content>
+${linkContent}
+</external_website_content>`;
+    }
 
     const taskPrompt = `Analyze the following creator's social media presence and generate a comprehensive Creator Dossier.
 
@@ -312,19 +548,23 @@ ${handleParts.join('\n')}
 </social_handles>
 
 ${brand.name && brand.name !== 'Untitled Brand' ? `<brand_name>${brand.name}</brand_name>` : ''}
+${scrapedDataSection}
+${firecrawlSection}
 
-Based on your knowledge of these social media accounts (or if you don't recognize them, generate a realistic and comprehensive analysis based on the handle names, likely niche, and typical creator patterns), create a Creator Dossier JSON with this EXACT structure:
+${hasAnyScrapedData
+    ? 'Using the REAL scraped data above as your primary source, create'
+    : 'Based on your knowledge of these social media accounts (use REAL publicly known data for well-known creators), create'} a Creator Dossier JSON with this EXACT structure:
 
 {
   "profile": {
-    "displayName": "string - display name or best guess from handle",
-    "bio": "string - likely bio or a generated one that fits",
-    "profilePicUrl": null,
-    "totalFollowers": number,
-    "totalFollowing": number,
+    "displayName": "string - ${scrapedData ? 'use the scraped display name' : 'real name or best guess from handle'}",
+    "bio": "string - ${scrapedData ? 'use the scraped bio' : 'likely bio or a generated one that fits'}",
+    "profilePicUrl": ${scrapedData?.profilePicUrl ? `"${scrapedData.profilePicUrl}"` : 'null'},
+    "totalFollowers": ${scrapedData ? scrapedData.followers : 'number'},
+    "totalFollowing": ${scrapedData ? scrapedData.following : 'number'},
     "primaryPlatform": "instagram|tiktok|youtube|twitter|facebook",
-    "externalUrl": null,
-    "isVerified": false
+    "externalUrl": ${scrapedData?.externalUrl ? `"${scrapedData.externalUrl}"` : 'null'},
+    "isVerified": ${scrapedData ? scrapedData.isVerified : 'false'}
   },
   "platforms": [
     {
@@ -332,12 +572,12 @@ Based on your knowledge of these social media accounts (or if you don't recogniz
       "handle": "string",
       "displayName": "string",
       "bio": "string or null",
-      "profilePicUrl": null,
-      "isVerified": false,
+      "profilePicUrl": ${scrapedData?.profilePicUrl ? `"${scrapedData.profilePicUrl}"` : 'null'},
+      "isVerified": ${scrapedData ? scrapedData.isVerified : 'false'},
       "metrics": {
-        "followers": number,
-        "following": number,
-        "postCount": number,
+        "followers": ${scrapedData ? scrapedData.followers : 'number'},
+        "following": ${scrapedData ? scrapedData.following : 'number'},
+        "postCount": ${scrapedData ? scrapedData.postsCount : 'number'},
         "engagementRate": number (0-1 decimal, e.g. 0.045),
         "avgLikes": number,
         "avgComments": number,
@@ -442,18 +682,27 @@ Based on your knowledge of these social media accounts (or if you don't recogniz
 }
 
 IMPORTANT:
-- Generate realistic, specific data for ALL fields based on the social handles provided
-- Use your knowledge of public creators if you recognize the handles
-- If you don't recognize them, infer likely niche, audience, and content patterns from the handle names
+${scrapedData ? `- The profile data above is REAL scraped data. Use exact values for displayName, bio, followers, following, postCount, profilePicUrl, isVerified, externalUrl.
+- Calculate engagement rate and averages from the real post data provided.
+- Derive content themes, hashtag strategy, and posting patterns from the actual post captions and timestamps.
+- Your audience analysis and personality assessment should be informed by the real content.` : `- Use REAL publicly known data for well-known creators. If you recognize the handle, provide accurate follower counts and real information.
+- If you don't recognize the handle, infer likely niche, audience, and content patterns from the handle name.`}
 - Include at least 3 content themes, 5 top hashtags, 3-5 personality traits, 3+ values
-- Generate a complete 5-color natural palette that fits the creator's likely aesthetic
+- Generate a complete 5-color natural palette that fits the creator's aesthetic
 - Be specific and insightful -- this dossier drives the entire brand creation process
-- ALL numbers must be realistic for the creator's likely tier (follower count, engagement, etc.)
 - Return ONLY the JSON object, no markdown code blocks, no explanatory text`;
 
-    const AI_TIMEOUT_MS = 90_000; // 90 seconds max for Claude call
+    const AI_TIMEOUT_MS = 120_000; // 120 seconds max (scraping + Claude)
 
-    logger.info({ brandId, userId, handles: handleParts, handleCount: handleParts.length }, 'Starting Claude social analysis...');
+    logger.info({
+      brandId,
+      userId,
+      handles: handleParts,
+      handleCount: handleParts.length,
+      hasApifyData: !!scrapedData,
+      hasFirecrawlData: !!firecrawlData,
+      scrapedFollowers: scrapedData?.followers || null,
+    }, 'Starting Claude social analysis with scraped data...');
     const startTime = Date.now();
 
     let aiResult;
@@ -467,7 +716,7 @@ IMPORTANT:
           jsonMode: true,
         }),
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('AI analysis timed out after 90 seconds')), AI_TIMEOUT_MS)
+          setTimeout(() => reject(new Error('AI analysis timed out after 120 seconds')), AI_TIMEOUT_MS)
         ),
       ]);
     } catch (aiError) {
@@ -494,12 +743,46 @@ IMPORTANT:
       return res.status(500).json({ success: false, error: 'Failed to parse AI-generated dossier' });
     }
 
+    // Overlay real scraped profile data to ensure accuracy
+    if (scrapedData) {
+      parsed.profile = {
+        ...parsed.profile,
+        displayName: scrapedData.displayName,
+        bio: scrapedData.bio || parsed.profile?.bio,
+        profilePicUrl: scrapedData.profilePicUrl,
+        totalFollowers: scrapedData.followers,
+        totalFollowing: scrapedData.following,
+        externalUrl: scrapedData.externalUrl,
+        isVerified: scrapedData.isVerified,
+      };
+      // Ensure platform metrics use real data
+      if (parsed.platforms?.[0]) {
+        parsed.platforms[0].profilePicUrl = scrapedData.profilePicUrl;
+        parsed.platforms[0].isVerified = scrapedData.isVerified;
+        parsed.platforms[0].displayName = scrapedData.displayName;
+        parsed.platforms[0].bio = scrapedData.bio;
+        if (parsed.platforms[0].metrics) {
+          parsed.platforms[0].metrics.followers = scrapedData.followers;
+          parsed.platforms[0].metrics.following = scrapedData.following;
+          parsed.platforms[0].metrics.postCount = scrapedData.postsCount;
+        }
+      }
+    }
+
+    // Determine data sources used
+    const sources = [];
+    if (scrapedData) sources.push('apify');
+    if (firecrawlData?.instagramPage) sources.push('firecrawl');
+    if (firecrawlData?.externalLinks) sources.push('firecrawl-external');
+    if (sources.length === 0) sources.push('ai-knowledge');
+    const source = sources.join('+');
+
     // Cache in wizard_state
     const updatedState = {
       ...(brand.wizard_state || {}),
       'social-analysis': {
         ...parsed,
-        source: 'ai-analysis',
+        source,
         socialHandles,
         generatedAt: new Date().toISOString(),
         model: aiResult.model,
@@ -519,7 +802,15 @@ IMPORTANT:
       logger.error({ brandId, error: updateError.message, code: updateError.code }, 'Failed to save social analysis to wizard_state');
     }
 
-    logger.info({ brandId, userId, model: aiResult.model, stateSize: JSON.stringify(updatedState).length }, 'Social analysis dossier generated');
+    logger.info({
+      brandId,
+      userId,
+      model: aiResult.model,
+      source,
+      hasApify: !!scrapedData,
+      hasFirecrawl: !!firecrawlData,
+      stateSize: JSON.stringify(updatedState).length,
+    }, 'Social analysis dossier generated');
 
     res.json({
       success: true,
@@ -528,6 +819,7 @@ IMPORTANT:
         step: 'social-analysis',
         dossier: parsed,
         model: aiResult.model,
+        source,
       },
     });
   } catch (err) {

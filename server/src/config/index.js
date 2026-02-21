@@ -139,6 +139,10 @@ export const config = cleanEnv(process.env, {
     devDefault: 'placeholder',
     desc: 'Apify API token for social media scraping',
   }),
+  FIRECRAWL_API_KEY: str({
+    devDefault: 'placeholder',
+    desc: 'Firecrawl API key for web scraping and deep research',
+  }),
 
   // ── Observability ──────────────────────────────────────────
   SENTRY_DSN: str({
