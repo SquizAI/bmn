@@ -51,6 +51,7 @@ const AdminUsersPage = lazy(() => import('@/routes/admin/users'));
 const AdminProductsPage = lazy(() => import('@/routes/admin/products'));
 const AdminJobsPage = lazy(() => import('@/routes/admin/jobs'));
 const AdminTemplatesPage = lazy(() => import('@/routes/admin/templates'));
+const AdminProductTiersPage = lazy(() => import('@/routes/admin/product-tiers'));
 
 // --- Suspense wrapper helper ---
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
@@ -347,6 +348,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <AdminTemplatesPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'product-tiers',
+            element: (
+              <SuspenseRoute>
+                <AdminProductTiersPage />
               </SuspenseRoute>
             ),
           },

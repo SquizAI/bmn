@@ -11,6 +11,9 @@ import { initEmailSendWorker } from './email-send.js';
 import { initImageUploadWorker } from './image-upload.js';
 import { initCleanupWorker } from './cleanup.js';
 import { initPrintExportWorker } from './print-export.js';
+import { initContentGenWorker } from './content-gen-worker.js';
+import { initEmailCampaignWorker } from './email-campaign-worker.js';
+import { initAnalyticsWorker } from './analytics-worker.js';
 
 /** @type {import('bullmq').Worker[]} */
 let workers = [];
@@ -35,6 +38,9 @@ export function initWorkers(io) {
     initImageUploadWorker(io),
     initPrintExportWorker(io),
     initCleanupWorker(io),
+    initContentGenWorker(io),
+    initEmailCampaignWorker(io),
+    initAnalyticsWorker(io),
   ];
 
   logger.info({ count: workers.length }, 'BullMQ workers initialized');

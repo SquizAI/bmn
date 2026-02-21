@@ -38,6 +38,7 @@ export const ROUTES = {
   ADMIN_PRODUCTS: '/admin/products',
   ADMIN_JOBS: '/admin/jobs',
   ADMIN_TEMPLATES: '/admin/templates',
+  ADMIN_PRODUCT_TIERS: '/admin/product-tiers',
   ADMIN_MODERATION: '/admin/moderation',
   ADMIN_HEALTH: '/admin/health',
 } as const;
@@ -102,8 +103,10 @@ export const SOCKET_EVENTS = {
   BRAND_ASSET_READY: 'brand:asset:ready',
 
   // Room management
-  JOIN_ROOM: 'join:room',
-  LEAVE_ROOM: 'leave:room',
+  JOIN_BRAND: 'join:brand',
+  LEAVE_BRAND: 'leave:brand',
+  JOIN_JOB: 'join:job',
+  LEAVE_JOB: 'leave:job',
 } as const;
 
 // ------ Subscription Tiers ------

@@ -138,7 +138,7 @@ export async function listAllBrands(req, res, next) {
  */
 export async function createProduct(req, res, next) {
   try {
-    const { name, description, category, base_price, mockup_template_url, metadata } = req.body;
+    const { name, description, category, base_price, mockup_template_url, metadata, tier_id } = req.body;
 
     const { data, error } = await supabaseAdmin
       .from('products')
@@ -149,6 +149,7 @@ export async function createProduct(req, res, next) {
         base_price: base_price || 0,
         mockup_template_url: mockup_template_url || null,
         metadata: metadata || null,
+        tier_id: tier_id || null,
         is_active: true,
       })
       .select()
@@ -506,6 +507,261 @@ export async function deleteTemplate(req, res, next) {
     if (error) throw error;
     logger.info({ templateId }, 'Template disabled by admin');
     res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ── Product Tiers (admin CRUD) ────────────────────────────────────────
+
+/**
+ * GET /api/v1/admin/product-tiers
+ * List all product tiers (admin sees inactive too).
+ * Includes product count per tier.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function listProductTiers(req, res, next) {
+  try {
+    const { data: tiers, error } = await supabaseAdmin
+      .from('product_tiers')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      logger.error({ error }, 'Failed to list product tiers');
+      throw error;
+    }
+
+    // Get product counts per tier
+    const { data: counts, error: countErr } = await supabaseAdmin
+      .from('products')
+      .select('tier_id')
+      .eq('is_active', true)
+      .not('tier_id', 'is', null);
+
+    if (countErr) {
+      logger.error({ error: countErr }, 'Failed to count tier products');
+      throw countErr;
+    }
+
+    const countMap = {};
+    for (const row of counts || []) {
+      countMap[row.tier_id] = (countMap[row.tier_id] || 0) + 1;
+    }
+
+    const items = tiers.map((tier) => ({
+      ...tier,
+      product_count: countMap[tier.id] || 0,
+    }));
+
+    res.json({ success: true, data: { items } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/v1/admin/product-tiers/:tierId
+ * Get a single product tier with its assigned products.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function getProductTier(req, res, next) {
+  try {
+    const { tierId } = req.params;
+
+    const { data: tier, error } = await supabaseAdmin
+      .from('product_tiers')
+      .select('*')
+      .eq('id', tierId)
+      .single();
+
+    if (error || !tier) {
+      return res.status(404).json({ success: false, error: 'Product tier not found' });
+    }
+
+    // Get products in this tier
+    const { data: products, error: prodErr } = await supabaseAdmin
+      .from('products')
+      .select('id, sku, name, category, base_cost, retail_price, image_url, is_active')
+      .eq('tier_id', tierId)
+      .order('sort_order', { ascending: true });
+
+    if (prodErr) throw prodErr;
+
+    res.json({ success: true, data: { ...tier, products: products || [] } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/admin/product-tiers
+ * Create a new product tier.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function createProductTier(req, res, next) {
+  try {
+    const {
+      slug, name, display_name, description,
+      sort_order, min_subscription_tier, margin_multiplier,
+      badge_color, badge_label,
+    } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('product_tiers')
+      .insert({
+        slug,
+        name,
+        display_name,
+        description: description || '',
+        sort_order: sort_order ?? 0,
+        min_subscription_tier: min_subscription_tier || 'free',
+        margin_multiplier: margin_multiplier ?? 1.00,
+        badge_color: badge_color || '#6B7280',
+        badge_label: badge_label || '',
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, error: 'Product tier with this slug already exists' });
+      }
+      logger.error({ error }, 'Failed to create product tier');
+      throw error;
+    }
+
+    logger.info({ tierId: data.id, slug }, 'Product tier created');
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/v1/admin/product-tiers/:tierId
+ * Update an existing product tier.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function updateProductTier(req, res, next) {
+  try {
+    const { tierId } = req.params;
+
+    const { data: existing } = await supabaseAdmin
+      .from('product_tiers')
+      .select('id')
+      .eq('id', tierId)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Product tier not found' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('product_tiers')
+      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .eq('id', tierId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, error: 'Slug already in use by another tier' });
+      }
+      logger.error({ error, tierId }, 'Failed to update product tier');
+      throw error;
+    }
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /api/v1/admin/product-tiers/:tierId
+ * Soft-delete a product tier (sets is_active = false).
+ * Products in this tier keep their tier_id but the tier won't appear in public listings.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function deleteProductTier(req, res, next) {
+  try {
+    const { tierId } = req.params;
+
+    const { error } = await supabaseAdmin
+      .from('product_tiers')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', tierId);
+
+    if (error) {
+      logger.error({ error, tierId }, 'Failed to disable product tier');
+      throw error;
+    }
+
+    logger.info({ tierId }, 'Product tier disabled by admin');
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/v1/admin/product-tiers/:tierId/assign
+ * Bulk assign products to a tier.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function assignProductsToTier(req, res, next) {
+  try {
+    const { tierId } = req.params;
+    const { product_ids } = req.body;
+
+    // Verify tier exists
+    const { data: tier } = await supabaseAdmin
+      .from('product_tiers')
+      .select('id, slug')
+      .eq('id', tierId)
+      .single();
+
+    if (!tier) {
+      return res.status(404).json({ success: false, error: 'Product tier not found' });
+    }
+
+    // Update all specified products
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .update({ tier_id: tierId, updated_at: new Date().toISOString() })
+      .in('id', product_ids)
+      .select('id, sku, name');
+
+    if (error) {
+      logger.error({ error, tierId }, 'Failed to assign products to tier');
+      throw error;
+    }
+
+    logger.info({ tierId, slug: tier.slug, count: data.length }, 'Products assigned to tier');
+    res.json({
+      success: true,
+      data: { assigned: data.length, products: data },
+    });
   } catch (err) {
     next(err);
   }

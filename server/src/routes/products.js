@@ -14,6 +14,9 @@ productRoutes.get('/', validate({ query: productQuerySchema }), productControlle
 // NOTE: This must be registered BEFORE the /:productId route to avoid matching "categories" as a UUID
 productRoutes.get('/categories', productController.listCategories);
 
+// GET /api/v1/products/tiers -- List all active product tiers (public)
+productRoutes.get('/tiers', productController.listProductTiers);
+
 // GET /api/v1/products/:productId -- Get single product details
 productRoutes.get(
   '/:productId',

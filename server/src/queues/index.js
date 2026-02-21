@@ -180,6 +180,54 @@ export const QUEUE_CONFIGS = {
       removeOnFail: { count: 50, age: 604_800 },
     },
   },
+
+  'content-gen': {
+    name: 'content-gen',
+    concurrency: 5,
+    timeout: 30_000,       // 30 seconds
+    priority: 3,
+    retry: {
+      attempts: 2,
+      backoffDelay: 3_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 500, age: 86_400 },
+      removeOnFail: { count: 500, age: 604_800 },
+    },
+  },
+
+  'email-campaign': {
+    name: 'email-campaign',
+    concurrency: 5,
+    timeout: 30_000,
+    priority: 4,
+    retry: {
+      attempts: 3,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 200, age: 86_400 },
+      removeOnFail: { count: 200, age: 604_800 },
+    },
+  },
+
+  'analytics': {
+    name: 'analytics',
+    concurrency: 2,
+    timeout: 60_000,       // 1 minute
+    priority: 8,
+    retry: {
+      attempts: 2,
+      backoffDelay: 10_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 100, age: 86_400 },
+      removeOnFail: { count: 100, age: 604_800 },
+    },
+  },
 };
 
 /** @type {Map<string, Queue>} */
@@ -242,6 +290,17 @@ export function initQueues() {
     {
       repeat: { every: 3_600_000 },
       jobId: 'recurring-cleanup',
+    }
+  );
+
+  // Set up repeatable analytics job (every week)
+  const analyticsQueue = queues.get('analytics');
+  analyticsQueue.add(
+    'weekly-health-score',
+    { type: 'health-score-recalculation' },
+    {
+      repeat: { every: 604_800_000 },  // 7 days
+      jobId: 'recurring-health-score',
     }
   );
 

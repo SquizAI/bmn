@@ -184,6 +184,8 @@
   --bmn-max-width-wizard: 960px;
   --bmn-max-width-form: 640px;
   --bmn-sidebar-width: 260px;
+  --bmn-sidebar-collapsed-width: 64px;
+  --bmn-mobile-footer-height: 56px;
   --bmn-header-height: 56px;
   --bmn-wizard-progress-height: 2px;
   --bmn-chat-sidebar-width: 420px;
@@ -195,6 +197,7 @@
     --bmn-sidebar-width: 280px;
     --bmn-header-height: 48px;
     --bmn-chat-sidebar-width: 100vw;
+    --bmn-mobile-footer-height: 60px;
   }
 }
 @media (min-width: 640px) and (max-width: 767px) {

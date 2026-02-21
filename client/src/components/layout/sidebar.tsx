@@ -1,34 +1,17 @@
 import { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router';
-import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity, Building2, Layers } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-}
-
-const dashboardNav: NavItem[] = [
-  { label: 'My Brands', path: ROUTES.DASHBOARD_BRANDS, icon: <LayoutDashboard className="h-4 w-4" /> },
-  { label: 'Create Brand', path: ROUTES.WIZARD, icon: <Palette className="h-4 w-4" /> },
-  { label: 'Organization', path: ROUTES.DASHBOARD_ORGANIZATION, icon: <Building2 className="h-4 w-4" /> },
-  { label: 'Settings', path: ROUTES.DASHBOARD_SETTINGS, icon: <Settings className="h-4 w-4" /> },
-];
-
-const adminNav: NavItem[] = [
-  { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <Users className="h-4 w-4" /> },
-  { label: 'Products', path: ROUTES.ADMIN_PRODUCTS, icon: <Package className="h-4 w-4" /> },
-  { label: 'Templates', path: ROUTES.ADMIN_TEMPLATES, icon: <Layers className="h-4 w-4" /> },
-  { label: 'Jobs', path: ROUTES.ADMIN_JOBS, icon: <Activity className="h-4 w-4" /> },
-];
+import { dashboardNav, adminNav, adminLinkItem } from './nav-items';
 
 function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const location = useLocation();
   const isAdminSection = location.pathname.startsWith('/admin');
@@ -51,32 +34,57 @@ function Sidebar() {
       )}
       <aside
         className={cn(
-          'fixed left-0 top-(--bmn-header-height) z-(--bmn-z-sticky) h-[calc(100dvh-var(--bmn-header-height))]',
-          'w-(--bmn-sidebar-width) border-r border-border bg-surface transition-transform duration-300',
+          'fixed left-0 top-(--bmn-header-height) z-(--bmn-z-sticky)',
+          'h-[calc(100dvh-var(--bmn-header-height))]',
+          'border-r border-border bg-surface',
+          'transition-all duration-300',
+          // Mobile: always full sidebar width, slide in/out
+          'w-(--bmn-sidebar-width)',
           'md:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop: dynamic width based on collapsed state
+          sidebarCollapsed
+            ? 'md:w-(--bmn-sidebar-collapsed-width)'
+            : 'md:w-(--bmn-sidebar-width)',
         )}
       >
-        <nav className="flex flex-col gap-0.5 p-3">
-          <div className="mb-3 px-3 text-xs sm:text-[11px] font-medium uppercase tracking-widest text-text-muted">
+        <nav className="flex h-full flex-col gap-0.5 p-3">
+          {/* Section label */}
+          <div
+            className={cn(
+              'mb-3 px-3 text-xs sm:text-[11px] font-medium uppercase tracking-widest text-text-muted',
+              'transition-opacity duration-200',
+              sidebarCollapsed && 'md:hidden',
+            )}
+          >
             {isAdminSection ? 'Admin' : 'Navigation'}
           </div>
+
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === ROUTES.DASHBOARD_BRANDS}
+              title={sidebarCollapsed ? item.label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-md px-3 py-3 sm:py-2 text-sm sm:text-[13px] font-medium transition-colors',
+                  'flex items-center rounded-md px-3 py-3 sm:py-2 text-sm sm:text-[13px] font-medium transition-colors',
+                  sidebarCollapsed ? 'md:justify-center md:px-0' : 'gap-3',
                   isActive
                     ? 'bg-primary text-primary-foreground'
                     : 'text-text-secondary hover:bg-surface-hover hover:text-text',
                 )
               }
             >
-              {item.icon}
-              <span>{item.label}</span>
+              <span className="shrink-0">{item.icon}</span>
+              <span
+                className={cn(
+                  'transition-opacity duration-200',
+                  sidebarCollapsed && 'md:hidden',
+                )}
+              >
+                {item.label}
+              </span>
             </NavLink>
           ))}
 
@@ -84,25 +92,65 @@ function Sidebar() {
           {isAdmin && !isAdminSection && (
             <>
               <div className="my-3 border-t border-border" />
-              <div className="mb-3 px-3 text-xs sm:text-[11px] font-medium uppercase tracking-widest text-text-muted">
+              <div
+                className={cn(
+                  'mb-3 px-3 text-xs sm:text-[11px] font-medium uppercase tracking-widest text-text-muted',
+                  'transition-opacity duration-200',
+                  sidebarCollapsed && 'md:hidden',
+                )}
+              >
                 Admin
               </div>
               <NavLink
-                to={ROUTES.ADMIN}
+                to={adminLinkItem.path}
+                title={sidebarCollapsed ? adminLinkItem.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-md px-3 py-3 sm:py-2 text-sm sm:text-[13px] font-medium transition-colors',
+                    'flex items-center rounded-md px-3 py-3 sm:py-2 text-sm sm:text-[13px] font-medium transition-colors',
+                    sidebarCollapsed ? 'md:justify-center md:px-0' : 'gap-3',
                     isActive
                       ? 'bg-primary text-primary-foreground'
                       : 'text-text-secondary hover:bg-surface-hover hover:text-text',
                   )
                 }
               >
-                <ShieldCheck className="h-4 w-4" />
-                <span>Admin Panel</span>
+                <span className="shrink-0">{adminLinkItem.icon}</span>
+                <span
+                  className={cn(
+                    'transition-opacity duration-200',
+                    sidebarCollapsed && 'md:hidden',
+                  )}
+                >
+                  {adminLinkItem.label}
+                </span>
               </NavLink>
             </>
           )}
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Collapse/expand toggle — desktop only */}
+          <button
+            type="button"
+            onClick={toggleSidebarCollapsed}
+            className={cn(
+              'hidden md:flex items-center rounded-md px-3 py-2 text-[13px] font-medium',
+              'text-text-muted hover:bg-surface-hover hover:text-text transition-colors',
+              sidebarCollapsed ? 'justify-center px-0' : 'gap-3',
+            )}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? (
+              <ChevronsRight className="h-4 w-4" />
+            ) : (
+              <>
+                <ChevronsLeft className="h-4 w-4" />
+                <span>Collapse</span>
+              </>
+            )}
+          </button>
         </nav>
       </aside>
     </>

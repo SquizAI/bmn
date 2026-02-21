@@ -14,12 +14,15 @@ interface ToastItem {
 interface UIState {
   theme: Theme;
   sidebarOpen: boolean;
+  sidebarCollapsed: boolean;
   chatOpen: boolean;
   toasts: ToastItem[];
 
   setTheme: (theme: Theme) => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
   setChatOpen: (open: boolean) => void;
   addToast: (toast: Omit<ToastItem, 'id'>) => void;
   removeToast: (id: string) => void;
@@ -31,6 +34,7 @@ export const useUIStore = create<UIState>()(
       (set, get) => ({
         theme: 'system',
         sidebarOpen: true,
+        sidebarCollapsed: false,
         chatOpen: false,
         toasts: [],
 
@@ -50,6 +54,12 @@ export const useUIStore = create<UIState>()(
 
         toggleSidebar: () =>
           set((s) => ({ sidebarOpen: !s.sidebarOpen }), false, 'toggleSidebar'),
+
+        setSidebarCollapsed: (collapsed) =>
+          set({ sidebarCollapsed: collapsed }, false, 'setSidebarCollapsed'),
+
+        toggleSidebarCollapsed: () =>
+          set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed }), false, 'toggleSidebarCollapsed'),
 
         setChatOpen: (open) => set({ chatOpen: open }, false, 'setChatOpen'),
 
@@ -75,6 +85,7 @@ export const useUIStore = create<UIState>()(
         partialize: (state) => ({
           theme: state.theme,
           sidebarOpen: state.sidebarOpen,
+          sidebarCollapsed: state.sidebarCollapsed,
         }),
       },
     ),

@@ -23,6 +23,7 @@ export const adminProductCreateSchema = z.object({
   suggested_price: z.number().positive('Suggested price must be positive'),
   mockup_template_url: z.string().url().optional(),
   is_active: z.boolean().default(true),
+  tier_id: z.string().uuid().nullable().optional(),
 });
 
 /**
@@ -37,6 +38,50 @@ export const adminProductUpdateSchema = z.object({
   suggested_price: z.number().positive().optional(),
   mockup_template_url: z.string().url().optional(),
   is_active: z.boolean().optional(),
+  tier_id: z.string().uuid().nullable().optional(),
+});
+
+// ── Product Tier Schemas ─────────────────────────────────────────────
+
+const minSubscriptionTierEnum = z.enum(['free', 'starter', 'pro', 'agency']);
+
+/**
+ * POST /api/v1/admin/product-tiers
+ */
+export const adminTierCreateSchema = z.object({
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens only'),
+  name: z.string().min(1, 'Tier name is required').max(100),
+  display_name: z.string().min(1, 'Display name is required').max(200),
+  description: z.string().max(1000).optional(),
+  sort_order: z.number().int().min(0).default(0),
+  min_subscription_tier: minSubscriptionTierEnum.default('free'),
+  margin_multiplier: z.number().positive('Margin multiplier must be positive').default(1.00),
+  badge_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a hex color').default('#6B7280'),
+  badge_label: z.string().max(50).default(''),
+});
+
+/**
+ * PATCH /api/v1/admin/product-tiers/:tierId
+ */
+export const adminTierUpdateSchema = z.object({
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
+  name: z.string().min(1).max(100).optional(),
+  display_name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional(),
+  sort_order: z.number().int().min(0).optional(),
+  min_subscription_tier: minSubscriptionTierEnum.optional(),
+  margin_multiplier: z.number().positive().optional(),
+  badge_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  badge_label: z.string().max(50).optional(),
+  is_active: z.boolean().optional(),
+});
+
+/**
+ * PATCH /api/v1/admin/product-tiers/:tierId/assign
+ * Bulk assign products to a tier.
+ */
+export const adminTierAssignSchema = z.object({
+  product_ids: z.array(z.string().uuid()).min(1, 'At least one product ID required').max(100),
 });
 
 // ── Packaging Template Schemas ─────────────────────────────────────────

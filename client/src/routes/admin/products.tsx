@@ -11,6 +11,7 @@ import {
   X,
   Upload,
   Save,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +21,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
+import { useAdminProductTiers, type ProductTier } from '@/hooks/use-admin-product-tiers';
 
 // ------ Schema ------
 
@@ -31,6 +33,7 @@ const productSchema = z.object({
   description: z.string().max(500).optional(),
   basePrice: z.coerce.number().min(0.01, 'Price must be positive'),
   imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  tier_id: z.string().uuid().nullable().optional(),
 });
 
 type ProductForm = z.infer<typeof productSchema>;
@@ -38,6 +41,7 @@ type ProductForm = z.infer<typeof productSchema>;
 // ------ Types ------
 
 interface AdminProduct {
+  id: string;
   sku: string;
   name: string;
   category: string;
@@ -45,6 +49,14 @@ interface AdminProduct {
   basePrice: number;
   imageUrl: string;
   available: boolean;
+  tier_id: string | null;
+  tier?: {
+    id: string;
+    slug: string;
+    name: string;
+    badge_color: string;
+    badge_label: string;
+  } | null;
   createdAt: string;
 }
 
@@ -53,8 +65,14 @@ interface AdminProduct {
 export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
+
+  // Fetch tiers for filter + form dropdown
+  const { data: tiersData } = useAdminProductTiers();
+  const tiers = tiersData?.items || [];
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.products(),
@@ -67,6 +85,7 @@ export default function AdminProductsPage() {
       apiClient.post('/api/v1/admin/products', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
       addToast({ type: 'success', title: 'Product created' });
       setShowForm(false);
       resetForm();
@@ -79,6 +98,7 @@ export default function AdminProductsPage() {
       apiClient.patch(`/api/v1/admin/products/${sku}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
       addToast({ type: 'success', title: 'Product updated' });
       setEditingProduct(null);
       setShowForm(false);
@@ -92,6 +112,7 @@ export default function AdminProductsPage() {
       apiClient.delete(`/api/v1/admin/products/${sku}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
       addToast({ type: 'success', title: 'Product deleted' });
     },
     onError: () => addToast({ type: 'error', title: 'Failed to delete product' }),
@@ -101,6 +122,8 @@ export default function AdminProductsPage() {
     register,
     handleSubmit,
     reset: resetForm,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ProductForm>({
     resolver: zodResolver(productSchema),
@@ -112,9 +135,12 @@ export default function AdminProductsPage() {
           description: editingProduct.description,
           basePrice: editingProduct.basePrice,
           imageUrl: editingProduct.imageUrl,
+          tier_id: editingProduct.tier_id,
         }
       : undefined,
   });
+
+  const watchedTierId = watch('tier_id');
 
   const onSubmit = (data: ProductForm) => {
     if (editingProduct) {
@@ -140,7 +166,21 @@ export default function AdminProductsPage() {
     resetForm();
   };
 
-  const products = data?.items || [];
+  const allProducts = data?.items || [];
+
+  // Apply tier filter
+  const products = tierFilter === 'all'
+    ? allProducts
+    : tierFilter === 'unassigned'
+      ? allProducts.filter((p) => !p.tier_id)
+      : allProducts.filter((p) => p.tier_id === tierFilter);
+
+  // Helper: get tier info for a product
+  const getTierForProduct = (product: AdminProduct): ProductTier | null => {
+    if (product.tier) return product.tier as unknown as ProductTier;
+    if (!product.tier_id) return null;
+    return tiers.find((t) => t.id === product.tier_id) || null;
+  };
 
   return (
     <motion.div
@@ -165,6 +205,57 @@ export default function AdminProductsPage() {
           Add Product
         </Button>
       </div>
+
+      {/* Tier Filter Bar */}
+      {tiers.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto">
+          <Filter className="h-4 w-4 shrink-0 text-text-muted" />
+          <button
+            onClick={() => setTierFilter('all')}
+            className={cn(
+              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              tierFilter === 'all'
+                ? 'bg-primary text-white'
+                : 'bg-surface-hover text-text-secondary hover:bg-surface-hover/80',
+            )}
+          >
+            All ({allProducts.length})
+          </button>
+          {tiers.map((tier) => {
+            const count = allProducts.filter((p) => p.tier_id === tier.id).length;
+            return (
+              <button
+                key={tier.id}
+                onClick={() => setTierFilter(tier.id)}
+                className={cn(
+                  'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                  tierFilter === tier.id
+                    ? 'text-white'
+                    : 'text-text-secondary hover:opacity-80',
+                )}
+                style={{
+                  backgroundColor: tierFilter === tier.id ? tier.badge_color : undefined,
+                  border: tierFilter !== tier.id ? `1px solid ${tier.badge_color}` : undefined,
+                  color: tierFilter !== tier.id ? tier.badge_color : undefined,
+                }}
+              >
+                {tier.name} ({count})
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setTierFilter('unassigned')}
+            className={cn(
+              'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              tierFilter === 'unassigned'
+                ? 'bg-text-muted text-white'
+                : 'border border-border bg-transparent text-text-muted hover:bg-surface-hover',
+            )}
+          >
+            Unassigned ({allProducts.filter((p) => !p.tier_id).length})
+          </button>
+        </div>
+      )}
 
       {/* Create/Edit Form */}
       <AnimatePresence>
@@ -215,6 +306,27 @@ export default function AdminProductsPage() {
                   />
                 </div>
 
+                {/* Tier Assignment */}
+                {tiers.length > 0 && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      Product Tier
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      value={watchedTierId || ''}
+                      onChange={(e) => setValue('tier_id', e.target.value || null)}
+                    >
+                      <option value="">No tier assigned</option>
+                      {tiers.filter((t) => t.is_active).map((tier) => (
+                        <option key={tier.id} value={tier.id}>
+                          {tier.name} — {tier.display_name} (min: {tier.min_subscription_tier})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <Input
                   label="Image URL"
                   placeholder="https://..."
@@ -260,59 +372,81 @@ export default function AdminProductsPage() {
       ) : products.length === 0 ? (
         <Card variant="outlined" padding="lg" className="text-center">
           <Package className="mx-auto h-10 w-10 text-text-muted" />
-          <p className="mt-2 text-text-secondary">No products yet. Add your first product above.</p>
+          <p className="mt-2 text-text-secondary">
+            {tierFilter !== 'all'
+              ? 'No products match this filter.'
+              : 'No products yet. Add your first product above.'}
+          </p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((product) => (
-            <Card key={product.sku} variant="outlined" padding="none" className="overflow-hidden">
-              {product.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="aspect-square w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex aspect-square items-center justify-center bg-surface-hover">
-                  <Package className="h-10 w-10 text-text-muted" />
-                </div>
-              )}
+          {products.map((product) => {
+            const tier = getTierForProduct(product);
 
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-text">{product.name}</h3>
-                    <p className="text-xs text-text-muted capitalize">{product.category}</p>
-                    <p className="mt-1 text-xs text-text-muted">SKU: {product.sku}</p>
+            return (
+              <Card key={product.sku} variant="outlined" padding="none" className="overflow-hidden">
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="aspect-square w-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex aspect-square items-center justify-center bg-surface-hover">
+                    <Package className="h-10 w-10 text-text-muted" />
                   </div>
-                  <span className="text-sm font-bold text-primary">
-                    {formatCurrency(product.basePrice)}
-                  </span>
-                </div>
+                )}
 
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(product)}
-                    leftIcon={<Pencil className="h-3 w-3" />}
-                    className="flex-1"
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(product.sku, product.name)}
-                    className="text-error hover:bg-error-bg"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-text">{product.name}</h3>
+                      <div className="mt-0.5 flex items-center gap-2">
+                        <p className="text-xs text-text-muted capitalize">{product.category}</p>
+                        {tier ? (
+                          <span
+                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                            style={{ backgroundColor: tier.badge_color }}
+                          >
+                            {tier.badge_label || tier.name}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                            No tier
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-text-muted">SKU: {product.sku}</p>
+                    </div>
+                    <span className="text-sm font-bold text-primary">
+                      {formatCurrency(product.basePrice)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEdit(product)}
+                      leftIcon={<Pencil className="h-3 w-3" />}
+                      className="flex-1"
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(product.sku, product.name)}
+                      className="text-error hover:bg-error-bg"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </motion.div>

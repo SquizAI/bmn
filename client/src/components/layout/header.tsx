@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
-import { Menu, LogOut, Settings, Moon, Sun, MessageSquare } from 'lucide-react';
+import { Menu, LogOut, Settings, Moon, Sun, MessageSquare, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ interface HeaderProps {
 function Header({ className }: HeaderProps) {
   const { user, isAuthenticated, signOut } = useAuth();
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
   const [isDark, setIsDark] = useState(() => getResolvedTheme() === 'dark');
 
   const handleToggleTheme = () => {
@@ -42,15 +44,32 @@ function Header({ className }: HeaderProps) {
       {/* Left: Menu toggle + Logo */}
       <div className="flex items-center gap-3">
         {isAuthenticated && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            aria-label="Toggle sidebar"
-            className="md:hidden"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
+          <>
+            {/* Mobile: hamburger for overlay sidebar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+              className="md:hidden"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            {/* Desktop: collapse/expand sidebar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebarCollapsed}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="hidden md:inline-flex"
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
+          </>
         )}
         <Link to={ROUTES.DASHBOARD} className="flex items-center gap-0">
           <span className="text-base font-bold tracking-tight text-text">brand</span>
