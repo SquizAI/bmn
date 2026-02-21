@@ -362,8 +362,9 @@ export default function SocialAnalysisPage() {
         simTimerRef.current = null;
       }
       // If we got a direct dossier, jump to complete (handled by directComplete)
-      // If we got an error or no direct dossier, reset sim state
-      if (!directComplete) {
+      // If we're tracking via Socket.io (activeJobId), keep sim state as a visual floor
+      // Only reset if we have no tracking path active
+      if (!directComplete && !activeJobId) {
         setSimPhase('idle');
         setSimProgress(0);
         setSimMessage('');
@@ -377,7 +378,7 @@ export default function SocialAnalysisPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatchScrape.isPending, directComplete]);
+  }, [dispatchScrape.isPending, directComplete, activeJobId]);
 
   // Creep effect: slowly increment progress after the last simulated step
   useEffect(() => {

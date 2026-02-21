@@ -3,6 +3,30 @@
 import { z } from 'zod';
 
 /**
+ * Social Analysis job -- chunked AI analysis of scraped social data.
+ * The controller scrapes data synchronously, then dispatches this job
+ * for the heavy AI processing. The worker emits Socket.io progress events.
+ */
+export const SocialAnalysisJobSchema = z.object({
+  userId: z.string().uuid(),
+  brandId: z.string().uuid(),
+  socialHandles: z.object({
+    instagram: z.string().optional(),
+    tiktok: z.string().optional(),
+    youtube: z.string().optional(),
+    twitter: z.string().optional(),
+    facebook: z.string().optional(),
+    websiteUrl: z.string().optional(),
+  }),
+  /** Structured profile data from Apify (null if scraper unavailable) */
+  scrapedData: z.unknown().nullable(),
+  /** Rich page content from Firecrawl (null if unavailable) */
+  firecrawlData: z.unknown().nullable(),
+  /** Brand name (null if not yet set) */
+  brandName: z.string().nullable(),
+});
+
+/**
  * Brand Wizard job -- runs the full Agent SDK agent loop.
  */
 export const BrandWizardJobSchema = z.object({
@@ -195,6 +219,7 @@ export const AnalyticsJobSchema = z.object({
  * @type {Record<string, z.ZodType>}
  */
 export const JOB_SCHEMAS = {
+  'social-analysis': SocialAnalysisJobSchema,
   'brand-wizard': BrandWizardJobSchema,
   'logo-generation': LogoGenerationJobSchema,
   'mockup-generation': MockupGenerationJobSchema,

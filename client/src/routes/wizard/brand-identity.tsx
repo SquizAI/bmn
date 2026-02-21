@@ -156,8 +156,8 @@ export default function BrandIdentityPage() {
       { brandId },
       {
         onSuccess: (data) => {
-          // Case 1: Server returned cached directions (no BullMQ job needed)
-          if (data?.cached && data?.directions?.length) {
+          // Case 1: Server returned directions directly (cached or freshly generated)
+          if (data?.directions?.length) {
             setDirections(data.directions);
             setPhase('choose-direction');
             return;

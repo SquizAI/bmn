@@ -6,7 +6,7 @@ import { config } from '../../config/index.js';
 import { logger } from '../../lib/logger.js';
 
 /**
- * @typedef {'brand-vision' | 'social-analysis' | 'chatbot' | 'extraction' | 'name-generation' | 'validation' | 'large-context'} TaskType
+ * @typedef {'brand-vision' | 'social-analysis' | 'chatbot' | 'extraction' | 'name-generation' | 'validation' | 'large-context' | 'context-analysis' | 'brand-validation'} TaskType
  */
 
 /**
@@ -76,6 +76,22 @@ export const MODEL_ROUTES = {
     fallbackProvider: 'anthropic',
     reason: '1M context for massive inputs',
     estimatedCostPer1kTokens: 0.005625,
+  },
+  'context-analysis': {
+    model: 'claude-haiku-4-5',
+    provider: 'anthropic',
+    fallbackModel: 'gemini-3.0-flash',
+    fallbackProvider: 'google',
+    reason: 'Fast context distillation + archetype suggestion',
+    estimatedCostPer1kTokens: 0.0024,
+  },
+  'brand-validation': {
+    model: 'claude-haiku-4-5',
+    provider: 'anthropic',
+    fallbackModel: 'gemini-3.0-flash',
+    fallbackProvider: 'google',
+    reason: 'Fast validation + harmonization of generated directions',
+    estimatedCostPer1kTokens: 0.0024,
   },
 };
 

@@ -5,7 +5,17 @@ import { logger } from '../lib/logger.js';
 import { sessionManager } from '../agents/session-manager.js';
 import { signResumeToken, verifyResumeToken } from '../lib/hmac-tokens.js';
 import { routeModel } from '../skills/_shared/model-router.js';
-import { SYSTEM_PROMPT as BRAND_GENERATOR_PROMPT, buildDirectionsTaskPrompt } from '../skills/brand-generator/prompts.js';
+import {
+  SYSTEM_PROMPT as BRAND_GENERATOR_PROMPT,
+  buildDirectionsTaskPrompt,
+  CONTEXT_ANALYSIS_SYSTEM,
+  buildContextAnalysisPrompt,
+  DIRECTION_GENERATION_SYSTEM,
+  buildDirectionPrompt,
+  buildDirectionsBCPrompt,
+  VALIDATION_SYSTEM,
+  buildValidationPrompt,
+} from '../skills/brand-generator/prompts.js';
 import { SYSTEM_PROMPT as NAME_GENERATOR_PROMPT } from '../skills/name-generator/prompts.js';
 import { analyzeCompetitors as runCompetitorAnalysis } from '../services/competitor.js';
 import { scrapeWebsite } from '../services/website-scraper.js';
@@ -420,10 +430,18 @@ async function scrapeExternalUrl(url) {
 /**
  * POST /api/v1/wizard/:brandId/analyze-social
  * Analyze social media profiles and generate a Creator Dossier.
- * Step 1: Scrape real data from Instagram via Apify (if available).
- * Step 1b: Enrich with Firecrawl deep scraping of public profile page.
- * Step 2: Feed all scraped data to Claude for comprehensive analysis.
- * Fallback: If scrapers are unavailable, Claude uses its training knowledge.
+ *
+ * Flow:
+ *  1. Check cache -- return cached dossier directly if handles match (no BullMQ).
+ *  2. Scrape real data via Apify + Firecrawl in parallel (stays synchronous, ~10-30s).
+ *  3. Dispatch a `social-analysis` BullMQ job with the scraped data payload.
+ *  4. Return immediately with `{ jobId, status: 'processing' }`.
+ *  5. The worker (`social-analysis-worker.js`) handles chunked AI processing
+ *     and emits Socket.io progress events for the client to track.
+ *
+ * Response shapes (backward-compatible):
+ *  - Cache hit:  `{ cached: true, dossier: {...} }`
+ *  - New job:    `{ jobId: "...", status: "processing" }`
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -502,344 +520,45 @@ export async function analyzeSocial(req, res, next) {
       }
     }
 
-    const hasAnyScrapedData = !!(scrapedData || firecrawlData);
+    // ── Step 2: Dispatch AI analysis to BullMQ ──
+    // The heavy AI processing runs asynchronously in a worker.
+    // The worker emits Socket.io progress events as it processes chunks.
+    const { getQueue } = await import('../queues/index.js');
+    const queue = getQueue('social-analysis');
 
-    // ── Step 2: Build Claude prompt with real data (or fallback to knowledge) ──
-    const systemPrompt = `You are an expert social media analyst working for Brand Me Now, an AI-powered brand creation platform. Your job is to analyze a creator's social media presence and build a comprehensive Creator Dossier -- the raw materials for building their brand identity.
-
-${hasAnyScrapedData ? 'You have been provided with REAL scraped data from the creator\'s social media profiles and linked websites. Use this data as the ground truth for your analysis. Derive all metrics, themes, and insights from this actual data.' : 'No scraped data is available. Use your knowledge of public social media creators to provide the most accurate analysis possible. If you recognize the handle, use real publicly known information.'}
-
-Return ONLY valid JSON matching the exact structure specified.`;
-
-    // Build the scraped data section for the prompt
-    let scrapedDataSection = '';
-    if (scrapedData) {
-      // Summarize posts for the prompt (full posts would be too long)
-      const postSummaries = (scrapedData.posts || []).map((p, i) => ({
-        idx: i + 1,
-        type: p.type,
-        caption: (p.caption || '').slice(0, 200),
-        likes: p.likes,
-        comments: p.comments,
-        hashtags: p.hashtags?.slice(0, 10),
-      }));
-
-      scrapedDataSection = `
-<scraped_instagram_data>
-Display Name: ${scrapedData.displayName}
-Handle: @${scrapedData.handle}
-Bio: ${scrapedData.bio || 'N/A'}
-Followers: ${scrapedData.followers.toLocaleString()}
-Following: ${scrapedData.following.toLocaleString()}
-Post Count: ${scrapedData.postsCount.toLocaleString()}
-Verified: ${scrapedData.isVerified}
-Profile Pic URL: ${scrapedData.profilePicUrl || 'N/A'}
-External URL: ${scrapedData.externalUrl || 'N/A'}
-
-Recent Posts (${postSummaries.length}):
-${postSummaries.map((p) => `  ${p.idx}. [${p.type}] Likes: ${p.likes}, Comments: ${p.comments}${p.hashtags?.length ? ` | Tags: ${p.hashtags.join(', ')}` : ''}
-     Caption: ${p.caption || '(no caption)'}
-`).join('')}
-</scraped_instagram_data>`;
-    }
-
-    // Add Firecrawl enrichment data (public profile page content + external links)
-    let firecrawlSection = '';
-    if (firecrawlData?.instagramPage) {
-      // Truncate to keep prompt reasonable (first 3000 chars of page content)
-      const pageContent = firecrawlData.instagramPage.slice(0, 3000);
-      firecrawlSection += `
-<instagram_page_content>
-${pageContent}
-</instagram_page_content>`;
-    }
-    if (firecrawlData?.externalLinks) {
-      const linkContent = firecrawlData.externalLinks.slice(0, 2000);
-      firecrawlSection += `
-<external_website_content>
-${linkContent}
-</external_website_content>`;
-    }
-
-    const taskPrompt = `Analyze the following creator's social media presence and generate a comprehensive Creator Dossier.
-
-<social_handles>
-${handleParts.join('\n')}
-</social_handles>
-
-${brand.name && brand.name !== 'Untitled Brand' ? `<brand_name>${brand.name}</brand_name>` : ''}
-${scrapedDataSection}
-${firecrawlSection}
-
-${hasAnyScrapedData
-    ? 'Using the REAL scraped data above as your primary source, create'
-    : 'Based on your knowledge of these social media accounts (use REAL publicly known data for well-known creators), create'} a Creator Dossier JSON with this EXACT structure:
-
-{
-  "profile": {
-    "displayName": "string - ${scrapedData ? 'use the scraped display name' : 'real name or best guess from handle'}",
-    "bio": "string - ${scrapedData ? 'use the scraped bio' : 'likely bio or a generated one that fits'}",
-    "profilePicUrl": ${scrapedData?.profilePicUrl ? `"${scrapedData.profilePicUrl}"` : 'null'},
-    "totalFollowers": ${scrapedData ? scrapedData.followers : 'number'},
-    "totalFollowing": ${scrapedData ? scrapedData.following : 'number'},
-    "primaryPlatform": "instagram|tiktok|youtube|twitter|facebook",
-    "externalUrl": ${scrapedData?.externalUrl ? `"${scrapedData.externalUrl}"` : 'null'},
-    "isVerified": ${scrapedData ? scrapedData.isVerified : 'false'}
-  },
-  "platforms": [
-    {
-      "platform": "instagram",
-      "handle": "string",
-      "displayName": "string",
-      "bio": "string or null",
-      "profilePicUrl": ${scrapedData?.profilePicUrl ? `"${scrapedData.profilePicUrl}"` : 'null'},
-      "isVerified": ${scrapedData ? scrapedData.isVerified : 'false'},
-      "metrics": {
-        "followers": ${scrapedData ? scrapedData.followers : 'number'},
-        "following": ${scrapedData ? scrapedData.following : 'number'},
-        "postCount": ${scrapedData ? scrapedData.postsCount : 'number'},
-        "engagementRate": number (0-1 decimal, e.g. 0.045),
-        "avgLikes": number,
-        "avgComments": number,
-        "avgShares": null,
-        "avgViews": null
-      },
-      "recentPosts": [],
-      "topPosts": [],
-      "scrapedAt": "${new Date().toISOString()}"
-    }
-  ],
-  "audience": {
-    "estimatedAgeRange": "string e.g. 18-34",
-    "ageBreakdown": [{"range": "18-24", "percentage": 35}, {"range": "25-34", "percentage": 40}, {"range": "35-44", "percentage": 15}, {"range": "45+", "percentage": 10}],
-    "genderSplit": {"male": number, "female": number, "other": number},
-    "primaryInterests": ["interest1", "interest2", "interest3", "interest4", "interest5"],
-    "geographicIndicators": ["country1", "country2"],
-    "incomeLevel": "budget|mid-range|premium|luxury",
-    "loyaltySignals": ["signal1", "signal2"],
-    "demographicConfidence": number (0-1),
-    "demographicReasoning": "string explaining reasoning"
-  },
-  "content": {
-    "themes": [{"name": "theme name", "frequency": 0.5, "examples": ["example caption or description"], "sentiment": "positive|neutral|mixed"}],
-    "formats": {
-      "breakdown": {"reels": number, "carousel": number, "static": number, "stories": number, "live": number},
-      "bestFormat": "string",
-      "engagementByFormat": {},
-      "totalPostsAnalyzed": number
-    },
-    "postingFrequency": {
-      "postsPerWeek": number,
-      "consistencyPercent": number,
-      "bestDays": ["Monday", "Thursday"],
-      "bestTimes": ["18:00 UTC", "12:00 UTC"],
-      "gaps": [],
-      "avgGapHours": number,
-      "analysisSpan": {"firstPost": "${new Date(Date.now() - 60 * 86400000).toISOString()}", "lastPost": "${new Date().toISOString()}", "totalDays": 60, "totalPosts": number}
-    },
-    "consistencyScore": number (0-100),
-    "bestPerformingContentType": "string",
-    "peakEngagementTopics": ["topic1", "topic2"],
-    "hashtagStrategy": {
-      "topHashtags": [{"tag": "#hashtag", "count": number, "niche": "string", "estimatedMarketSize": "string"}],
-      "strategy": "string - strategy assessment paragraph",
-      "recommendations": ["rec1", "rec2", "rec3"]
-    }
-  },
-  "aesthetic": {
-    "dominantColors": [{"hex": "#hexcode", "name": "color name", "percentage": number}],
-    "naturalPalette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
-    "visualMood": ["mood1", "mood2"],
-    "photographyStyle": ["style1"],
-    "compositionPatterns": ["pattern1"],
-    "filterStyle": "string",
-    "lighting": "string",
-    "overallAesthetic": "string description"
-  },
-  "niche": {
-    "primaryNiche": {
-      "name": "string",
-      "confidence": number (0-1),
-      "marketSize": "small|medium|large|massive",
-      "hashtagVolume": null,
-      "relatedKeywords": ["keyword1", "keyword2"]
-    },
-    "secondaryNiches": [{"name": "string", "confidence": number}],
-    "nicheClarity": number (0-100)
-  },
-  "readinessScore": {
-    "totalScore": number (0-100),
-    "factors": [{"name": "factor name", "score": number, "weight": number, "weightedScore": number, "tip": "string"}],
-    "tier": "not-ready|emerging|ready|prime",
-    "summary": "string summary",
-    "actionItems": ["action1", "action2"]
-  },
-  "competitors": {
-    "niche": "string",
-    "creatorTier": "nano|micro|mid|macro|mega",
-    "similarCreators": [{"name": "string", "handle": "@handle", "followers": "string", "productLines": ["string"], "tier": "string"}],
-    "competingBrands": ["brand1", "brand2"],
-    "hashtagOverlapNote": "string",
-    "opportunities": ["opp1", "opp2"]
-  },
-  "personality": {
-    "archetype": "The Creator|The Sage|The Explorer|The Hero|The Magician|The Ruler|The Caregiver|The Jester|The Lover|The Innocent|The Outlaw|The Everyperson",
-    "traits": ["trait1", "trait2", "trait3", "trait4"],
-    "voiceTone": "string description",
-    "primaryTone": "string",
-    "secondaryTones": ["tone1", "tone2"],
-    "toneConfidence": number (0-1),
-    "voiceDescription": "string",
-    "toneExamples": [{"content": "string example", "tone": "string"}],
-    "values": ["value1", "value2", "value3"]
-  },
-  "growth": {
-    "trend": "growing|stable|declining|unknown",
-    "momentum": "string",
-    "followerGrowthSignals": "string",
-    "contentEvolution": "string"
-  }
-}
-
-IMPORTANT:
-${scrapedData ? `- The profile data above is REAL scraped data. Use exact values for displayName, bio, followers, following, postCount, profilePicUrl, isVerified, externalUrl.
-- Calculate engagement rate and averages from the real post data provided.
-- Derive content themes, hashtag strategy, and posting patterns from the actual post captions and timestamps.
-- Your audience analysis and personality assessment should be informed by the real content.` : `- Use REAL publicly known data for well-known creators. If you recognize the handle, provide accurate follower counts and real information.
-- If you don't recognize the handle, infer likely niche, audience, and content patterns from the handle name.`}
-- Include at least 3 content themes, 5 top hashtags, 3-5 personality traits, 3+ values
-- Generate a complete 5-color natural palette that fits the creator's aesthetic
-- Be specific and insightful -- this dossier drives the entire brand creation process
-- Return ONLY the JSON object, no markdown code blocks, no explanatory text`;
-
-    const AI_TIMEOUT_MS = 120_000; // 120 seconds max (scraping + Claude)
+    const job = await queue.add('analyze', {
+      brandId,
+      userId,
+      socialHandles,
+      scrapedData,
+      firecrawlData,
+      brandName: brand?.name || null,
+    }, {
+      priority: 1,
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 5000 },
+    });
 
     logger.info({
       brandId,
       userId,
+      jobId: job.id,
       handles: handleParts,
       handleCount: handleParts.length,
       hasApifyData: !!scrapedData,
       hasFirecrawlData: !!firecrawlData,
       scrapedFollowers: scrapedData?.followers || null,
-    }, 'Starting Claude social analysis with scraped data...');
-    const startTime = Date.now();
+    }, 'Social analysis job dispatched to BullMQ');
 
-    let aiResult;
-    try {
-      aiResult = await Promise.race([
-        routeModel('social-analysis', {
-          systemPrompt,
-          prompt: taskPrompt,
-          maxTokens: 8192,
-          temperature: 0.7,
-          jsonMode: true,
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('AI analysis timed out after 120 seconds')), AI_TIMEOUT_MS)
-        ),
-      ]);
-    } catch (aiError) {
-      logger.error({ brandId, error: aiError.message }, 'AI model call failed for social analysis');
-      return res.status(503).json({
-        success: false,
-        error: aiError.message.includes('timed out')
-          ? 'Analysis is taking longer than expected. Please try again.'
-          : 'AI analysis service is temporarily unavailable. Please try again in a moment.',
-      });
-    }
-
-    logger.info({ brandId, userId, model: aiResult.model, durationMs: Date.now() - startTime }, 'Claude social analysis completed');
-
-    // Parse the AI response
-    let parsed;
-    try {
-      let jsonText = aiResult.text.trim();
-      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) jsonText = jsonMatch[1].trim();
-      parsed = JSON.parse(jsonText);
-    } catch (parseErr) {
-      logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse social analysis AI response');
-      return res.status(500).json({ success: false, error: 'Failed to parse AI-generated dossier' });
-    }
-
-    // Overlay real scraped profile data to ensure accuracy
-    if (scrapedData) {
-      parsed.profile = {
-        ...parsed.profile,
-        displayName: scrapedData.displayName,
-        bio: scrapedData.bio || parsed.profile?.bio,
-        profilePicUrl: scrapedData.profilePicUrl,
-        totalFollowers: scrapedData.followers,
-        totalFollowing: scrapedData.following,
-        externalUrl: scrapedData.externalUrl,
-        isVerified: scrapedData.isVerified,
-      };
-      // Ensure platform metrics use real data
-      if (parsed.platforms?.[0]) {
-        parsed.platforms[0].profilePicUrl = scrapedData.profilePicUrl;
-        parsed.platforms[0].isVerified = scrapedData.isVerified;
-        parsed.platforms[0].displayName = scrapedData.displayName;
-        parsed.platforms[0].bio = scrapedData.bio;
-        if (parsed.platforms[0].metrics) {
-          parsed.platforms[0].metrics.followers = scrapedData.followers;
-          parsed.platforms[0].metrics.following = scrapedData.following;
-          parsed.platforms[0].metrics.postCount = scrapedData.postsCount;
-        }
-      }
-    }
-
-    // Determine data sources used
-    const sources = [];
-    if (scrapedData) sources.push('apify');
-    if (firecrawlData?.instagramPage) sources.push('firecrawl');
-    if (firecrawlData?.externalLinks) sources.push('firecrawl-external');
-    if (sources.length === 0) sources.push('ai-knowledge');
-    const source = sources.join('+');
-
-    // Cache in wizard_state
-    const updatedState = {
-      ...(brand.wizard_state || {}),
-      'social-analysis': {
-        ...parsed,
-        source,
-        socialHandles,
-        generatedAt: new Date().toISOString(),
-        model: aiResult.model,
-      },
-    };
-
-    const { error: updateError } = await supabaseAdmin
-      .from('brands')
-      .update({
-        wizard_step: 'social',
-        wizard_state: updatedState,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', brandId);
-
-    if (updateError) {
-      logger.error({ brandId, error: updateError.message, code: updateError.code }, 'Failed to save social analysis to wizard_state');
-    }
-
-    logger.info({
-      brandId,
-      userId,
-      model: aiResult.model,
-      source,
-      hasApify: !!scrapedData,
-      hasFirecrawl: !!firecrawlData,
-      stateSize: JSON.stringify(updatedState).length,
-    }, 'Social analysis dossier generated');
-
-    res.json({
+    // Return immediately with job ID for Socket.io tracking
+    return res.json({
       success: true,
       data: {
         brandId,
         step: 'social-analysis',
-        dossier: parsed,
-        model: aiResult.model,
-        source,
+        jobId: job.id,
+        status: 'processing',
+        message: 'Social analysis started. Track progress via WebSocket.',
       },
     });
   } catch (err) {
@@ -848,8 +567,78 @@ ${scrapedData ? `- The profile data above is REAL scraped data. Use exact values
 }
 
 /**
+ * Timeout wrapper for AI model calls.
+ * @param {Promise} promise - The model call promise
+ * @param {number} ms - Timeout in milliseconds
+ * @param {string} label - Step label for error messages
+ * @returns {Promise}
+ */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ]);
+}
+
+/**
+ * Parse a JSON response from an AI model, handling markdown code blocks.
+ * @param {string} text - Raw AI response text
+ * @returns {Object} Parsed JSON object
+ */
+function parseAiJson(text) {
+  let jsonText = text.trim();
+  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) jsonText = jsonMatch[1].trim();
+  return JSON.parse(jsonText);
+}
+
+/**
+ * Emit a generation progress event via Socket.io to the user's room.
+ * @param {import('socket.io').Server|null} io - Socket.io server instance
+ * @param {string} userId - User ID for room targeting
+ * @param {Object} payload - Progress event payload
+ * @param {string} payload.phase - Current phase (analyzing, generating, complete)
+ * @param {number} payload.progress - Progress percentage (0-100)
+ * @param {string} payload.message - Human-readable status message
+ * @param {Object} [payload.data] - Partial data (e.g. directions as they complete)
+ */
+function emitProgress(io, userId, payload) {
+  if (!io) return;
+  try {
+    io.to(`user:${userId}`).emit('generation:progress', payload);
+  } catch (err) {
+    logger.warn({ userId, error: err.message }, 'Failed to emit generation:progress');
+  }
+}
+
+/**
+ * Emit a generation complete event via Socket.io.
+ * @param {import('socket.io').Server|null} io
+ * @param {string} userId
+ * @param {Object} result
+ */
+function emitComplete(io, userId, result) {
+  if (!io) return;
+  try {
+    io.to(`user:${userId}`).emit('generation:complete', { result });
+  } catch (err) {
+    logger.warn({ userId, error: err.message }, 'Failed to emit generation:complete');
+  }
+}
+
+/**
  * POST /api/v1/wizard/:brandId/generate-identity
- * Queue brand identity generation via BullMQ.
+ *
+ * Generate 3 brand identity directions using a 4-step chunked pipeline:
+ *   Step 1: ANALYZE_CONTEXT   (Haiku, ~15s) -- distill social data + suggest 3 archetypes
+ *   Step 2: GENERATE_DIR_A    (Sonnet, ~25s) -- build complete direction A
+ *   Step 3: GENERATE_DIR_B_C  (Sonnet, ~25s) -- build directions B & C (contrasted with A)
+ *   Step 4: VALIDATE_HARMONIZE (Haiku, ~10s) -- cross-check colors, fonts, differentiation
+ *
+ * Emits Socket.io `generation:progress` events during each step.
+ * Falls back to the monolithic single-call approach if the pipeline fails.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -859,6 +648,7 @@ export async function generateIdentity(req, res, next) {
   try {
     const userId = req.user.id;
     const { brandId } = req.params;
+    const io = req.app.locals.io || null;
 
     // Verify ownership
     const { data: brand, error } = await supabaseAdmin
@@ -888,81 +678,382 @@ export async function generateIdentity(req, res, next) {
       });
     }
 
-    // Call Claude directly to generate 3 brand identity directions
     const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
-    const taskPrompt = buildDirectionsTaskPrompt({
-      socialAnalysis,
-      brandId,
-      userId,
-      brandName: brand.name || null,
-      userPreferences: req.body,
+    const brandName = brand.name && brand.name !== 'Untitled Brand' ? brand.name : null;
+    const startTime = Date.now();
+    const modelsUsed = [];
+
+    logger.info({ brandId, userId }, 'Starting 4-step brand identity pipeline');
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 1: ANALYZE_CONTEXT (Haiku, ~15s)
+    // Distill social data into a concise context + suggest 3 archetypes
+    // ──────────────────────────────────────────────────────────────────────
+    emitProgress(io, userId, {
+      phase: 'analyzing',
+      progress: 10,
+      message: 'Analyzing your social DNA...',
     });
 
-    logger.info({ brandId, userId }, 'Calling Claude for brand identity directions');
-
-    const aiResult = await routeModel('brand-vision', {
-      systemPrompt: BRAND_GENERATOR_PROMPT,
-      prompt: taskPrompt,
-      maxTokens: 8192,
-      temperature: 0.8,
-      jsonMode: true,
-    });
-
-    // Parse the AI response
-    let parsed;
+    let contextResult;
     try {
-      // Extract JSON from the response (handle markdown code blocks)
-      let jsonText = aiResult.text.trim();
-      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) jsonText = jsonMatch[1].trim();
-      parsed = JSON.parse(jsonText);
-    } catch (parseErr) {
-      logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse AI directions response');
-      return res.status(500).json({ success: false, error: 'Failed to parse AI-generated directions' });
+      const contextPrompt = buildContextAnalysisPrompt({
+        socialAnalysis,
+        brandName,
+        userPreferences: req.body,
+      });
+
+      const step1Result = await withTimeout(
+        routeModel('context-analysis', {
+          systemPrompt: CONTEXT_ANALYSIS_SYSTEM,
+          prompt: contextPrompt,
+          maxTokens: 1024,
+          temperature: 0.7,
+          jsonMode: true,
+        }),
+        60_000,
+        'Step 1 (context analysis)',
+      );
+
+      contextResult = parseAiJson(step1Result.text);
+      modelsUsed.push({ step: 'context-analysis', model: step1Result.model });
+
+      logger.info(
+        { brandId, step: 1, model: step1Result.model, archetypes: contextResult.archetypes?.length, durationMs: Date.now() - startTime },
+        'Step 1 complete: context analyzed',
+      );
+    } catch (step1Err) {
+      logger.error({ brandId, error: step1Err.message }, 'Step 1 failed -- falling back to monolithic generation');
+      return await fallbackMonolithicGeneration(req, res, brand, socialAnalysis, brandName, io, userId);
     }
 
-    const directions = parsed.directions || [];
-    const socialContext = parsed.socialContext || null;
-
-    // Cache in wizard_state
-    const updatedState = {
-      ...(brand.wizard_state || {}),
-      'brand-identity': {
-        ...(brand.wizard_state?.['brand-identity'] || {}),
-        directions,
-        socialContext,
-        generatedAt: new Date().toISOString(),
-        model: aiResult.model,
-      },
-    };
-
-    const { error: updateError } = await supabaseAdmin
-      .from('brands')
-      .update({
-        wizard_step: 'identity',
-        wizard_state: updatedState,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', brandId);
-
-    if (updateError) {
-      logger.error({ brandId, error: updateError.message, code: updateError.code }, 'Failed to save brand identity to wizard_state');
+    const { socialContext, archetypes } = contextResult;
+    if (!archetypes || archetypes.length < 3) {
+      logger.warn({ brandId, archetypeCount: archetypes?.length }, 'Step 1 returned fewer than 3 archetypes -- falling back');
+      return await fallbackMonolithicGeneration(req, res, brand, socialAnalysis, brandName, io, userId);
     }
 
-    logger.info({ brandId, userId, model: aiResult.model, directionCount: directions.length, stateSize: JSON.stringify(updatedState).length }, 'Brand identity directions generated');
-
-    res.json({
-      success: true,
-      data: {
-        brandId,
-        step: 'brand-identity',
-        directions,
-        socialContext,
-        model: aiResult.model,
-      },
+    emitProgress(io, userId, {
+      phase: 'analyzing',
+      progress: 25,
+      message: 'Social context analyzed. Crafting direction 1 of 3...',
     });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 2: GENERATE_DIRECTION_A (Sonnet, ~25s)
+    // Build the first complete brand direction
+    // ──────────────────────────────────────────────────────────────────────
+    emitProgress(io, userId, {
+      phase: 'generating',
+      progress: 30,
+      message: 'Crafting direction 1 of 3...',
+    });
+
+    let directionA;
+    try {
+      const dirAPrompt = buildDirectionPrompt({
+        socialContext,
+        archetype: archetypes[0],
+        brandName,
+      });
+
+      const step2Result = await withTimeout(
+        routeModel('brand-vision', {
+          systemPrompt: DIRECTION_GENERATION_SYSTEM,
+          prompt: dirAPrompt,
+          maxTokens: 3072,
+          temperature: 0.8,
+          jsonMode: true,
+        }),
+        60_000,
+        'Step 2 (direction A)',
+      );
+
+      directionA = parseAiJson(step2Result.text);
+      modelsUsed.push({ step: 'direction-a', model: step2Result.model });
+
+      logger.info(
+        { brandId, step: 2, model: step2Result.model, label: directionA.label, durationMs: Date.now() - startTime },
+        'Step 2 complete: direction A generated',
+      );
+    } catch (step2Err) {
+      logger.error({ brandId, error: step2Err.message }, 'Step 2 failed -- attempting retry then fallback');
+
+      // Retry once with slightly different temperature
+      try {
+        const retryPrompt = buildDirectionPrompt({
+          socialContext,
+          archetype: archetypes[0],
+          brandName,
+        });
+
+        const retryResult = await withTimeout(
+          routeModel('brand-vision', {
+            systemPrompt: DIRECTION_GENERATION_SYSTEM,
+            prompt: retryPrompt,
+            maxTokens: 3072,
+            temperature: 0.9,
+            jsonMode: true,
+          }),
+          60_000,
+          'Step 2 retry (direction A)',
+        );
+
+        directionA = parseAiJson(retryResult.text);
+        modelsUsed.push({ step: 'direction-a-retry', model: retryResult.model });
+      } catch (retryErr) {
+        logger.error({ brandId, error: retryErr.message }, 'Step 2 retry failed -- falling back to monolithic');
+        return await fallbackMonolithicGeneration(req, res, brand, socialAnalysis, brandName, io, userId);
+      }
+    }
+
+    // Emit partial data so the client can show the first direction card
+    emitProgress(io, userId, {
+      phase: 'generating',
+      progress: 50,
+      message: 'Direction 1 complete! Crafting directions 2 and 3...',
+      data: { directions: [directionA] },
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 3: GENERATE_DIRECTIONS_B_C (Sonnet, ~25s)
+    // Build directions B and C, contrasted against direction A
+    // ──────────────────────────────────────────────────────────────────────
+    let directionB;
+    let directionC;
+    try {
+      const dirBCPrompt = buildDirectionsBCPrompt({
+        socialContext,
+        archetypes: [archetypes[1], archetypes[2]],
+        brandName,
+        directionA,
+      });
+
+      const step3Result = await withTimeout(
+        routeModel('brand-vision', {
+          systemPrompt: DIRECTION_GENERATION_SYSTEM,
+          prompt: dirBCPrompt,
+          maxTokens: 4096,
+          temperature: 0.8,
+          jsonMode: true,
+        }),
+        60_000,
+        'Step 3 (directions B & C)',
+      );
+
+      const parsedBC = parseAiJson(step3Result.text);
+      const bcDirections = parsedBC.directions || [];
+      directionB = bcDirections[0] || null;
+      directionC = bcDirections[1] || null;
+      modelsUsed.push({ step: 'directions-bc', model: step3Result.model });
+
+      logger.info(
+        { brandId, step: 3, model: step3Result.model, dirCount: bcDirections.length, durationMs: Date.now() - startTime },
+        'Step 3 complete: directions B & C generated',
+      );
+    } catch (step3Err) {
+      logger.error({ brandId, error: step3Err.message }, 'Step 3 failed -- returning direction A only');
+
+      // Graceful degradation: return whatever directions we have
+      const partialDirections = [directionA];
+      emitProgress(io, userId, {
+        phase: 'generating',
+        progress: 85,
+        message: 'Partial results ready (1 direction). Finalizing...',
+        data: { directions: partialDirections, socialContext },
+      });
+
+      // Save and return partial results
+      return await saveAndRespond(res, brand, brandId, userId, partialDirections, socialContext, modelsUsed, startTime, io);
+    }
+
+    // Collect all completed directions
+    const allDirections = [directionA];
+    if (directionB) allDirections.push(directionB);
+    if (directionC) allDirections.push(directionC);
+
+    emitProgress(io, userId, {
+      phase: 'generating',
+      progress: 85,
+      message: `All ${allDirections.length} directions crafted. Validating...`,
+      data: { directions: allDirections, socialContext },
+    });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 4: VALIDATE_HARMONIZE (Haiku, ~10s)
+    // Cross-check colors, fonts, and differentiation
+    // ──────────────────────────────────────────────────────────────────────
+    let finalDirections = allDirections;
+    try {
+      if (allDirections.length >= 3) {
+        const validationPrompt = buildValidationPrompt(allDirections);
+
+        const step4Result = await withTimeout(
+          routeModel('brand-validation', {
+            systemPrompt: VALIDATION_SYSTEM,
+            prompt: validationPrompt,
+            maxTokens: 2048,
+            temperature: 0.3,
+            jsonMode: true,
+          }),
+          60_000,
+          'Step 4 (validation)',
+        );
+
+        const validated = parseAiJson(step4Result.text);
+        if (validated.directions && validated.directions.length >= allDirections.length) {
+          finalDirections = validated.directions;
+          modelsUsed.push({ step: 'validation', model: step4Result.model });
+
+          if (validated.fixes?.length > 0) {
+            logger.info(
+              { brandId, step: 4, fixes: validated.fixes },
+              'Step 4: validation applied fixes',
+            );
+          }
+        }
+
+        logger.info(
+          { brandId, step: 4, model: step4Result.model, durationMs: Date.now() - startTime },
+          'Step 4 complete: directions validated',
+        );
+      } else {
+        logger.info({ brandId, dirCount: allDirections.length }, 'Skipping validation (fewer than 3 directions)');
+      }
+    } catch (step4Err) {
+      // Validation failure is non-fatal -- use unvalidated directions
+      logger.warn({ brandId, error: step4Err.message }, 'Step 4 (validation) failed -- using unvalidated directions');
+    }
+
+    emitProgress(io, userId, {
+      phase: 'complete',
+      progress: 100,
+      message: 'Brand directions ready!',
+      data: { directions: finalDirections, socialContext },
+    });
+
+    // Save and return final results
+    return await saveAndRespond(res, brand, brandId, userId, finalDirections, socialContext, modelsUsed, startTime, io);
   } catch (err) {
     next(err);
+  }
+}
+
+/**
+ * Save brand identity directions to wizard_state and send HTTP response.
+ * @param {import('express').Response} res
+ * @param {Object} brand - Brand record from DB
+ * @param {string} brandId
+ * @param {string} userId
+ * @param {Array} directions
+ * @param {string|null} socialContext
+ * @param {Array} modelsUsed
+ * @param {number} startTime
+ * @param {import('socket.io').Server|null} io
+ */
+async function saveAndRespond(res, brand, brandId, userId, directions, socialContext, modelsUsed, startTime, io) {
+  const updatedState = {
+    ...(brand.wizard_state || {}),
+    'brand-identity': {
+      ...(brand.wizard_state?.['brand-identity'] || {}),
+      directions,
+      socialContext,
+      generatedAt: new Date().toISOString(),
+      modelsUsed,
+      pipeline: 'chunked-4-step',
+    },
+  };
+
+  const { error: updateError } = await supabaseAdmin
+    .from('brands')
+    .update({
+      wizard_step: 'identity',
+      wizard_state: updatedState,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', brandId);
+
+  if (updateError) {
+    logger.error({ brandId, error: updateError.message, code: updateError.code }, 'Failed to save brand identity to wizard_state');
+  }
+
+  const totalDurationMs = Date.now() - startTime;
+  logger.info(
+    { brandId, userId, directionCount: directions.length, modelsUsed, totalDurationMs, stateSize: JSON.stringify(updatedState).length },
+    'Brand identity pipeline complete',
+  );
+
+  emitComplete(io, userId, { directions, socialContext });
+
+  res.json({
+    success: true,
+    data: {
+      brandId,
+      step: 'brand-identity',
+      directions,
+      socialContext,
+      model: modelsUsed.map((m) => m.model).join(', '),
+    },
+  });
+}
+
+/**
+ * Fallback: generate all 3 directions in a single monolithic AI call.
+ * Used when the chunked pipeline fails at an early step.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {Object} brand
+ * @param {Object} socialAnalysis
+ * @param {string|null} brandName
+ * @param {import('socket.io').Server|null} io
+ * @param {string} userId
+ */
+async function fallbackMonolithicGeneration(req, res, brand, socialAnalysis, brandName, io, userId) {
+  const brandId = brand.id;
+  const startTime = Date.now();
+
+  emitProgress(io, userId, {
+    phase: 'generating',
+    progress: 30,
+    message: 'Generating all brand directions (fallback mode)...',
+  });
+
+  logger.info({ brandId, userId }, 'Falling back to monolithic brand identity generation');
+
+  const taskPrompt = buildDirectionsTaskPrompt({
+    socialAnalysis,
+    brandId,
+    userId,
+    brandName,
+    userPreferences: req.body,
+  });
+
+  try {
+    const aiResult = await withTimeout(
+      routeModel('brand-vision', {
+        systemPrompt: BRAND_GENERATOR_PROMPT,
+        prompt: taskPrompt,
+        maxTokens: 8192,
+        temperature: 0.8,
+        jsonMode: true,
+      }),
+      120_000,
+      'Monolithic fallback',
+    );
+
+    const parsed = parseAiJson(aiResult.text);
+    const directions = parsed.directions || [];
+    const socialContext = parsed.socialContext || null;
+    const modelsUsed = [{ step: 'monolithic-fallback', model: aiResult.model }];
+
+    return await saveAndRespond(res, brand, brandId, userId, directions, socialContext, modelsUsed, startTime, io);
+  } catch (fallbackErr) {
+    logger.error({ brandId, error: fallbackErr.message }, 'Monolithic fallback also failed');
+    return res.status(503).json({
+      success: false,
+      error: 'Brand identity generation is temporarily unavailable. Please try again in a moment.',
+    });
   }
 }
 

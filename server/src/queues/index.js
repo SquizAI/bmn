@@ -21,6 +21,22 @@ import { logger } from '../lib/logger.js';
 
 /** @type {Record<string, QueueConfig>} */
 export const QUEUE_CONFIGS = {
+  'social-analysis': {
+    name: 'social-analysis',
+    concurrency: 3,
+    timeout: 180_000,       // 3 minutes total (chunked AI processing)
+    priority: 1,            // Highest -- user is actively waiting
+    retry: {
+      attempts: 2,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 200, age: 86_400 },  // Keep 200 or 24 hours
+      removeOnFail: { count: 500, age: 604_800 },     // Keep 500 or 7 days
+    },
+  },
+
   'brand-wizard': {
     name: 'brand-wizard',
     concurrency: 2,

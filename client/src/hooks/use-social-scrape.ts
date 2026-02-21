@@ -6,10 +6,14 @@ import type { SocialHandlesInput, CreatorDossier } from '@/lib/dossier-types';
 interface AnalyzeSocialResponse {
   brandId: string;
   step: string;
-  /** Present when dossier is returned directly (no BullMQ) */
+  /** Present when dossier is returned directly (cache hit, no BullMQ) */
   dossier?: Partial<CreatorDossier>;
   /** Present when job is queued via BullMQ */
   jobId?: string;
+  /** Job status — 'processing' when dispatched to BullMQ */
+  status?: 'processing';
+  /** Human-readable status message */
+  message?: string;
   cached?: boolean;
   model?: string;
 }
