@@ -138,7 +138,7 @@ export async function listBrands(req, res, next) {
       .from('brands')
       .select('*', { count: 'exact' })
       .eq('user_id', userId)
-      .neq('status', 'deleted')
+      .neq('status', 'archived')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -316,22 +316,23 @@ export async function deleteBrand(req, res, next) {
     const userId = req.user.id;
     const { brandId } = req.params;
 
-    // Verify ownership
+    // Verify ownership (exclude already-archived brands)
     const { data: existing, error: fetchErr } = await supabaseAdmin
       .from('brands')
       .select('id')
       .eq('id', brandId)
       .eq('user_id', userId)
-      .neq('status', 'deleted')
+      .neq('status', 'archived')
       .single();
 
     if (fetchErr || !existing) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
+    // Soft-delete by archiving (status enum: draft/generating/review/complete/archived)
     const { error } = await supabaseAdmin
       .from('brands')
-      .update({ status: 'deleted', updated_at: new Date().toISOString() })
+      .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('id', brandId);
 
     if (error) {
@@ -339,7 +340,7 @@ export async function deleteBrand(req, res, next) {
       throw error;
     }
 
-    logger.info({ brandId, userId }, 'Brand soft-deleted');
+    logger.info({ brandId, userId }, 'Brand archived (soft-deleted)');
     res.status(204).end();
   } catch (err) {
     next(err);
