@@ -83,7 +83,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
         <div className="grid grid-cols-2 gap-2">
           {(['x', 'y', 'width', 'height'] as const).map((key) => (
             <div key={key}>
-              <label className="block text-[10px] uppercase text-text-muted">{key}</label>
+              <label className="block text-xs sm:text-[10px] uppercase text-text-muted">{key}</label>
               <input
                 type="number"
                 min={key === 'width' || key === 'height' ? 1 : 0}
@@ -127,7 +127,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
         <div className="space-y-2">
           <label className="block text-xs text-text-muted mb-1">Text Constraints</label>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Max Characters</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Max Characters</label>
             <input
               type="number"
               min={1}
@@ -138,7 +138,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
             />
           </div>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Alignment</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Alignment</label>
             <select
               value={(zone.constraints.alignment as string) || 'center'}
               onChange={(e) => updateConstraint('alignment', e.target.value)}
@@ -156,7 +156,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
         <div className="space-y-2">
           <label className="block text-xs text-text-muted mb-1">Color Fill Style</label>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Default Opacity</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Default Opacity</label>
             <input
               type="range"
               min={0}
@@ -171,12 +171,12 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
               }
               className="w-full"
             />
-            <span className="text-[10px] text-text-muted">
+            <span className="text-xs sm:text-[10px] text-text-muted">
               {((zone.style.default_opacity as number) ?? 1).toFixed(2)}
             </span>
           </div>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Z-Index</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Z-Index</label>
             <input
               type="number"
               value={(zone.constraints.z_index as number) ?? 0}
@@ -191,7 +191,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
         <div className="space-y-2">
           <label className="block text-xs text-text-muted mb-1">Pattern Settings</label>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Repeat Mode</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Repeat Mode</label>
             <select
               value={(zone.constraints.repeat as string) || 'tile'}
               onChange={(e) => updateConstraint('repeat', e.target.value)}
@@ -203,7 +203,7 @@ export default function ZonePropertyPanel({ zone, onZoneChange }: ZonePropertyPa
             </select>
           </div>
           <div>
-            <label className="block text-[10px] uppercase text-text-muted">Z-Index</label>
+            <label className="block text-xs sm:text-[10px] uppercase text-text-muted">Z-Index</label>
             <input
               type="number"
               value={(zone.constraints.z_index as number) ?? 0}

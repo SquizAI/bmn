@@ -52,7 +52,7 @@ function ReferralLink({ referralUrl, referralCode, className }: ReferralLinkProp
         </Button>
       </div>
 
-      <p className="mt-2 text-[11px] text-text-muted">
+      <p className="mt-2 text-xs text-text-muted">
         Code: <span className="font-mono font-medium text-text">{referralCode}</span>
       </p>
     </Card>

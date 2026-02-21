@@ -175,9 +175,9 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-3 font-semibold text-text-muted">User</th>
                   <th className="px-4 py-3 font-semibold text-text-muted">Role</th>
                   <th className="px-4 py-3 font-semibold text-text-muted">Status</th>
-                  <th className="px-4 py-3 font-semibold text-text-muted">Brands</th>
-                  <th className="px-4 py-3 font-semibold text-text-muted">Tier</th>
-                  <th className="px-4 py-3 font-semibold text-text-muted">Joined</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-semibold text-text-muted">Brands</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-semibold text-text-muted">Tier</th>
+                  <th className="hidden lg:table-cell px-4 py-3 font-semibold text-text-muted">Joined</th>
                   <th className="px-4 py-3 font-semibold text-text-muted">Actions</th>
                 </tr>
               </thead>
@@ -199,13 +199,13 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <UserStatusBadge status={user.status} />
                     </td>
-                    <td className="px-4 py-3 text-text-secondary">{user.brandsCount}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3 text-text-secondary">{user.brandsCount}</td>
+                    <td className="hidden md:table-cell px-4 py-3">
                       <span className="capitalize text-text-secondary">
                         {user.subscriptionTier}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-text-muted">
+                    <td className="hidden lg:table-cell px-4 py-3 text-text-muted">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">

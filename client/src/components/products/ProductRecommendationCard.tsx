@@ -79,7 +79,7 @@ export function ProductRecommendationCard({
 
       {/* Selected check */}
       {isSelected && (
-        <div className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white shadow-md">
+        <div className="absolute right-3 top-3 z-10 flex h-8 w-8 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-primary text-white shadow-md">
           <Check className="h-4 w-4" />
         </div>
       )}
@@ -149,10 +149,10 @@ export function ProductRecommendationCard({
 
         {/* Niche + Margin badges */}
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-medium text-primary">
+          <span className="rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary">
             {Math.round(product.nicheMatchScore * 100)}% niche fit
           </span>
-          <span className="rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+          <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary">
             {Math.round(product.marginPercent)}% margin
           </span>
           <SeasonalBadge category={product.category} />
@@ -172,7 +172,7 @@ export function ProductRecommendationCard({
             type="button"
             onClick={() => onToggle(product.sku)}
             className={cn(
-              'flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all',
+              'flex-1 rounded-lg px-3 py-2.5 sm:py-2 text-xs font-semibold transition-all',
               isSelected
                 ? 'bg-primary text-white'
                 : 'bg-surface-hover text-text hover:bg-primary-light hover:text-primary',
@@ -184,7 +184,7 @@ export function ProductRecommendationCard({
             <button
               type="button"
               onClick={() => onViewDetail(product.sku)}
-              className="rounded-lg p-2 text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
+              className="rounded-lg p-2.5 sm:p-2 text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
             >
               <Info className="h-4 w-4" />
             </button>

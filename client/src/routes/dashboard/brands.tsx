@@ -29,7 +29,7 @@ function StatusBadge({ status }: { status: Brand['status'] }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
+        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
         styles[status],
       )}
     >
@@ -146,7 +146,7 @@ function BrandCard({ brand }: { brand: Brand }) {
               {brand.name}
             </h3>
           </Link>
-          <div className="mt-1.5 flex items-center gap-1 text-[11px] text-text-muted">
+          <div className="mt-1.5 flex items-center gap-1 text-xs text-text-muted">
             <Clock className="h-3 w-3" />
             <span>{updatedAt}</span>
           </div>
@@ -191,7 +191,7 @@ function EmptyState() {
           </Button>
         </Link>
 
-        <div className="mt-6 grid grid-cols-3 gap-8 text-center">
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-8 text-center">
           {[
             { value: '2min', label: 'Avg. creation time' },
             { value: '7', label: 'AI-powered steps' },
@@ -199,7 +199,7 @@ function EmptyState() {
           ].map((stat) => (
             <div key={stat.label}>
               <p className="text-lg font-bold tracking-tight text-text">{stat.value}</p>
-              <p className="mt-0.5 text-[11px] text-text-muted">{stat.label}</p>
+              <p className="mt-0.5 text-xs text-text-muted">{stat.label}</p>
             </div>
           ))}
         </div>

@@ -94,8 +94,8 @@ function QuickActions({ className }: QuickActionsProps) {
                 {action.icon}
               </div>
               <div>
-                <p className="text-[12px] font-medium text-text">{action.label}</p>
-                <p className="text-[10px] text-text-muted">{action.description}</p>
+                <p className="text-xs font-medium text-text">{action.label}</p>
+                <p className="text-[11px] text-text-muted">{action.description}</p>
               </div>
             </Link>
           </motion.div>

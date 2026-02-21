@@ -172,7 +172,7 @@ function CreateApiKeyForm({ onClose }: { onClose: () => void }) {
                   />
                   <div>
                     <span className="block text-[12px] font-medium text-text">{scope.label}</span>
-                    <span className="block text-[10px] text-text-muted">{scope.description}</span>
+                    <span className="block text-xs text-text-muted">{scope.description}</span>
                   </div>
                 </label>
               ))}
@@ -232,7 +232,7 @@ function ApiKeyRow({ apiKey }: { apiKey: ApiKey }) {
           <Key className="h-4 w-4 text-text-muted" />
           <span className="text-[13px] font-medium text-text">{apiKey.name}</span>
         </div>
-        <div className="mt-1 flex items-center gap-3 text-[11px] text-text-muted">
+        <div className="mt-1 flex items-center gap-3 text-xs text-text-muted">
           <code className="rounded bg-surface-hover px-1.5 py-0.5 font-mono">
             {apiKey.key_prefix}{'****'.repeat(4)}
           </code>
@@ -259,7 +259,7 @@ function ApiKeyRow({ apiKey }: { apiKey: ApiKey }) {
           {apiKey.scopes.map((scope) => (
             <span
               key={scope}
-              className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+              className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
             >
               {scope}
             </span>
@@ -460,7 +460,7 @@ export default function ApiAccessPage() {
           <Shield className="mt-0.5 h-4 w-4 text-info" />
           <div>
             <h4 className="text-[12px] font-medium text-info">Security Best Practices</h4>
-            <ul className="mt-1 space-y-0.5 text-[11px] text-info/80">
+            <ul className="mt-1 space-y-0.5 text-xs text-info/80">
               <li>Never share your API keys or commit them to version control.</li>
               <li>Use environment variables to store keys in your applications.</li>
               <li>Assign the minimum required scopes for each key.</li>

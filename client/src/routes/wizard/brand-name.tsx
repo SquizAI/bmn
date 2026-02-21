@@ -305,7 +305,7 @@ export default function BrandNamePage() {
             </p>
             <p className="text-xs text-text-muted">Checking domains, social handles, and trademarks</p>
             {generation.progress > 0 && (
-              <div className="mt-2 h-1.5 w-48 overflow-hidden rounded-full bg-border">
+              <div className="mt-2 h-1.5 w-full max-w-48 overflow-hidden rounded-full bg-border">
                 <motion.div
                   className="h-full rounded-full bg-accent"
                   initial={{ width: 0 }}

@@ -47,7 +47,7 @@ function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
         active ? 'bg-success-bg text-success' : 'bg-surface-hover text-text-muted',
       )}
     >
@@ -63,7 +63,7 @@ function DeliveryStatusBadge({ success, statusCode }: { success: boolean; status
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
         success ? 'bg-success-bg text-success' : 'bg-error-bg text-error',
       )}
     >
@@ -102,7 +102,7 @@ function DeliveryLog({ webhookId }: { webhookId: string }) {
         {deliveries.map((delivery) => (
           <div
             key={delivery.id}
-            className="flex items-center justify-between rounded bg-surface-hover px-3 py-2 text-[11px]"
+            className="flex items-center justify-between rounded bg-surface-hover px-3 py-2 text-xs"
           >
             <div className="flex items-center gap-2">
               <DeliveryStatusBadge success={delivery.success} statusCode={delivery.status_code} />
@@ -198,13 +198,13 @@ function WebhookCard({ webhook }: WebhookCardProps) {
             {webhook.events.map((event) => (
               <span
                 key={event}
-                className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary"
               >
                 {event}
               </span>
             ))}
           </div>
-          <p className="mt-1 text-[11px] text-text-muted">
+          <p className="mt-1 text-xs text-text-muted">
             Created{' '}
             {new Date(webhook.created_at).toLocaleDateString('en-US', {
               month: 'short',
@@ -403,7 +403,7 @@ function CreateWebhookForm({ onClose }: { onClose: () => void }) {
                 />
                 <div>
                   <span className="block text-[12px] font-medium text-text">{event.label}</span>
-                  <span className="block text-[10px] text-text-muted">{event.description}</span>
+                  <span className="block text-xs text-text-muted">{event.description}</span>
                 </div>
               </label>
             ))}
@@ -510,7 +510,7 @@ export default function WebhooksPage() {
       {/* Info Banner */}
       <div className="rounded-lg border border-info-border bg-info-bg p-4">
         <h4 className="text-[12px] font-medium text-info">Webhook Signature Verification</h4>
-        <p className="mt-1 text-[11px] text-info/80">
+        <p className="mt-1 text-xs text-info/80">
           Each webhook delivery includes an <code className="rounded bg-info/10 px-1">X-BMN-Signature</code> header
           containing an HMAC-SHA256 signature. Verify this signature using your webhook secret to ensure
           the payload was sent by Brand Me Now.

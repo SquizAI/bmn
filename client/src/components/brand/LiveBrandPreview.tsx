@@ -69,7 +69,7 @@ function ProductLabelLive({
       />
 
       <p
-        className="text-[10px] uppercase tracking-widest"
+        className="text-xs sm:text-[10px] uppercase tracking-widest"
         style={{ fontFamily: `'${bodyFont}', sans-serif`, color: '#999' }}
       >
         Premium Quality
@@ -112,7 +112,7 @@ function ProductLabelLive({
       )}
 
       <p
-        className="mt-3 text-[10px]"
+        className="mt-3 text-xs sm:text-[10px]"
         style={{ fontFamily: `'${bodyFont}', sans-serif`, color: '#aaa' }}
       >
         Net Wt. 90 capsules
@@ -161,7 +161,7 @@ function SocialPostLive({
             style={{ backgroundColor: primaryColor }}
           />
           <span
-            className="text-[11px] font-semibold text-text"
+            className="text-xs font-semibold text-text"
             style={{ fontFamily: `'${bodyFont}', sans-serif` }}
           >
             {(brandName || 'brand').toLowerCase().replace(/\s+/g, '')}
@@ -231,7 +231,7 @@ export function LiveBrandPreview({
             </button>
           </div>
         </div>
-        <p className="mt-1 text-[10px] text-text-muted">
+        <p className="mt-1 text-xs sm:text-[10px] text-text-muted">
           Updates in real-time as you edit
         </p>
       </div>
@@ -285,12 +285,12 @@ export function LiveBrandPreview({
                 style={{ backgroundColor }}
               />
             )}
-            <span className="ml-auto text-[10px] text-text-muted">
+            <span className="ml-auto text-xs sm:text-[10px] text-text-muted">
               {headingFont} + {bodyFont}
             </span>
           </div>
           {archetype && (
-            <p className="text-[10px] text-text-muted">
+            <p className="text-xs sm:text-[10px] text-text-muted">
               Archetype: <span className="font-medium text-text-secondary">{archetype}</span>
             </p>
           )}

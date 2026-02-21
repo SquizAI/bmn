@@ -87,7 +87,7 @@ export default function DossierLoadingSequence({
                 <div className="h-3 w-3 rounded-full border border-[var(--bmn-color-border)]" />
               )}
               <span
-                className={`text-[10px] ${
+                className={`text-xs ${
                   reached
                     ? 'text-[var(--bmn-color-text-secondary)]'
                     : 'text-[var(--bmn-color-text-muted)]'

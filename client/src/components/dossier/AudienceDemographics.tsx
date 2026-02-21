@@ -64,7 +64,7 @@ export default function AudienceDemographics({ audience }: AudienceDemographicsP
                 title={`Other: ${audience.genderSplit.other}%`}
               />
             </div>
-            <div className="mt-1 flex justify-between text-[10px] text-[var(--bmn-color-text-muted)]">
+            <div className="mt-1 flex justify-between text-xs text-[var(--bmn-color-text-muted)]">
               <span>F {audience.genderSplit.female}%</span>
               <span>M {audience.genderSplit.male}%</span>
               {audience.genderSplit.other > 0 && <span>Other {audience.genderSplit.other}%</span>}

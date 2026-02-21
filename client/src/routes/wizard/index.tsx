@@ -60,13 +60,13 @@ export default function WizardLayout() {
       </div>
 
       {/* Minimal header with phase indicators */}
-      <header className="flex items-center justify-between px-6 py-4 md:px-10">
+      <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-10">
         {/* Left: Back button + Logo */}
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleBack}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
             title={currentIndex > 0 ? 'Previous step' : 'Back to dashboard'}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -93,7 +93,7 @@ export default function WizardLayout() {
                 )}
                 <div
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300',
+                    'flex items-center gap-1.5 rounded-full px-2.5 py-1.5 sm:py-1 text-xs sm:text-[11px] font-medium transition-all duration-300',
                     i < currentPhaseIndex
                       ? 'bg-accent/15 text-accent'
                       : i === currentPhaseIndex
@@ -125,7 +125,7 @@ export default function WizardLayout() {
             ))}
           </div>
 
-          <span className="hidden text-[11px] text-text-muted md:inline">
+          <span className="hidden text-xs sm:text-[11px] text-text-muted md:inline">
             {WIZARD_STEPS[currentIndex]?.label ?? currentStep}
           </span>
         </div>
@@ -135,7 +135,7 @@ export default function WizardLayout() {
           <button
             type="button"
             onClick={() => useUIStore.getState().setChatOpen(!useUIStore.getState().chatOpen)}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
             title="Toggle Brand Assistant"
           >
             <MessageSquare className="h-4 w-4" />
@@ -143,7 +143,7 @@ export default function WizardLayout() {
           <button
             type="button"
             onClick={() => navigate(ROUTES.DASHBOARD)}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            className="flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
             title="Save & exit to dashboard"
           >
             <X className="h-4 w-4" />
@@ -152,7 +152,7 @@ export default function WizardLayout() {
       </header>
 
       {/* Step content */}
-      <div className="mx-auto max-w-(--bmn-max-width-wizard) px-6 py-8 md:px-10 md:py-12">
+      <div className="mx-auto max-w-(--bmn-max-width-wizard) px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-12">
         <Outlet />
       </div>
 

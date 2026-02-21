@@ -35,7 +35,7 @@ function Header({ className }: HeaderProps) {
     <header
       className={cn(
         'sticky top-0 z-(--bmn-z-sticky) flex h-(--bmn-header-height) items-center justify-between',
-        'border-b border-border bg-surface/80 backdrop-blur-lg px-5 md:px-8',
+        'border-b border-border bg-surface/80 backdrop-blur-lg px-3 sm:px-5 md:px-8',
         className,
       )}
     >
@@ -79,13 +79,15 @@ function Header({ className }: HeaderProps) {
             >
               <MessageSquare className="h-4 w-4" />
             </Button>
-            <Link to={ROUTES.DASHBOARD_SETTINGS}>
-              <Button variant="ghost" size="icon" aria-label="Settings">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
-            <div className="ml-1 flex items-center gap-2 rounded-md px-3 py-1.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            <span className="hidden sm:block">
+              <Link to={ROUTES.DASHBOARD_SETTINGS}>
+                <Button variant="ghost" size="icon" aria-label="Settings">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </span>
+            <div className="ml-1 flex items-center gap-2 rounded-md px-2 sm:px-3 py-1.5">
+              <div className="flex h-9 w-9 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-primary text-sm sm:text-xs font-medium text-primary-foreground">
                 {user?.email?.charAt(0).toUpperCase() ?? 'U'}
               </div>
               <span className="hidden text-sm text-text-secondary md:inline">

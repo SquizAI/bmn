@@ -209,12 +209,12 @@ export function BrandVoiceSamples({ direction, brandName, brandId }: BrandVoiceS
             <p className="mt-1 text-xs text-text-muted">
               Voice: {direction.voice.tone} / {direction.voice.vocabularyLevel}
               {aiSamples && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-accent-light px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                <span className="ml-2 inline-flex items-center rounded-full bg-accent-light px-1.5 py-0.5 text-xs font-medium text-accent">
                   AI generated
                 </span>
               )}
               {!aiSamples && !isLoading && (
-                <span className="ml-2 inline-flex items-center rounded-full bg-surface-hover px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                <span className="ml-2 inline-flex items-center rounded-full bg-surface-hover px-1.5 py-0.5 text-xs font-medium text-text-muted">
                   Template
                 </span>
               )}

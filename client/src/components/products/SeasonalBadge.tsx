@@ -71,7 +71,7 @@ export function SeasonalBadge({ category, className }: SeasonalBadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-medium text-primary',
+        'inline-flex items-center gap-1 rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary',
         className,
       )}
     >

@@ -63,7 +63,7 @@ function ReferralLeaderboard({ entries, className }: ReferralLeaderboardProps) {
               <p className="truncate text-[13px] font-medium text-text">
                 {entry.name}
               </p>
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xs text-text-muted">
                 {formatNumber(entry.conversions)} conversions
               </p>
             </div>

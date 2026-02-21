@@ -81,7 +81,7 @@ export default function DashboardOverview() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-4 sm:gap-6"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -93,13 +93,13 @@ export default function DashboardOverview() {
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+        <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-border p-0.5">
           {periods.map((p) => (
             <button
               key={p.value}
               type="button"
               onClick={() => setPeriod(p.value)}
-              className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
+              className={`whitespace-nowrap rounded-md px-3 py-2 sm:py-1.5 text-[12px] font-medium transition-all ${
                 period === p.value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-text-secondary hover:bg-surface-hover'
@@ -123,7 +123,7 @@ export default function DashboardOverview() {
       <MetricsGrid items={metricsItems} columns={4} />
 
       {/* Two-column layout: Products + Health Score */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
         <div className="lg:col-span-2">
           <TopProductsList
             products={topProducts?.items ?? []}
@@ -141,7 +141,7 @@ export default function DashboardOverview() {
       <QuickActions />
 
       {/* Insights Row: Restock Alerts, A/B Tests, Brand Evolution */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3">
         <RestockAlerts
           alerts={restockData?.alerts}
           loading={restockLoading}

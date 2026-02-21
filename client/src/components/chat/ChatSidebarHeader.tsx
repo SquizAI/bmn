@@ -39,7 +39,7 @@ function ChatSidebarHeader({ onNewSession }: { onNewSession: () => void }) {
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-text truncate">Brand Assistant</h3>
             {brandContext && (
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary truncate max-w-[120px]">
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary truncate max-w-[120px]">
                 {brandContext.brandName}
               </span>
             )}
@@ -53,7 +53,7 @@ function ChatSidebarHeader({ onNewSession }: { onNewSession: () => void }) {
                 status === 'tool' && 'bg-info animate-pulse',
               )}
             />
-            <p className="text-[10px] text-text-muted truncate">
+            <p className="text-xs text-text-muted truncate">
               {status === 'tool' && <Wrench className="mr-0.5 inline h-2.5 w-2.5" />}
               {status === 'thinking' && <Loader2 className="mr-0.5 inline h-2.5 w-2.5 animate-spin" />}
               {statusLabel}

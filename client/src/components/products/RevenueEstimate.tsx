@@ -118,7 +118,7 @@ export function RevenueEstimate({
           <span className="text-sm font-semibold text-text">Estimated Revenue</span>
         </div>
         {hasAudience && (
-          <div className="flex items-center gap-1 text-[10px] text-text-muted">
+          <div className="flex items-center gap-1 text-xs text-text-muted">
             <Users className="h-3 w-3" />
             <span>Based on {formatNumber(audienceData.followers)} followers</span>
           </div>
@@ -135,7 +135,7 @@ export function RevenueEstimate({
               type="button"
               onClick={() => setSelectedTier(tier.label)}
               className={cn(
-                'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all',
+                'flex-1 rounded-md px-2 py-2 sm:py-1.5 text-xs font-medium transition-all',
                 selectedTier === tier.label
                   ? 'bg-surface shadow-sm text-text'
                   : 'text-text-muted hover:text-text-secondary',

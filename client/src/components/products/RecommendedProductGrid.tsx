@@ -61,7 +61,7 @@ export function RecommendedProductGrid({
             type="button"
             onClick={() => setViewMode('grid')}
             className={cn(
-              'rounded-md p-1.5 transition-colors',
+              'rounded-md p-2.5 sm:p-1.5 transition-colors',
               viewMode === 'grid' ? 'bg-surface text-text shadow-sm' : 'text-text-muted',
             )}
           >
@@ -71,7 +71,7 @@ export function RecommendedProductGrid({
             type="button"
             onClick={() => setViewMode('list')}
             className={cn(
-              'rounded-md p-1.5 transition-colors',
+              'rounded-md p-2.5 sm:p-1.5 transition-colors',
               viewMode === 'list' ? 'bg-surface text-text shadow-sm' : 'text-text-muted',
             )}
           >

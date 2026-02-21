@@ -29,7 +29,7 @@ function RevenueCard({ title, amount, change, sparkline, className }: RevenueCar
       <Card variant="default" padding="md" className={cn('relative overflow-hidden', className)}>
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
               {title}
             </p>
             <p className="mt-1 text-2xl font-bold tracking-tight text-text">
@@ -45,7 +45,7 @@ function RevenueCard({ title, amount, change, sparkline, className }: RevenueCar
               )}
               <span
                 className={cn(
-                  'text-[11px] font-semibold',
+                  'text-xs font-semibold',
                   isNeutral
                     ? 'text-text-muted'
                     : isPositive
@@ -55,7 +55,7 @@ function RevenueCard({ title, amount, change, sparkline, className }: RevenueCar
               >
                 {isPositive ? '+' : ''}{change}%
               </span>
-              <span className="text-[11px] text-text-muted">vs prev period</span>
+              <span className="text-xs text-text-muted">vs prev period</span>
             </div>
           </div>
 

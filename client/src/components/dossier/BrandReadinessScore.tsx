@@ -94,7 +94,7 @@ export default function BrandReadinessScore({ readiness }: BrandReadinessScorePr
               {animatedScore}
             </span>
             <span
-              className="text-[10px] font-semibold uppercase"
+              className="text-xs font-semibold uppercase"
               style={{ color }}
             >
               {tierLabels[readiness.tier]}

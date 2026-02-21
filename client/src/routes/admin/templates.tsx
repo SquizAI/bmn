@@ -283,7 +283,7 @@ export default function AdminTemplatesPage() {
                       <h3 className="font-semibold text-text">{template.name}</h3>
                       <p className="text-xs text-text-muted capitalize">{template.category}</p>
                     </div>
-                    <span className="flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                    <span className="flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary">
                       <Package className="h-3 w-3" />
                       {template.branding_zones?.length || 0} zones
                     </span>

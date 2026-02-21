@@ -113,7 +113,7 @@ export default function EnhancedDossierMetrics({
                   <span className="text-xs font-medium text-[var(--bmn-color-primary)]">
                     #{ht.tag.replace(/^#/, '')}
                   </span>
-                  <span className="text-[10px] text-[var(--bmn-color-text-muted)]">
+                  <span className="text-xs text-[var(--bmn-color-text-muted)]">
                     {ht.count}
                   </span>
                 </motion.div>
@@ -232,7 +232,7 @@ export default function EnhancedDossierMetrics({
                     />
                   )}
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-[var(--bmn-color-text-muted)]">
+                <div className="mt-1 flex justify-between text-xs text-[var(--bmn-color-text-muted)]">
                   <span>F {audience.genderSplit.female}%</span>
                   <span>M {audience.genderSplit.male}%</span>
                   {audience.genderSplit.other > 0 && <span>Other {audience.genderSplit.other}%</span>}

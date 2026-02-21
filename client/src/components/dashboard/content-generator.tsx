@@ -132,7 +132,7 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
     <div className={cn('flex flex-col gap-6', className)}>
       {/* Platform Selection */}
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
           Platform
         </p>
         <div className="flex flex-wrap gap-2">
@@ -157,7 +157,7 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
 
       {/* Content Type */}
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
           Content Type
         </p>
         <div className="flex flex-wrap gap-2">
@@ -181,7 +181,7 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
 
       {/* Tone */}
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
           Tone
         </p>
         <div className="flex flex-wrap gap-2">
@@ -205,7 +205,7 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
 
       {/* Topic */}
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
           Topic (optional)
         </p>
         <textarea
@@ -281,7 +281,7 @@ function GeneratedPost({ content, onCopy, copied }: GeneratedPostProps) {
               {content.hashtags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-0.5 rounded-full bg-info-bg px-2 py-0.5 text-[11px] font-medium text-info"
+                  className="inline-flex items-center gap-0.5 rounded-full bg-info-bg px-2 py-0.5 text-xs font-medium text-info"
                 >
                   <Hash className="h-2.5 w-2.5" />
                   {tag}
@@ -293,7 +293,7 @@ function GeneratedPost({ content, onCopy, copied }: GeneratedPostProps) {
 
         {content.imagePrompt && (
           <div className="mt-3">
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
               Image Prompt
             </p>
             <p className="text-[12px] italic text-text-secondary">

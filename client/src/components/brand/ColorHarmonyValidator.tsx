@@ -341,7 +341,7 @@ function ColorSwatchRow({ colors }: { colors: ColorEntry[] }) {
             title={`${color.name} (${color.hex})`}
           />
           <span className="text-xs font-medium text-text">{color.name}</span>
-          <span className="text-[10px] font-mono text-text-muted">{color.hex}</span>
+          <span className="text-xs font-mono text-text-muted">{color.hex}</span>
         </motion.div>
       ))}
     </div>

@@ -600,7 +600,7 @@ export default function BrandIdentityPage() {
             </div>
 
             {/* 3 Direction Cards */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
               {directions.map((direction, index) => (
                 <BrandDirectionCard
                   key={direction.id}
@@ -838,7 +838,7 @@ export default function BrandIdentityPage() {
                       <Input
                         key={index}
                         placeholder={`Value ${index + 1}`}
-                        className="w-40"
+                        className="w-full sm:w-40"
                         {...register(`values.${index}`)}
                       />
                     ))}

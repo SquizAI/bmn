@@ -74,7 +74,7 @@ function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
           )}
         </div>
         {timestamp && (
-          <span className="px-1 text-[10px] text-text-muted">
+          <span className="px-1 text-xs text-text-muted">
             {formatTime(timestamp)}
           </span>
         )}

@@ -128,7 +128,7 @@ export function ProductCompare({ products, onRemove, className }: ProductCompare
                   )}
                   <p className="font-semibold text-text">{p.name}</p>
                   {p.rank <= 3 && (
-                    <span className="mt-1 inline-block rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="mt-1 inline-block rounded-full bg-primary-light px-2 py-0.5 text-xs font-bold text-primary">
                       AI Pick #{p.rank}
                     </span>
                   )}

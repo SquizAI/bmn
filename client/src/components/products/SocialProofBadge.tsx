@@ -45,7 +45,7 @@ export function SocialProofBadge({
         <span
           key={label}
           className={cn(
-            'inline-flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-text-secondary',
+            'inline-flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary',
           )}
         >
           <Icon className="h-3 w-3" />

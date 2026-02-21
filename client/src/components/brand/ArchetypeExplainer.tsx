@@ -147,11 +147,11 @@ export function ArchetypeExplainer({ archetype, compact = false, className }: Ar
               <p className="text-xs font-bold text-text">{archetype}</p>
               <p className="mt-1 text-xs text-text-secondary">{data.description}</p>
               <div className="mt-2 flex flex-wrap items-center gap-1">
-                <span className="text-[10px] font-medium text-text-muted italic">Think:</span>
+                <span className="text-xs font-medium text-text-muted italic">Think:</span>
                 {data.realBrands.map((brand) => (
                   <span
                     key={brand}
-                    className="inline-flex rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium text-text-secondary"
+                    className="inline-flex rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-text-secondary"
                   >
                     {brand}
                   </span>

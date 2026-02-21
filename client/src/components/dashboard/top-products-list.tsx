@@ -31,7 +31,7 @@ function TopProductsList({ products, className }: TopProductsListProps) {
       <div className="flex items-center gap-2 mb-4">
         <Package className="h-4 w-4 text-text-muted" />
         <CardTitle className="text-[13px]">Top Products</CardTitle>
-        <span className="ml-auto text-[11px] text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           {products.length} products
         </span>
       </div>
@@ -46,7 +46,7 @@ function TopProductsList({ products, className }: TopProductsListProps) {
             className="flex items-center gap-3"
           >
             {/* Rank */}
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-[11px] font-bold text-primary">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-bold text-primary">
               {i + 1}
             </span>
 
@@ -77,7 +77,7 @@ function TopProductsList({ products, className }: TopProductsListProps) {
                     }}
                   />
                 </div>
-                <span className="shrink-0 text-[11px] text-text-muted">
+                <span className="shrink-0 text-xs text-text-muted">
                   {formatNumber(product.totalOrders)} orders
                 </span>
               </div>

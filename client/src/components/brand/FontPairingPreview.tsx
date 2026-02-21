@@ -217,7 +217,7 @@ function ProductLabelPreview({
         />
 
         <p
-          className="text-[10px] uppercase tracking-widest"
+          className="text-xs sm:text-[10px] uppercase tracking-widest"
           style={{ fontFamily: `'${bodyFont}', sans-serif`, color: '#999' }}
         >
           Premium Quality
@@ -243,7 +243,7 @@ function ProductLabelPreview({
         </p>
 
         <p
-          className="mt-3 text-[10px]"
+          className="mt-3 text-xs sm:text-[10px]"
           style={{ fontFamily: `'${bodyFont}', sans-serif`, color: '#aaa' }}
         >
           Net Wt. 90 capsules / 30 servings

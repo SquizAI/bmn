@@ -31,9 +31,9 @@ function formatMetricValue(value: number, format?: string): string {
 
 function MetricsGrid({ items, columns = 4, className }: MetricsGridProps) {
   const colClass = {
-    2: 'grid-cols-1 sm:grid-cols-2',
-    3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-    4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+    2: 'grid-cols-2 gap-3 sm:gap-4',
+    3: 'grid-cols-2 sm:grid-cols-3',
+    4: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-4',
   };
 
   return (
@@ -51,7 +51,7 @@ function MetricsGrid({ items, columns = 4, className }: MetricsGridProps) {
                 {item.icon}
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
+                <p className="text-xs sm:text-[11px] font-medium uppercase tracking-wider text-text-muted">
                   {item.label}
                 </p>
                 <div className="flex items-baseline gap-2">
@@ -61,7 +61,7 @@ function MetricsGrid({ items, columns = 4, className }: MetricsGridProps) {
                   {item.change !== undefined && item.change !== 0 && (
                     <span
                       className={cn(
-                        'text-[11px] font-semibold',
+                        'text-xs sm:text-[11px] font-semibold',
                         item.change > 0 ? 'text-success' : 'text-error',
                       )}
                     >

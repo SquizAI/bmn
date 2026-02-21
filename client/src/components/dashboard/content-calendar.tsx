@@ -57,7 +57,7 @@ function ContentCalendar({ items, className }: ContentCalendarProps) {
       <div className="flex items-center gap-2 mb-4">
         <Calendar className="h-4 w-4 text-text-muted" />
         <CardTitle className="text-[13px]">Content Calendar</CardTitle>
-        <span className="ml-auto text-[11px] text-text-muted">This Week</span>
+        <span className="ml-auto text-xs text-text-muted">This Week</span>
       </div>
 
       <div className="grid grid-cols-7 gap-1">
@@ -70,7 +70,7 @@ function ContentCalendar({ items, className }: ContentCalendarProps) {
                 day.isToday && 'font-semibold',
               )}
             >
-              <p className="text-[10px] uppercase text-text-muted">{day.label}</p>
+              <p className="text-xs uppercase text-text-muted">{day.label}</p>
               <p
                 className={cn(
                   'mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-[12px]',
@@ -94,7 +94,7 @@ function ContentCalendar({ items, className }: ContentCalendarProps) {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className={cn(
-                    'rounded border p-1 text-[10px]',
+                    'rounded border p-1 text-xs',
                     PLATFORM_COLORS[item.platform] || PLATFORM_COLORS.general,
                   )}
                   title={item.caption}

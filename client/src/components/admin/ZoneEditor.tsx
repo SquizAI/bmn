@@ -302,7 +302,7 @@ export default function ZoneEditor({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <span className="rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-white truncate max-w-full">
+            <span className="rounded bg-black/50 px-1.5 py-0.5 text-xs sm:text-[10px] text-white truncate max-w-full">
               {zone.label}
             </span>
 

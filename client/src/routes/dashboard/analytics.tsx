@@ -81,13 +81,13 @@ export default function AnalyticsPage() {
             Customer demographics, purchase patterns, and referral insights.
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+        <div className="flex items-center gap-1 overflow-x-auto rounded-lg border border-border p-0.5">
           {periods.map((p) => (
             <button
               key={p.value}
               type="button"
               onClick={() => setPeriod(p.value)}
-              className={`rounded-md px-3 py-1.5 text-[12px] font-medium transition-all ${
+              className={`whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
                 period === p.value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-text-secondary hover:bg-surface-hover'
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
       {sales?.revenueTrend && sales.revenueTrend.length > 0 && (
         <Card variant="default" padding="md">
           <CardTitle className="mb-4 text-[13px]">Revenue Trend</CardTitle>
-          <div className="h-56">
+          <div className="h-44 sm:h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={sales.revenueTrend}>
                 <CartesianGrid
@@ -161,7 +161,7 @@ export default function AnalyticsPage() {
       )}
 
       {/* Two column layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
         {/* Purchase Patterns by Day */}
         {customers?.patterns.byDayOfWeek && (
           <Card variant="default" padding="md">
@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
               <Clock className="h-4 w-4 text-text-muted" />
               <CardTitle className="text-[13px]">Orders by Day of Week</CardTitle>
             </div>
-            <div className="h-48">
+            <div className="h-36 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={customers.patterns.byDayOfWeek}>
                   <CartesianGrid
@@ -218,13 +218,13 @@ export default function AnalyticsPage() {
             <div className="flex flex-col gap-2">
               {customers.demographics.topLocations.slice(0, 8).map((loc, i) => (
                 <div key={loc.location} className="flex items-center gap-3">
-                  <span className="w-5 text-right text-[11px] text-text-muted">{i + 1}</span>
+                  <span className="w-5 text-right text-xs text-text-muted">{i + 1}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
                       <span className="truncate text-[13px] text-text">
                         {loc.location}
                       </span>
-                      <span className="shrink-0 text-[11px] text-text-muted">
+                      <span className="shrink-0 text-xs text-text-muted">
                         {loc.percentage}%
                       </span>
                     </div>
@@ -257,7 +257,7 @@ export default function AnalyticsPage() {
               >
                 <div>
                   <p className="text-[13px] font-medium text-text">{source.source}</p>
-                  <p className="text-[11px] text-text-muted">
+                  <p className="text-xs text-text-muted">
                     {formatNumber(source.count)} referrals
                   </p>
                 </div>
@@ -274,21 +274,21 @@ export default function AnalyticsPage() {
       {customers?.patterns && (
         <Card variant="default" padding="md">
           <CardTitle className="mb-4 text-[13px]">Customer Insights</CardTitle>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
             <div className="rounded-lg bg-success-bg p-4 text-center">
-              <p className="text-[11px] font-medium text-success">Customer Lifetime Value</p>
+              <p className="text-xs font-medium text-success">Customer Lifetime Value</p>
               <p className="mt-1 text-2xl font-bold text-success">
                 {formatCurrency(customers.patterns.customerLifetimeValue)}
               </p>
             </div>
             <div className="rounded-lg bg-info-bg p-4 text-center">
-              <p className="text-[11px] font-medium text-info">Avg Order Value</p>
+              <p className="text-xs font-medium text-info">Avg Order Value</p>
               <p className="mt-1 text-2xl font-bold text-info">
                 {formatCurrency(customers.patterns.avgOrderValue)}
               </p>
             </div>
             <div className="rounded-lg bg-warning-bg p-4 text-center">
-              <p className="text-[11px] font-medium text-warning">Repeat Purchase Rate</p>
+              <p className="text-xs font-medium text-warning">Repeat Purchase Rate</p>
               <p className="mt-1 text-2xl font-bold text-warning">
                 {customers.patterns.repeatPurchaseRate}%
               </p>

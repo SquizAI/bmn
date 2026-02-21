@@ -179,7 +179,7 @@ export function MockupEditor({
             draggable={false}
           />
           {!showPreview && (
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-primary px-2 py-0.5 text-[10px] font-medium text-white">
+            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-primary px-2 py-0.5 text-xs font-medium text-white">
               <Move className="mr-1 inline h-2.5 w-2.5" />
               Drag to move
             </div>

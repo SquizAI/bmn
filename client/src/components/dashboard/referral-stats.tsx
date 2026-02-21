@@ -61,7 +61,7 @@ function ReferralStats({ stats, loading, className }: ReferralStatsProps) {
           <Card variant="default" padding="sm">
             <div className="flex items-center gap-2">
               {metric.icon}
-              <span className="text-[11px] text-text-muted">{metric.label}</span>
+              <span className="text-xs text-text-muted">{metric.label}</span>
             </div>
             <p className="mt-1 text-xl font-bold text-text">{metric.value}</p>
           </Card>

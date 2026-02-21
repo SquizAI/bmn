@@ -33,7 +33,7 @@ function AppShell({ showSidebar = true }: AppShellProps) {
             : 'mr-0',
         )}
       >
-        <div className="mx-auto max-w-[var(--bmn-max-width-content)] p-4 md:p-6">
+        <div className="mx-auto max-w-[var(--bmn-max-width-content)] p-3 sm:p-4 md:p-6">
           <Outlet />
         </div>
       </main>

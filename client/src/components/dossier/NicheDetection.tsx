@@ -54,7 +54,7 @@ export default function NicheDetection({ niche }: NicheDetectionProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {i === 0 && (
-                  <span className="rounded bg-[var(--bmn-color-accent)] px-1.5 py-0.5 text-[10px] font-bold uppercase text-[var(--bmn-color-accent-foreground)]">
+                  <span className="rounded bg-[var(--bmn-color-accent)] px-1.5 py-0.5 text-xs font-bold uppercase text-[var(--bmn-color-accent-foreground)]">
                     Primary
                   </span>
                 )}

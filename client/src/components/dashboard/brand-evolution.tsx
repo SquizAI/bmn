@@ -111,7 +111,7 @@ function BrandEvolution({ data, loading, className }: BrandEvolutionProps) {
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
                   stage.bgColor,
                   stage.color
                 )}
@@ -143,12 +143,12 @@ function BrandEvolution({ data, loading, className }: BrandEvolutionProps) {
                   <p className="text-[12px] font-medium text-text">
                     {suggestion.title}
                   </p>
-                  <p className="text-[11px] text-text-muted mt-0.5 leading-relaxed">
+                  <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
                     {suggestion.description}
                   </p>
                   <button
                     type="button"
-                    className="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+                    className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                   >
                     {suggestion.actionLabel}
                     <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
@@ -169,10 +169,10 @@ function BrandEvolution({ data, loading, className }: BrandEvolutionProps) {
           <div className="flex items-start gap-2">
             <Sun className={cn('h-3.5 w-3.5 mt-0.5 shrink-0', seasonStyle.text)} />
             <div>
-              <p className={cn('text-[11px] font-medium', seasonStyle.text)}>
+              <p className={cn('text-xs font-medium', seasonStyle.text)}>
                 {data.seasonalTip.season} Tip
               </p>
-              <p className="text-[11px] text-text-muted mt-0.5 leading-relaxed">
+              <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
                 {data.seasonalTip.suggestion}
               </p>
             </div>

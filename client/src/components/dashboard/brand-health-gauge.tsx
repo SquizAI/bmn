@@ -110,7 +110,7 @@ function BrandHealthGauge({ score, loading, className }: BrandHealthGaugeProps) 
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-3xl font-bold text-text">{score.overall}</span>
-            <span className="text-[11px] text-text-muted">{getScoreLabel(score.overall)}</span>
+            <span className="text-xs text-text-muted">{getScoreLabel(score.overall)}</span>
           </div>
         </div>
       </div>
@@ -122,7 +122,7 @@ function BrandHealthGauge({ score, loading, className }: BrandHealthGaugeProps) 
           if (!info) return null;
           return (
             <div key={key} className="flex items-center gap-2">
-              <span className="w-28 shrink-0 text-[11px] text-text-muted">
+              <span className="w-28 shrink-0 text-xs text-text-muted">
                 {info.label}
               </span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-hover">
@@ -134,7 +134,7 @@ function BrandHealthGauge({ score, loading, className }: BrandHealthGaugeProps) 
                   transition={{ duration: 0.8, ease: 'easeOut' }}
                 />
               </div>
-              <span className="w-8 shrink-0 text-right text-[11px] font-medium text-text">
+              <span className="w-8 shrink-0 text-right text-xs font-medium text-text">
                 {value}
               </span>
             </div>
@@ -145,7 +145,7 @@ function BrandHealthGauge({ score, loading, className }: BrandHealthGaugeProps) 
       {/* Tips */}
       {score.tips.length > 0 && (
         <div className="mt-4 border-t border-border pt-4">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
             Tips to Improve
           </p>
           <div className="flex flex-col gap-2">

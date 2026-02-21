@@ -79,7 +79,7 @@ function StatusBadge({ status }: { status: IntegrationStatus['status'] }) {
   const c = config[status];
 
   return (
-    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', c.class)}>
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', c.class)}>
       {c.icon}
       {c.label}
     </span>
@@ -132,7 +132,7 @@ function IntegrationCard({ config, status }: IntegrationCardProps) {
 
           {/* Stats when connected */}
           {isConnected && status && (
-            <div className="mt-3 flex items-center gap-4 text-[11px] text-text-secondary">
+            <div className="mt-3 flex items-center gap-4 text-xs text-text-secondary">
               <span>
                 <span className="font-medium text-text">{formatNumber(status.productsSynced)}</span> products synced
               </span>
@@ -155,7 +155,7 @@ function IntegrationCard({ config, status }: IntegrationCardProps) {
 
           {/* Error message */}
           {status?.errorMessage && (
-            <div className="mt-2 rounded bg-error-bg p-2 text-[11px] text-error">
+            <div className="mt-2 rounded bg-error-bg p-2 text-xs text-error">
               {status.errorMessage}
             </div>
           )}

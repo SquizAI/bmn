@@ -92,7 +92,7 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
           <button
             type="button"
             onClick={() => setShowForm(!showForm)}
-            className="ml-auto flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary hover:bg-primary/20 transition-colors"
+            className="ml-auto flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
           >
             {showForm ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
             {showForm ? 'Cancel' : 'New Test'}
@@ -174,7 +174,7 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="mt-3 rounded-md bg-primary/10 px-3 py-1.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
+              className="mt-3 rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
             >
               Create Your First Test
             </button>
@@ -215,18 +215,18 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
                   {/* Price comparison */}
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <div className="text-center rounded-md bg-surface-hover/50 p-1.5">
-                      <p className="text-[10px] text-text-muted">Price A</p>
+                      <p className="text-xs text-text-muted">Price A</p>
                       <p className="text-[13px] font-semibold text-text">
                         ${test.variantAPrice.toFixed(2)}
                       </p>
-                      <p className="text-[10px] text-text-secondary">{convA} conv.</p>
+                      <p className="text-xs text-text-secondary">{convA} conv.</p>
                     </div>
                     <div className="text-center rounded-md bg-surface-hover/50 p-1.5">
-                      <p className="text-[10px] text-text-muted">Price B</p>
+                      <p className="text-xs text-text-muted">Price B</p>
                       <p className="text-[13px] font-semibold text-text">
                         ${test.variantBPrice.toFixed(2)}
                       </p>
-                      <p className="text-[10px] text-text-secondary">{convB} conv.</p>
+                      <p className="text-xs text-text-secondary">{convB} conv.</p>
                     </div>
                   </div>
 
@@ -239,10 +239,10 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
                   </div>
 
                   <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-[10px] text-text-muted">
+                    <span className="text-xs text-text-muted">
                       {test.impressions} impressions
                     </span>
-                    <span className={cn('text-[10px] font-medium', significance.color)}>
+                    <span className={cn('text-xs font-medium', significance.color)}>
                       {significance.label}
                     </span>
                   </div>
@@ -255,7 +255,7 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
         {/* Completed Tests */}
         {completedTests.length > 0 && (
           <div className={cn('flex flex-col gap-2', activeTests.length > 0 && 'mt-3')}>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+            <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
               Completed
             </p>
             {completedTests.slice(0, 3).map((test, i) => {
@@ -280,17 +280,17 @@ function ABTestCard({ tests, loading, onCreateTest, className }: ABTestCardProps
                   <div className="flex items-center gap-3">
                     <span
                       className={cn(
-                        'text-[11px]',
+                        'text-xs',
                         isAWinner ? 'font-semibold text-success' : 'text-text-muted'
                       )}
                     >
                       ${test.variantAPrice.toFixed(2)}
                       {isAWinner && ' (winner)'}
                     </span>
-                    <span className="text-[11px] text-text-muted">vs</span>
+                    <span className="text-xs text-text-muted">vs</span>
                     <span
                       className={cn(
-                        'text-[11px]',
+                        'text-xs',
                         isBWinner ? 'font-semibold text-success' : 'text-text-muted'
                       )}
                     >

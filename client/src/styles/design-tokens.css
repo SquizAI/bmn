@@ -189,6 +189,20 @@
   --bmn-chat-sidebar-width: 420px;
 }
 
+/* Mobile layout overrides */
+@media (max-width: 639px) {
+  :root {
+    --bmn-sidebar-width: 280px;
+    --bmn-header-height: 48px;
+    --bmn-chat-sidebar-width: 100vw;
+  }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  :root {
+    --bmn-chat-sidebar-width: 380px;
+  }
+}
+
 /* ========================================================
    LIGHT MODE (explicit scope — for containers inside dark mode)
    ======================================================== */

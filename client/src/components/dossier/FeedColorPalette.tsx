@@ -42,7 +42,7 @@ export default function FeedColorPalette({ aesthetic }: FeedColorPaletteProps) {
               className="aspect-square w-full rounded-xl shadow-[var(--bmn-shadow-sm)] ring-1 ring-black/5 transition-transform duration-200 group-hover:scale-110"
               style={{ backgroundColor: hex }}
             />
-            <span className="text-[10px] font-mono text-[var(--bmn-color-text-muted)]">
+            <span className="text-xs font-mono text-[var(--bmn-color-text-muted)]">
               {hex}
             </span>
           </motion.div>

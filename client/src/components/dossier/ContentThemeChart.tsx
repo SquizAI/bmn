@@ -71,7 +71,7 @@ export default function ContentThemeChart({ content }: ContentThemeChartProps) {
                 <p className="text-sm font-semibold text-[var(--bmn-color-text)]">
                   {Math.round(fmt.percentage)}%
                 </p>
-                <p className="text-[10px] capitalize text-[var(--bmn-color-text-muted)]">
+                <p className="text-xs capitalize text-[var(--bmn-color-text-muted)]">
                   {fmt.format}
                 </p>
               </div>

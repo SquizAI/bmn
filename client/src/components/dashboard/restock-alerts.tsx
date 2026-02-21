@@ -49,7 +49,7 @@ function RestockAlerts({ alerts, loading, className }: RestockAlertsProps) {
           <Bell className="h-4 w-4 text-text-muted" />
           <CardTitle className="text-[13px]">Restock Alerts</CardTitle>
           {items.length > 0 && (
-            <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+            <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
               {items.length}
             </span>
           )}
@@ -86,15 +86,15 @@ function RestockAlerts({ alerts, loading, className }: RestockAlertsProps) {
                       <p className="text-[12px] font-medium text-text truncate">
                         {alert.productName}
                       </p>
-                      <p className="text-[11px] text-text-muted mt-0.5">
+                      <p className="text-xs text-text-muted mt-0.5">
                         {alert.message}
                       </p>
                       <div className="mt-1.5 flex items-center gap-3">
-                        <span className="text-[10px] font-medium text-text-secondary">
+                        <span className="text-xs font-medium text-text-secondary">
                           {alert.metric}
                         </span>
                       </div>
-                      <p className="text-[10px] text-text-muted mt-1 italic">
+                      <p className="text-xs text-text-muted mt-1 italic">
                         {alert.suggestion}
                       </p>
                     </div>
