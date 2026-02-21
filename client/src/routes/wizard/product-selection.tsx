@@ -383,7 +383,7 @@ export default function ProductSelectionPage() {
 
       {/* Main content */}
       {isLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="Loading products">
           <Spinner size="lg" />
         </div>
       ) : view === 'recommendations' && hasRecommendations ? (
