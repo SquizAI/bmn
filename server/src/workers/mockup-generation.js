@@ -55,10 +55,43 @@ async function generateMockupImage(prompt, { useIdeogram = false } = {}) {
 }
 
 /**
+ * Niche-specific lifestyle contexts for product mockup prompts.
+ * A random context is selected to add visual variety across mockups.
+ * @type {Record<string, string[]>}
+ */
+const LIFESTYLE_CONTEXTS = {
+  fitness: ['gym bag on a bench', 'kitchen counter with a shaker bottle', 'locker room shelf', 'post-workout scene'],
+  beauty: ['vanity mirror setting', 'bathroom shelf arrangement', 'makeup bag flatlay', 'spa-like environment'],
+  wellness: ['meditation space', 'bedside nightstand', 'yoga mat setup', 'peaceful morning routine'],
+  food: ['kitchen counter scene', 'dining table setting', 'pantry shelf organized', 'meal prep station'],
+  apparel: ['model wearing the product', 'flatlay on marble surface', 'wooden hanger on rack', 'lifestyle outdoor setting'],
+  supplements: ['gym counter setup', 'kitchen counter morning scene', 'wellness shelf display', 'active lifestyle backdrop'],
+  skincare: ['bathroom vanity', 'spa-like shelf', 'travel pouch flatlay', 'morning routine setup'],
+};
+
+/**
+ * Pick a random lifestyle context for the given product category/niche.
+ * Returns a descriptive scene string or a generic default.
+ *
+ * @param {string} categoryOrNiche - Product category or niche identifier
+ * @returns {string}
+ */
+function pickLifestyleContext(categoryOrNiche) {
+  const key = (categoryOrNiche || '').toLowerCase().trim();
+  const contexts = LIFESTYLE_CONTEXTS[key];
+  if (!contexts || contexts.length === 0) {
+    return 'clean product showcase';
+  }
+  return contexts[Math.floor(Math.random() * contexts.length)];
+}
+
+/**
  * Compose a mockup generation prompt.
  * When a packaging template with branding zones is available, builds a structured
  * prompt from the template's ai_prompt_template and zone definitions. Otherwise
  * falls back to the generic free-text prompt.
+ *
+ * Appends a niche-specific lifestyle context to the prompt for visual variety.
  *
  * @param {Object} params
  * @param {string} params.productName
@@ -67,9 +100,10 @@ async function generateMockupImage(prompt, { useIdeogram = false } = {}) {
  * @param {string} [params.mockupInstructions]
  * @param {Object} [params.template] - Packaging template row (nullable)
  * @param {string} [params.brandName]
+ * @param {string} [params.niche] - Product niche for lifestyle context
  * @returns {string}
  */
-function composeMockupPrompt({ productName, productCategory, colorPalette, mockupInstructions, template, brandName }) {
+function composeMockupPrompt({ productName, productCategory, colorPalette, mockupInstructions, template, brandName, niche }) {
   // If template with zones exists, use structured prompt
   if (template && template.branding_zones?.length > 0) {
     let prompt = template.ai_prompt_template || '';
@@ -98,6 +132,10 @@ function composeMockupPrompt({ productName, productCategory, colorPalette, mocku
       }
     }
 
+    // Append lifestyle context based on niche/category
+    const context = pickLifestyleContext(niche || productCategory);
+    prompt += ` Place the product in a ${context}.`;
+
     return prompt;
   }
 
@@ -110,6 +148,10 @@ function composeMockupPrompt({ productName, productCategory, colorPalette, mocku
   if (mockupInstructions) {
     prompt += ` Additional instructions: ${mockupInstructions}`;
   }
+
+  // Append lifestyle context based on niche/category
+  const context = pickLifestyleContext(niche || productCategory);
+  prompt += ` Place the product in a ${context}.`;
 
   return prompt;
 }

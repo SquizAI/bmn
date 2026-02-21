@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
+import { useMutation } from '@tanstack/react-query';
 import {
   PartyPopper,
   Download,
@@ -59,15 +60,26 @@ export default function CompletionPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Generate a resume token via the server
+  const generateResumeToken = useMutation({
+    mutationFn: () =>
+      apiClient.post<{ token: string }>(
+        `/api/v1/wizard/${brandId}/resume-token`,
+      ),
+  });
+
   const handleCopyLink = async () => {
-    const url = `${window.location.origin}/dashboard/brands/${brandId}`;
+    if (!brandId) return;
+
     try {
-      await navigator.clipboard.writeText(url);
+      const result = await generateResumeToken.mutateAsync();
+      const resumeUrl = `${window.location.origin}/wizard?resume_token=${result.token}`;
+      await navigator.clipboard.writeText(resumeUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      addToast({ type: 'success', title: 'Link copied to clipboard!' });
+      addToast({ type: 'success', title: 'Resume link copied to clipboard!' });
     } catch {
-      addToast({ type: 'error', title: 'Failed to copy link' });
+      addToast({ type: 'error', title: 'Failed to generate resume link' });
     }
   };
 
@@ -224,14 +236,22 @@ export default function CompletionPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({
-                    title: `${brand.name} - Brand Me Now`,
-                    url: `${window.location.origin}/dashboard/brands/${brandId}`,
-                  });
-                } else {
-                  handleCopyLink();
+              onClick={async () => {
+                if (!brandId) return;
+                try {
+                  const result = await generateResumeToken.mutateAsync();
+                  const resumeUrl = `${window.location.origin}/wizard?resume_token=${result.token}`;
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: `${brand.name} - Brand Me Now`,
+                      url: resumeUrl,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(resumeUrl);
+                    addToast({ type: 'success', title: 'Resume link copied to clipboard!' });
+                  }
+                } catch {
+                  addToast({ type: 'error', title: 'Failed to share resume link' });
                 }
               }}
               leftIcon={<Share2 className="h-4 w-4" />}

@@ -243,6 +243,7 @@ export default function AdminProductTiersPage() {
                             src={product.image_url}
                             alt={product.name}
                             className="h-10 w-10 rounded object-cover"
+                            loading="lazy"
                           />
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded bg-surface-hover">

@@ -11,7 +11,7 @@
  * - Retry 2 times with exponential backoff
  */
 
-import { Worker } from 'bullmq';
+import { Worker, Queue } from 'bullmq';
 import * as Sentry from '@sentry/node';
 import { redis } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
@@ -285,6 +285,67 @@ export function initAnalyticsWorker(io) {
         jobLog.info({ brandId, overall }, 'Brand health score calculated');
 
         return { brandId, overall, breakdown };
+      }
+
+      if (type === 'health-score-recalculation') {
+        jobLog.info('Starting weekly health score recalculation for all active brands');
+
+        // Query all active brands (not deleted)
+        const { data: activeBrands, error: brandsError } = await supabaseAdmin
+          .from('brands')
+          .select('id, user_id')
+          .is('deleted_at', null);
+
+        if (brandsError) {
+          jobLog.error({ brandsError }, 'Failed to fetch active brands for recalculation');
+          throw new Error(`Failed to fetch active brands: ${brandsError.message}`);
+        }
+
+        const brands = activeBrands || [];
+
+        if (brands.length === 0) {
+          jobLog.info('No active brands found -- skipping recalculation');
+          return { brandsProcessed: 0 };
+        }
+
+        // Create a temporary Queue reference to dispatch child jobs
+        const analyticsQueue = new Queue('analytics', {
+          connection: getBullRedisConfig(),
+        });
+
+        try {
+          // Dispatch individual brand-health-score jobs with staggered delays
+          // to avoid hammering the DB (5 seconds between each)
+          const STAGGER_DELAY_MS = 5_000;
+
+          for (let i = 0; i < brands.length; i++) {
+            const brand = brands[i];
+            await analyticsQueue.add(
+              'brand-health-score',
+              {
+                type: 'brand-health-score',
+                brandId: brand.id,
+                userId: brand.user_id,
+              },
+              {
+                delay: i * STAGGER_DELAY_MS,
+                attempts: 2,
+                backoff: { type: 'exponential', delay: 30_000 },
+                removeOnComplete: true,
+                removeOnFail: false,
+              }
+            );
+          }
+
+          jobLog.info(
+            { brandCount: brands.length, staggerMs: STAGGER_DELAY_MS },
+            'Dispatched brand-health-score jobs for all active brands'
+          );
+
+          return { brandsProcessed: brands.length };
+        } finally {
+          await analyticsQueue.close();
+        }
       }
 
       jobLog.warn({ type }, 'Unknown analytics job type');

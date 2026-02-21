@@ -20,6 +20,11 @@ export async function requireAuth() {
  * redirects to /dashboard if not admin or super_admin.
  */
 export async function requireAdmin() {
+  // Dev bypass: skip auth + role check entirely when VITE_DEV_ADMIN is set
+  if (import.meta.env.DEV && import.meta.env.VITE_DEV_ADMIN === 'true') {
+    return { session: null, profile: { role: 'admin' } };
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();

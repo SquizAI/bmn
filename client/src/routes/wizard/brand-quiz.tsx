@@ -335,6 +335,11 @@ export default function BrandQuizPage() {
             initial={{ width: 0 }}
             animate={{ width: `${((step + 1) / TOTAL_QUESTIONS) * 100}%` }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
+            role="progressbar"
+            aria-valuenow={step + 1}
+            aria-valuemin={0}
+            aria-valuemax={TOTAL_QUESTIONS}
+            aria-label={`Quiz progress: question ${step + 1} of ${TOTAL_QUESTIONS}`}
           />
         </div>
       </div>
@@ -410,7 +415,7 @@ function QuestionVibe({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Brand vibe options">
       {VIBE_OPTIONS.map((option) => (
         <Card
           key={option.id}
@@ -423,6 +428,9 @@ function QuestionVibe({
               : 'hover:border-border-hover',
           )}
           onClick={() => onSelect(option.id)}
+          role="radio"
+          aria-checked={selected === option.id}
+          aria-label={option.label}
         >
           <span className="text-3xl">{option.emoji}</span>
           <span className="text-sm font-medium text-text">{option.label}</span>
@@ -451,7 +459,7 @@ function QuestionAudience({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Target audience options">
       {AUDIENCE_OPTIONS.map((option) => (
         <Card
           key={option.id}
@@ -464,6 +472,9 @@ function QuestionAudience({
               : 'hover:border-border-hover',
           )}
           onClick={() => onSelect(option.id)}
+          role="radio"
+          aria-checked={selected === option.id}
+          aria-label={option.label}
         >
           <span className="mt-0.5 text-2xl">{option.emoji}</span>
           <div className="flex flex-col gap-1">

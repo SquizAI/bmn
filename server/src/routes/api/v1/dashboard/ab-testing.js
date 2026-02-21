@@ -15,6 +15,16 @@ const createAbTestSchema = z.object({
   durationDays: z.number().int().min(1).max(90).default(14),
 });
 
+const recordImpressionSchema = z.object({
+  variant: z.enum(['A', 'B']),
+  productId: z.string().min(1, 'Product ID is required').optional(),
+});
+
+const recordConversionSchema = z.object({
+  variant: z.enum(['A', 'B']),
+  productId: z.string().min(1, 'Product ID is required').optional(),
+});
+
 /**
  * GET /api/v1/dashboard/ab-tests
  * Returns active and completed A/B tests for the user's brands.
@@ -237,6 +247,163 @@ abTestingRoutes.post(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'AB test creation failed');
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/dashboard/ab-tests/:testId/impressions
+ * Records an impression (user viewed a product) during an active A/B test.
+ */
+abTestingRoutes.post(
+  '/:testId/impressions',
+  validate({ body: recordImpressionSchema }),
+  async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { testId } = req.params;
+      const { variant, productId } = req.body;
+
+      // Verify the test exists and belongs to the user
+      const { data: test, error: fetchError } = await supabaseAdmin
+        .from('ab_tests')
+        .select('id, brand_id, user_id, status')
+        .eq('id', testId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError || !test) {
+        return res.status(404).json({
+          success: false,
+          error: 'A/B test not found',
+        });
+      }
+
+      if (test.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          error: 'A/B test is not active',
+        });
+      }
+
+      // Increment impressions counter on the ab_tests row
+      const { error: updateError } = await supabaseAdmin.rpc(
+        'increment_field',
+        {
+          row_id: testId,
+          table_name: 'ab_tests',
+          field_name: 'impressions',
+          increment_by: 1,
+        }
+      ).maybeSingle();
+
+      // Fallback: if RPC doesn't exist, do a manual read + update
+      if (updateError) {
+        logger.warn({ updateError }, 'RPC increment_field unavailable, using manual update');
+        const { data: current } = await supabaseAdmin
+          .from('ab_tests')
+          .select('impressions')
+          .eq('id', testId)
+          .single();
+
+        await supabaseAdmin
+          .from('ab_tests')
+          .update({ impressions: (current?.impressions || 0) + 1 })
+          .eq('id', testId);
+      }
+
+      logger.info(
+        { userId, testId, variant, productId },
+        'A/B test impression recorded'
+      );
+
+      res.json({
+        success: true,
+        data: { testId, variant, productId, event: 'impression' },
+      });
+    } catch (err) {
+      logger.error({ err, userId: req.user?.id }, 'AB test impression recording failed');
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/v1/dashboard/ab-tests/:testId/conversions
+ * Records a conversion (user selected/added a product) during an active A/B test.
+ */
+abTestingRoutes.post(
+  '/:testId/conversions',
+  validate({ body: recordConversionSchema }),
+  async (req, res, next) => {
+    try {
+      const userId = req.user.id;
+      const { testId } = req.params;
+      const { variant, productId } = req.body;
+
+      // Verify the test exists and belongs to the user
+      const { data: test, error: fetchError } = await supabaseAdmin
+        .from('ab_tests')
+        .select('id, brand_id, user_id, status')
+        .eq('id', testId)
+        .eq('user_id', userId)
+        .single();
+
+      if (fetchError || !test) {
+        return res.status(404).json({
+          success: false,
+          error: 'A/B test not found',
+        });
+      }
+
+      if (test.status !== 'active') {
+        return res.status(400).json({
+          success: false,
+          error: 'A/B test is not active',
+        });
+      }
+
+      // Determine which conversion column to increment based on variant
+      const conversionField = variant === 'A' ? 'conversions_a' : 'conversions_b';
+
+      // Try RPC atomic increment first
+      const { error: updateError } = await supabaseAdmin.rpc(
+        'increment_field',
+        {
+          row_id: testId,
+          table_name: 'ab_tests',
+          field_name: conversionField,
+          increment_by: 1,
+        }
+      ).maybeSingle();
+
+      // Fallback: manual read + update
+      if (updateError) {
+        logger.warn({ updateError }, 'RPC increment_field unavailable, using manual update');
+        const { data: current } = await supabaseAdmin
+          .from('ab_tests')
+          .select(conversionField)
+          .eq('id', testId)
+          .single();
+
+        await supabaseAdmin
+          .from('ab_tests')
+          .update({ [conversionField]: (current?.[conversionField] || 0) + 1 })
+          .eq('id', testId);
+      }
+
+      logger.info(
+        { userId, testId, variant, productId, conversionField },
+        'A/B test conversion recorded'
+      );
+
+      res.json({
+        success: true,
+        data: { testId, variant, productId, event: 'conversion' },
+      });
+    } catch (err) {
+      logger.error({ err, userId: req.user?.id }, 'AB test conversion recording failed');
       next(err);
     }
   }

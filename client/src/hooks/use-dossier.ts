@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getCurrentSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
 import type {
@@ -31,7 +31,6 @@ export function useDossier(jobId: string | null): UseDossierReturn {
   const [isComplete, setIsComplete] = useState(false);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const joinedRoom = useRef<string | null>(null);
 
   const reset = useCallback(() => {
     setDossier(null);
@@ -41,7 +40,6 @@ export function useDossier(jobId: string | null): UseDossierReturn {
     setIsComplete(false);
     setIsError(false);
     setError(null);
-    joinedRoom.current = null;
   }, []);
 
   useEffect(() => {
@@ -53,9 +51,7 @@ export function useDossier(jobId: string | null): UseDossierReturn {
     const socket = getCurrentSocket();
     if (!socket) return;
 
-    const room = `job:${jobId}`;
-    socket.emit(SOCKET_EVENTS.JOIN_ROOM, room);
-    joinedRoom.current = room;
+    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
     setPhase('scraping');
     setMessage('Starting social analysis...');
 
@@ -106,10 +102,7 @@ export function useDossier(jobId: string | null): UseDossierReturn {
       socket.off(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
-      if (joinedRoom.current) {
-        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, joinedRoom.current);
-        joinedRoom.current = null;
-      }
+      socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
     };
   }, [jobId, reset]);
 

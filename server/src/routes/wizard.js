@@ -65,6 +65,9 @@ wizardRoutes.post(
   wizardController.generateMockups
 );
 
+// POST /api/v1/wizard/:brandId/resume-token -- Generate an HMAC-signed resume token
+wizardRoutes.post('/:brandId/resume-token', wizardController.generateResumeToken);
+
 // POST /api/v1/wizard/resume -- Resume wizard from HMAC-signed token
 wizardRoutes.post(
   '/resume',

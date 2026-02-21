@@ -159,6 +159,38 @@ export const CleanupJobSchema = z.object({
 });
 
 /**
+ * Content Generation job -- generates social media content using AI.
+ */
+export const ContentGenJobSchema = z.object({
+  brandId: z.string().uuid(),
+  userId: z.string().uuid(),
+  platform: z.enum(['instagram', 'tiktok', 'twitter', 'general']),
+  contentType: z.enum(['post', 'story', 'reel_script', 'announcement', 'promotional']),
+  topic: z.string().max(1000).optional(),
+  tone: z.string().max(200),
+});
+
+/**
+ * Email Campaign job -- handles automated email marketing campaigns.
+ */
+export const EmailCampaignJobSchema = z.object({
+  type: z.enum(['welcome_sequence', 'reengagement', 'promotional']),
+  campaignId: z.string().uuid(),
+  userId: z.string().uuid(),
+  brandId: z.string().uuid().optional(),
+  step: z.number().int().min(0).default(0),
+});
+
+/**
+ * Analytics job -- recalculates Brand Health Score or other analytics tasks.
+ */
+export const AnalyticsJobSchema = z.object({
+  type: z.enum(['brand-health-score', 'health-score-recalculation']),
+  brandId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+});
+
+/**
  * Schema registry -- maps queue name to its Zod schema.
  * @type {Record<string, z.ZodType>}
  */
@@ -173,4 +205,7 @@ export const JOB_SCHEMAS = {
   'image-upload': ImageUploadJobSchema,
   'print-export': PrintExportJobSchema,
   'cleanup': CleanupJobSchema,
+  'content-gen': ContentGenJobSchema,
+  'email-campaign': EmailCampaignJobSchema,
+  'analytics': AnalyticsJobSchema,
 };

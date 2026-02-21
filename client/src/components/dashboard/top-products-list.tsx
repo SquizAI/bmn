@@ -56,6 +56,7 @@ function TopProductsList({ products, className }: TopProductsListProps) {
                 src={product.thumbnailUrl}
                 alt={product.name}
                 className="h-8 w-8 shrink-0 rounded-md object-cover"
+                loading="lazy"
               />
             ) : (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-hover">

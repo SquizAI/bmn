@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getCurrentSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
 
@@ -49,7 +49,6 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
   const [isError, setIsError] = useState(false);
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
-  const joinedRoom = useRef<string | null>(null);
 
   const reset = useCallback(() => {
     setProgress(0);
@@ -59,7 +58,6 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
     setIsError(false);
     setResult(null);
     setError(null);
-    joinedRoom.current = null;
   }, []);
 
   useEffect(() => {
@@ -71,9 +69,7 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
     const socket = getCurrentSocket();
     if (!socket) return;
 
-    const room = `job:${jobId}`;
-    socket.emit(SOCKET_EVENTS.JOIN_ROOM, room);
-    joinedRoom.current = room;
+    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
     setStatus('pending');
     setMessage('Starting...');
 
@@ -130,10 +126,7 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
       socket.off(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
-      if (joinedRoom.current) {
-        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, joinedRoom.current);
-        joinedRoom.current = null;
-      }
+      socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
     };
   }, [jobId, reset]);
 

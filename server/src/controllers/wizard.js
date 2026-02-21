@@ -3,7 +3,7 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { sessionManager } from '../agents/session-manager.js';
-import { verifyResumeToken } from '../lib/hmac-tokens.js';
+import { signResumeToken, verifyResumeToken } from '../lib/hmac-tokens.js';
 import { routeModel } from '../skills/_shared/model-router.js';
 import { SYSTEM_PROMPT as BRAND_GENERATOR_PROMPT, buildDirectionsTaskPrompt } from '../skills/brand-generator/prompts.js';
 import { SYSTEM_PROMPT as NAME_GENERATOR_PROMPT } from '../skills/name-generator/prompts.js';
@@ -239,6 +239,26 @@ export async function saveStepData(req, res, next) {
         logger.error({ error: advanceErr.message, brandId, dbStep }, 'Failed to advance wizard step');
         return res.status(500).json({ success: false, error: 'Failed to advance wizard step' });
       }
+    }
+
+    // Social proof: increment selected_count for each chosen product
+    if (step === 'product-selection' && data?.selectedProducts?.length) {
+      for (const productId of data.selectedProducts) {
+        const { error: rpcError } = await supabaseAdmin.rpc(
+          'increment_product_selected_count',
+          { p_product_id: productId },
+        );
+        if (rpcError) {
+          logger.warn(
+            { productId, error: rpcError.message },
+            'Failed to increment product selected_count (non-blocking)',
+          );
+        }
+      }
+      logger.info(
+        { brandId, productCount: data.selectedProducts.length },
+        'Incremented selected_count for chosen products',
+      );
     }
 
     res.json({
@@ -1401,6 +1421,44 @@ IMPORTANT:
 }
 
 /**
+ * POST /api/v1/wizard/:brandId/resume-token
+ * Generate an HMAC-signed resume token for sharing / magic link resume.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function generateResumeToken(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+
+    // Verify ownership
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('id, wizard_step')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const token = signResumeToken(brandId, userId, brand.wizard_step);
+
+    logger.info({ brandId, userId }, 'Resume token generated');
+
+    res.json({
+      success: true,
+      data: { token },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * POST /api/v1/wizard/resume
  * Resume a wizard session from an HMAC-signed token.
  *
@@ -1551,7 +1609,8 @@ Return a JSON object: { "taglines": ["tagline1", "tagline2", ...] }`;
 
 /**
  * POST /api/v1/wizard/:brandId/custom-product-request
- * Submit a custom product request.
+ * Submit a custom product request for admin review.
+ * Stores data in the custom_product_requests table and caches in wizard_state.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -1563,41 +1622,57 @@ export async function submitCustomProductRequest(req, res, next) {
     const userId = req.user.id;
     const { description, category, priceRange } = req.body;
 
-    const { data: brand, error } = await supabaseAdmin
+    // Verify ownership
+    const { data: brand, error: fetchError } = await supabaseAdmin
       .from('brands')
       .select('id, wizard_state')
       .eq('id', brandId)
       .eq('user_id', userId)
       .single();
 
-    if (error || !brand) {
+    if (fetchError || !brand) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    const requestId = crypto.randomUUID();
-    const existingRequests = brand.wizard_state?.['custom-product-requests'] || [];
-    const newRequest = {
-      id: requestId,
-      description,
-      category,
-      priceRange,
-      createdAt: new Date().toISOString(),
-    };
+    // Insert into the custom_product_requests table
+    const { data, error } = await supabaseAdmin
+      .from('custom_product_requests')
+      .insert({
+        brand_id: brandId,
+        user_id: userId,
+        description,
+        category,
+        price_range: priceRange,
+        status: 'pending',
+      })
+      .select()
+      .single();
 
+    if (error) throw error;
+
+    // Also cache in wizard_state for quick access during the wizard flow
+    const existingRequests = brand.wizard_state?.['custom-product-requests'] || [];
     await supabaseAdmin
       .from('brands')
       .update({
         wizard_state: {
           ...(brand.wizard_state || {}),
-          'custom-product-requests': [...existingRequests, newRequest],
+          'custom-product-requests': [...existingRequests, {
+            id: data.id,
+            description,
+            category,
+            priceRange,
+            status: 'pending',
+            createdAt: data.created_at,
+          }],
         },
         updated_at: new Date().toISOString(),
       })
       .eq('id', brandId);
 
-    logger.info({ brandId, requestId, category }, 'Custom product request submitted');
+    logger.info({ brandId, requestId: data.id, category }, 'Custom product request submitted');
 
-    res.json({ success: true, data: { message: 'Request received', requestId } });
+    res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
   }

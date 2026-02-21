@@ -76,6 +76,7 @@ function BrandCard({ brand }: { brand: Brand }) {
               src={brand.thumbnailUrl}
               alt={brand.name}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#111] to-[#333]">

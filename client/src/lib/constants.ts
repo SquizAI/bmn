@@ -47,19 +47,20 @@ export const ROUTES = {
 // Note: 'onboarding' auto-redirects to 'social-analysis' which is the real first step.
 // It is kept as an entry point for URL compatibility.
 export const WIZARD_STEPS = [
-  { key: 'onboarding', label: 'Welcome', path: 'onboarding' },
-  { key: 'social-analysis', label: 'Brand Discovery', path: 'social-analysis' },
-  { key: 'brand-name', label: 'Brand Name', path: 'brand-name' },
-  { key: 'brand-identity', label: 'Brand Identity', path: 'brand-identity' },
-  { key: 'logo-generation', label: 'Logo Generation', path: 'logo-generation' },
-  { key: 'product-selection', label: 'Product Selection', path: 'product-selection' },
-  { key: 'mockup-review', label: 'Mockup Review', path: 'mockup-review' },
-  { key: 'bundle-builder', label: 'Bundle Builder', path: 'bundle-builder' },
-  { key: 'profit-calculator', label: 'Profit Calculator', path: 'profit-calculator' },
-  { key: 'complete', label: 'Complete', path: 'complete' },
+  { key: 'onboarding', label: 'Welcome', path: 'onboarding', estimatedMinutes: 1 },
+  { key: 'social-analysis', label: 'Brand Discovery', path: 'social-analysis', estimatedMinutes: 3 },
+  { key: 'brand-name', label: 'Brand Name', path: 'brand-name', estimatedMinutes: 2 },
+  { key: 'brand-identity', label: 'Brand Identity', path: 'brand-identity', estimatedMinutes: 3 },
+  { key: 'logo-generation', label: 'Logo Generation', path: 'logo-generation', estimatedMinutes: 3 },
+  { key: 'product-selection', label: 'Product Selection', path: 'product-selection', estimatedMinutes: 3 },
+  { key: 'mockup-review', label: 'Mockup Review', path: 'mockup-review', estimatedMinutes: 2 },
+  { key: 'bundle-builder', label: 'Bundle Builder', path: 'bundle-builder', estimatedMinutes: 3 },
+  { key: 'profit-calculator', label: 'Profit Calculator', path: 'profit-calculator', estimatedMinutes: 2 },
+  { key: 'complete', label: 'Complete', path: 'complete', estimatedMinutes: 1 },
 ] as const;
 
 export type WizardStepKey = (typeof WIZARD_STEPS)[number]['key'];
+export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 // ------ Wizard Phases ------
 export const WIZARD_PHASES = [

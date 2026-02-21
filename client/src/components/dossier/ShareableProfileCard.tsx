@@ -174,6 +174,7 @@ export default function ShareableProfileCard({
                 src={profile.profilePicUrl}
                 alt={profile.displayName || 'Creator'}
                 className="h-14 w-14 rounded-full object-cover ring-2 ring-[var(--bmn-color-accent)] ring-offset-2 ring-offset-[var(--bmn-color-surface)]"
+                loading="lazy"
               />
             ) : (
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bmn-color-primary-light)] text-lg font-bold text-[var(--bmn-color-text)]">

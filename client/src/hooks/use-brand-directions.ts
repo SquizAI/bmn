@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getCurrentSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
 import type { BrandDirection, BrandDirectionsResult } from './use-brand-generation';
@@ -48,7 +48,6 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
   const [isComplete, setIsComplete] = useState(false);
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const joinedRoom = useRef<string | null>(null);
 
   const reset = useCallback(() => {
     setDirections([]);
@@ -59,7 +58,6 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
     setIsComplete(false);
     setIsError(false);
     setError(null);
-    joinedRoom.current = null;
   }, []);
 
   useEffect(() => {
@@ -70,9 +68,7 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
     const socket = getCurrentSocket();
     if (!socket) return;
 
-    const room = `job:${jobId}`;
-    socket.emit(SOCKET_EVENTS.JOIN_ROOM, room);
-    joinedRoom.current = room;
+    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
     setPhase('queued');
     setMessage('Generating brand directions...');
 
@@ -133,10 +129,7 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
       socket.off(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
-      if (joinedRoom.current) {
-        socket.emit(SOCKET_EVENTS.LEAVE_ROOM, joinedRoom.current);
-        joinedRoom.current = null;
-      }
+      socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
     };
   }, [jobId]);
 

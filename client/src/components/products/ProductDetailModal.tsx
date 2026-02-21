@@ -55,6 +55,7 @@ export function ProductDetailModal({
                 src={product.imageUrl}
                 alt={product.name}
                 className="h-56 w-full object-cover"
+                loading="lazy"
               />
             ) : (
               <div className="flex h-56 w-full items-center justify-center bg-surface-hover">
@@ -133,6 +134,67 @@ export function ProductDetailModal({
                   </span>
                 </div>
               </div>
+
+              {/* Ingredients */}
+              {product.ingredients && (
+                <div className="mb-4">
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-text">
+                    <Leaf className="h-4 w-4 text-success" />
+                    Ingredients
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.ingredients.split(',').map((ingredient) => (
+                      <span
+                        key={ingredient.trim()}
+                        className="rounded-full bg-surface-hover px-2.5 py-1 text-xs text-text-secondary"
+                      >
+                        {ingredient.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Materials & Sizing */}
+              {product.materials && (
+                <div className="mb-4">
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-text">
+                    <Shield className="h-4 w-4 text-info" />
+                    Materials
+                  </h3>
+                  {typeof product.materials === 'string' ? (
+                    <p className="text-sm text-text-secondary">{product.materials}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {Object.entries(product.materials as Record<string, unknown>).map(
+                        ([key, value]) => (
+                          <div key={key} className="flex items-center justify-between text-sm">
+                            <span className="capitalize text-text-secondary">{key.replace(/_/g, ' ')}</span>
+                            <span className="font-medium text-text">{String(value)}</span>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Certifications */}
+              {product.certifications && product.certifications.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="mb-2 text-sm font-semibold text-text">Certifications</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.certifications.map((cert) => (
+                      <span
+                        key={cert}
+                        className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success"
+                      >
+                        {cert}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Action */}
               <Button

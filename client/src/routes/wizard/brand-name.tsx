@@ -295,6 +295,9 @@ export default function BrandNamePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 py-16"
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
           >
             <div className="relative">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
@@ -311,6 +314,11 @@ export default function BrandNamePage() {
                   initial={{ width: 0 }}
                   animate={{ width: `${generation.progress}%` }}
                   transition={{ duration: 0.3 }}
+                  role="progressbar"
+                  aria-valuenow={Math.round(generation.progress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Name generation progress"
                 />
               </div>
             )}
@@ -344,6 +352,8 @@ export default function BrandNamePage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 py-16"
+            role="status"
+            aria-busy="true"
           >
             <div className="relative">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-border border-t-accent" />
@@ -390,6 +400,7 @@ export default function BrandNamePage() {
                       autoFocus
                       onKeyDown={(e) => e.key === 'Enter' && handleCustomNameSubmit()}
                       className="flex-1"
+                      aria-label="Custom brand name"
                     />
                     <Button
                       variant="primary"

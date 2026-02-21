@@ -118,6 +118,7 @@ export function ProductCompare({ products, onRemove, className }: ProductCompare
                       src={p.imageUrl}
                       alt={p.name}
                       className="mx-auto mb-2 h-16 w-16 rounded-lg object-cover"
+                      loading="lazy"
                     />
                   ) : (
                     <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-lg bg-surface-hover">

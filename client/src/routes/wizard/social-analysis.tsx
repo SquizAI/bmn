@@ -107,7 +107,7 @@ const PLATFORM_FIELDS = [
     label: 'TikTok',
     placeholder: '@yourbrand',
     icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.52a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.43v-7.15a8.16 8.16 0 005.58 2.09V11.1a4.83 4.83 0 01-3.77-1.58V6.69z" />
       </svg>
     ),
@@ -664,6 +664,8 @@ export default function SocialAnalysisPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            aria-busy="true"
+            aria-live="polite"
           >
             <DossierErrorBoundary>
               <DossierLoadingSequence
@@ -683,6 +685,7 @@ export default function SocialAnalysisPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="rounded-2xl border border-[var(--bmn-color-error-border)] bg-[var(--bmn-color-error-bg)] p-6 text-center"
+            role="alert"
           >
             <p className="text-sm font-medium text-[var(--bmn-color-error)]">
               {error || 'Analysis failed. Please try again.'}
@@ -697,6 +700,7 @@ export default function SocialAnalysisPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex flex-col gap-6"
+            aria-live="polite"
           >
             <DossierErrorBoundary>
               <DossierLoadingSequence
