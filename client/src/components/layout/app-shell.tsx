@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router';
 import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
+import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { useUIStore } from '@/stores/ui-store';
 import { cn } from '@/lib/utils';
 
@@ -10,11 +11,12 @@ interface AppShellProps {
 }
 
 /**
- * Application shell with header, optional sidebar, and main content area.
+ * Application shell with header, optional sidebar, chat sidebar, and main content area.
  * Used for dashboard and admin layouts.
  */
 function AppShell({ showSidebar = true }: AppShellProps) {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const chatOpen = useUIStore((s) => s.chatOpen);
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,12 +28,16 @@ function AppShell({ showSidebar = true }: AppShellProps) {
           showSidebar && sidebarOpen
             ? 'md:ml-[var(--bmn-sidebar-width)]'
             : 'ml-0',
+          chatOpen
+            ? 'md:mr-[var(--bmn-chat-sidebar-width)]'
+            : 'mr-0',
         )}
       >
         <div className="mx-auto max-w-[var(--bmn-max-width-content)] p-4 md:p-6">
           <Outlet />
         </div>
       </main>
+      <ChatSidebar />
     </div>
   );
 }

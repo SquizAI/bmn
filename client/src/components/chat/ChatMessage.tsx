@@ -1,5 +1,7 @@
 import { motion } from 'motion/react';
 import { Bot, User } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
@@ -52,7 +54,7 @@ function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
       </div>
 
       {/* Bubble */}
-      <div className={cn('flex max-w-[75%] flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
+      <div className={cn('flex max-w-[90%] flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
         <div
           className={cn(
             'rounded-xl px-3 py-2 text-[13px] leading-relaxed',
@@ -61,7 +63,15 @@ function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
               : 'rounded-bl-sm bg-surface-hover text-text',
           )}
         >
-          {content}
+          {isUser ? (
+            content
+          ) : (
+            <div className="prose-chat">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
         {timestamp && (
           <span className="px-1 text-[10px] text-text-muted">

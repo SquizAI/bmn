@@ -110,3 +110,56 @@
     outline-offset: 2px;
   }
 }
+
+/* Chat markdown prose — minimal typography for assistant messages */
+.prose-chat {
+  p { margin: 0.25em 0; }
+  p:first-child { margin-top: 0; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  code {
+    font-family: var(--bmn-font-mono);
+    font-size: 0.85em;
+    background: var(--bmn-color-surface);
+    border: 1px solid var(--bmn-color-border);
+    border-radius: var(--bmn-radius-sm);
+    padding: 0.1em 0.35em;
+  }
+  pre {
+    margin: 0.5em 0;
+    padding: 0.5em 0.75em;
+    border-radius: var(--bmn-radius-md);
+    background: var(--bmn-color-surface);
+    border: 1px solid var(--bmn-color-border);
+    overflow-x: auto;
+    font-size: 0.85em;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  ul, ol { margin: 0.25em 0; padding-left: 1.25em; }
+  li { margin: 0.1em 0; }
+  ul { list-style-type: disc; }
+  ol { list-style-type: decimal; }
+  a {
+    color: var(--bmn-color-text-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  h1, h2, h3, h4 {
+    font-weight: 600;
+    margin: 0.5em 0 0.25em;
+  }
+  h1 { font-size: 1.1em; }
+  h2 { font-size: 1.05em; }
+  h3 { font-size: 1em; }
+  blockquote {
+    border-left: 2px solid var(--bmn-color-border);
+    padding-left: 0.75em;
+    margin: 0.25em 0;
+    color: var(--bmn-color-text-secondary);
+  }
+}

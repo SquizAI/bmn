@@ -4,13 +4,11 @@ import { useWizardStore } from '@/stores/wizard-store';
 import { useExitIntent } from '@/hooks/use-exit-intent';
 import { WIZARD_STEPS, WIZARD_PHASES, ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X, MessageSquare } from 'lucide-react';
+import { useUIStore } from '@/stores/ui-store';
 
-const ChatWindow = lazy(() =>
-  import('@/components/chat/ChatWindow').then((m) => ({ default: m.ChatWindow })),
-);
-const ChatFab = lazy(() =>
-  import('@/components/chat/ChatFab').then((m) => ({ default: m.ChatFab })),
+const ChatSidebar = lazy(() =>
+  import('@/components/chat/ChatSidebar').then((m) => ({ default: m.ChatSidebar })),
 );
 
 /**
@@ -132,15 +130,25 @@ export default function WizardLayout() {
           </span>
         </div>
 
-        {/* Right: Exit button */}
-        <button
-          type="button"
-          onClick={() => navigate(ROUTES.DASHBOARD)}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
-          title="Save & exit to dashboard"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        {/* Right: Chat toggle + Exit button */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => useUIStore.getState().setChatOpen(!useUIStore.getState().chatOpen)}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            title="Toggle Brand Assistant"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.DASHBOARD)}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-border/50 hover:text-text"
+            title="Save & exit to dashboard"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {/* Step content */}
@@ -148,10 +156,9 @@ export default function WizardLayout() {
         <Outlet />
       </div>
 
-      {/* Chat overlay — fixed position, outside main content flow */}
+      {/* Chat sidebar — fixed position, outside main content flow */}
       <Suspense fallback={null}>
-        <ChatFab brandId={brandId} />
-        <ChatWindow brandId={brandId} sessionId={sessionId} />
+        <ChatSidebar />
       </Suspense>
     </div>
   );

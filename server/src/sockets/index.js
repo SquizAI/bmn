@@ -7,6 +7,7 @@ import { logger } from '../lib/logger.js';
 import { redis } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import Redis from 'ioredis';
+import { runChatAgent } from '../agents/chat/index.js';
 
 // NOTE: @socket.io/redis-adapter may need to be installed:
 // npm install @socket.io/redis-adapter
@@ -113,6 +114,7 @@ const connectionCounts = {
   wizard: 0,
   dashboard: 0,
   admin: 0,
+  chat: 0,
 };
 
 /**
@@ -300,6 +302,232 @@ export function createSocketServer(httpServer) {
 
     socket.on('disconnect', () => {
       connectionCounts.admin--;
+    });
+  });
+
+  // ==========================================================================
+  // Chat namespace (agentic sidebar chat)
+  // ==========================================================================
+  const chatNs = io.of('/chat');
+  chatNs.use(socketAuthMiddleware);
+
+  chatNs.on('connection', (socket) => {
+    const userId = socket.data.user?.id;
+    connectionCounts.chat++;
+
+    if (userId) {
+      socket.join(`chat:${userId}`);
+    }
+
+    attachRateLimiter(socket);
+
+    // Active agent abort controllers per session (for cancellation)
+    const activeAgents = new Map();
+
+    // ---- chat:send — Main message handler ----
+    socket.on('chat:send', async (payload) => {
+      const { content, sessionId, brandId, pageContext } = payload || {};
+
+      if (!content || !sessionId || !userId) {
+        socket.emit('chat:error', { sessionId, error: 'Missing content or sessionId', code: 'INVALID_PAYLOAD' });
+        return;
+      }
+
+      try {
+        // 1. Fetch user profile + org role
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email, full_name, role, org_id, subscription_tier')
+          .eq('id', userId)
+          .single();
+
+        if (!profile) {
+          socket.emit('chat:error', { sessionId, error: 'Profile not found', code: 'AUTH_ERROR' });
+          return;
+        }
+
+        let orgRole = null;
+        if (profile.org_id) {
+          const { data: membership } = await supabaseAdmin
+            .from('organization_members')
+            .select('role')
+            .eq('org_id', profile.org_id)
+            .eq('user_id', userId)
+            .single();
+          orgRole = membership?.role || null;
+        }
+
+        // 2. Load brand context if provided
+        let activeBrand = null;
+        if (brandId) {
+          const { data: brand } = await supabaseAdmin
+            .from('brands')
+            .select('id, name, status, wizard_step, wizard_state')
+            .eq('id', brandId)
+            .single();
+          activeBrand = brand;
+        }
+
+        // 3. Load recent history for context (last 20 messages)
+        const { data: historyRows } = await supabaseAdmin
+          .from('chat_messages')
+          .select('role, content')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true })
+          .limit(20);
+
+        // 4. Save user message to DB
+        await supabaseAdmin.from('chat_messages').insert({
+          brand_id: brandId || null,
+          session_id: sessionId,
+          role: 'user',
+          content,
+          message_type: 'text',
+          page_context: pageContext ? JSON.stringify(pageContext) : null,
+        });
+
+        // Update session metadata
+        await supabaseAdmin
+          .from('chat_sessions')
+          .upsert({
+            id: sessionId,
+            user_id: userId,
+            brand_id: brandId || null,
+            message_count: (historyRows?.length || 0) + 1,
+            last_message_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+
+        // 5. Emit message-start
+        const messageId = crypto.randomUUID();
+        socket.emit('chat:message-start', { messageId, sessionId });
+
+        // 6. Run the chat agent and stream results
+        let fullContent = '';
+        let tokensUsed = 0;
+
+        const abortController = new AbortController();
+        activeAgents.set(sessionId, abortController);
+
+        try {
+          const agentStream = runChatAgent({
+            userId,
+            sessionId,
+            message: content,
+            profile,
+            orgRole,
+            activeBrand,
+            pageContext: pageContext?.route || '',
+            history: historyRows || [],
+            io,
+          });
+
+          for await (const msg of agentStream) {
+            if (abortController.signal.aborted) break;
+
+            if (msg.type === 'assistant' && msg.message?.content) {
+              // Text content from the assistant
+              for (const block of msg.message.content) {
+                if (block.type === 'text') {
+                  socket.emit('chat:message-delta', { messageId, delta: block.text });
+                  fullContent += block.text;
+                }
+              }
+            } else if (msg.type === 'result' && msg.subtype === 'success') {
+              tokensUsed = msg.total_usage?.output_tokens || 0;
+
+              // Check if any tools modified brand data
+              if (activeBrand?.id) {
+                socket.emit('chat:brand-updated', {
+                  brandId: activeBrand.id,
+                  fields: ['wizard_state', 'name', 'brand_products'],
+                });
+              }
+            }
+          }
+        } finally {
+          activeAgents.delete(sessionId);
+        }
+
+        // 7. Emit message-end
+        socket.emit('chat:message-end', {
+          messageId,
+          content: fullContent,
+          model: 'claude-sonnet-4-6',
+          tokensUsed,
+        });
+
+        // 8. Save assistant response to DB
+        if (fullContent) {
+          await supabaseAdmin.from('chat_messages').insert({
+            brand_id: brandId || null,
+            session_id: sessionId,
+            role: 'assistant',
+            content: fullContent,
+            message_type: 'text',
+            model_used: 'claude-sonnet-4-6',
+            tokens_used: tokensUsed,
+          });
+        }
+      } catch (err) {
+        logger.error({ err: err.message, userId, sessionId }, 'Chat agent error');
+        socket.emit('chat:error', {
+          sessionId,
+          error: 'An error occurred while processing your message. Please try again.',
+          code: 'AGENT_ERROR',
+        });
+      }
+    });
+
+    // ---- chat:cancel — Cancel streaming response ----
+    socket.on('chat:cancel', ({ sessionId }) => {
+      const controller = activeAgents.get(sessionId);
+      if (controller) {
+        controller.abort();
+        activeAgents.delete(sessionId);
+        logger.info({ sessionId, userId }, 'Chat stream cancelled');
+      }
+    });
+
+    // ---- chat:history — Load message history ----
+    socket.on('chat:history', async ({ sessionId, before }, callback) => {
+      const query = supabaseAdmin
+        .from('chat_messages')
+        .select('id, role, content, message_type, metadata, created_at')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (before) query.lt('created_at', before);
+
+      const { data, error } = await query;
+      if (typeof callback === 'function') {
+        callback({ messages: data?.reverse() || [], error: error?.message || null });
+      }
+    });
+
+    // ---- chat:new-session — Start a fresh session ----
+    socket.on('chat:new-session', async ({ brandId }, callback) => {
+      const sessionId = crypto.randomUUID();
+
+      await supabaseAdmin.from('chat_sessions').insert({
+        id: sessionId,
+        user_id: userId,
+        brand_id: brandId || null,
+      });
+
+      if (typeof callback === 'function') {
+        callback({ sessionId });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      connectionCounts.chat--;
+      // Clean up any active agents
+      for (const controller of activeAgents.values()) {
+        controller.abort();
+      }
+      activeAgents.clear();
     });
   });
 

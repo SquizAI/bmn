@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
-import { Menu, LogOut, Settings, Moon, Sun } from 'lucide-react';
+import { Menu, LogOut, Settings, Moon, Sun, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,14 @@ function Header({ className }: HeaderProps) {
         </Button>
         {isAuthenticated ? (
           <>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => useUIStore.getState().setChatOpen(!useUIStore.getState().chatOpen)}
+              aria-label="Toggle chat assistant"
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
             <Link to={ROUTES.DASHBOARD_SETTINGS}>
               <Button variant="ghost" size="icon" aria-label="Settings">
                 <Settings className="h-4 w-4" />
