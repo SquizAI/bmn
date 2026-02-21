@@ -24,7 +24,7 @@ import { ROUTES } from '@/lib/constants';
 import DossierLoadingSequence from '@/components/dossier/DossierLoadingSequence';
 import DossierPdfExport from '@/components/dossier/DossierPdfExport';
 import { SocialHandlesInputSchema } from '@shared/schemas/social-analysis.js';
-import type { CreatorDossier } from '@/lib/dossier-types';
+import type { CreatorDossier, DossierPhase } from '@/lib/dossier-types';
 
 // ------ Schema (imported from shared) ------
 
@@ -203,6 +203,19 @@ function mapDossierToStore(dossier: Partial<CreatorDossier>) {
   return mapped;
 }
 
+// ------ Simulated Progress Timeline ------
+
+const SIM_TIMELINE: { delay: number; phase: DossierPhase; progress: number; message: string }[] = [
+  { delay: 0, phase: 'scraping', progress: 5, message: 'Scanning social profiles...' },
+  { delay: 2000, phase: 'profile-loaded', progress: 15, message: 'Profile data loaded' },
+  { delay: 5000, phase: 'posts-loaded', progress: 25, message: 'Posts retrieved' },
+  { delay: 8000, phase: 'analyzing-aesthetic', progress: 40, message: 'Analyzing visual aesthetic...' },
+  { delay: 12000, phase: 'detecting-niche', progress: 55, message: 'Detecting your niche...' },
+  { delay: 16000, phase: 'analyzing-audience', progress: 65, message: 'Analyzing audience...' },
+  { delay: 20000, phase: 'extracting-palette', progress: 78, message: 'Extracting color palette...' },
+  { delay: 25000, phase: 'calculating-readiness', progress: 88, message: 'Calculating readiness score...' },
+];
+
 // ------ Component ------
 
 export default function SocialAnalysisPage() {
@@ -223,14 +236,72 @@ export default function SocialAnalysisPage() {
   const [directDossier, setDirectDossier] = useState<Partial<CreatorDossier> | null>(null);
   const [directComplete, setDirectComplete] = useState(false);
 
-  // Merge: prefer direct dossier over socket dossier
+  // ------ Simulated progress while waiting for synchronous API response ------
+  const [simPhase, setSimPhase] = useState<DossierPhase>('idle');
+  const [simProgress, setSimProgress] = useState(0);
+  const [simMessage, setSimMessage] = useState('');
+  const simTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (dispatchScrape.isPending) {
+      // Start simulated progress
+      const startTime = Date.now();
+      let currentStep = 0;
+
+      // Set initial phase immediately
+      setSimPhase('scraping');
+      setSimProgress(5);
+      setSimMessage('Scanning social profiles...');
+
+      simTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        // Find the latest phase we should be at
+        let newStep = currentStep;
+        for (let i = currentStep + 1; i < SIM_TIMELINE.length; i++) {
+          if (elapsed >= SIM_TIMELINE[i].delay) {
+            newStep = i;
+          }
+        }
+        if (newStep !== currentStep) {
+          currentStep = newStep;
+          const step = SIM_TIMELINE[currentStep];
+          setSimPhase(step.phase);
+          setSimProgress(step.progress);
+          setSimMessage(step.message);
+        }
+      }, 500);
+    } else {
+      // Mutation is no longer pending — clean up timer
+      if (simTimerRef.current) {
+        clearInterval(simTimerRef.current);
+        simTimerRef.current = null;
+      }
+      // If we got a direct dossier, jump to complete (handled by directComplete)
+      // If we got an error or no direct dossier, reset sim state
+      if (!directComplete) {
+        setSimPhase('idle');
+        setSimProgress(0);
+        setSimMessage('');
+      }
+    }
+
+    return () => {
+      if (simTimerRef.current) {
+        clearInterval(simTimerRef.current);
+        simTimerRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatchScrape.isPending, directComplete]);
+
+  // Merge: direct dossier > socket > simulated
   const dossier = directDossier || socketDossier;
   const isComplete = directComplete || socketIsComplete;
-  const isError = socketIsError;
-  const error = socketError;
-  const phase = directComplete ? 'complete' as const : socketPhase;
-  const progress = directComplete ? 100 : socketProgress;
-  const message = directComplete ? 'Your Creator Dossier is ready!' : socketMessage;
+  const isError = socketIsError || dispatchScrape.isError;
+  const error = socketError || (dispatchScrape.isError ? (dispatchScrape.error as Error)?.message || 'Analysis failed. Please try again.' : null);
+  const phase = directComplete ? 'complete' as const : (socketPhase !== 'idle' ? socketPhase : simPhase);
+  const progress = directComplete ? 100 : (socketProgress > 0 ? socketProgress : simProgress);
+  const message = directComplete ? 'Your Creator Dossier is ready!' : (socketMessage || simMessage);
 
   // Track whether we've already persisted this dossier to avoid re-running
   const persistedRef = useRef(false);
@@ -277,34 +348,39 @@ export default function SocialAnalysisPage() {
     setDirectDossier(null);
     setDirectComplete(false);
 
-    let id = brandId;
+    try {
+      let id = brandId;
 
-    // Auto-create a draft brand if one doesn't exist yet
-    if (!id) {
-      const result = await apiClient.post<{ brandId: string }>(
-        '/api/v1/wizard/start',
-        { brand_name: 'Untitled Brand' },
-      );
-      id = result.brandId;
-      setMeta({ brandId: id });
-    }
+      // Auto-create a draft brand if one doesn't exist yet
+      if (!id) {
+        const result = await apiClient.post<{ brandId: string }>(
+          '/api/v1/wizard/start',
+          { brand_name: 'Untitled Brand' },
+        );
+        id = result.brandId;
+        setMeta({ brandId: id });
+      }
 
-    const response = await dispatchScrape.mutateAsync({
-      brandId: id,
-      handles: {
-        instagram: data.instagram || undefined,
-        tiktok: data.tiktok || undefined,
-        youtube: data.youtube || undefined,
-        twitter: data.twitter || undefined,
-        facebook: data.facebook || undefined,
-        websiteUrl: data.websiteUrl || undefined,
-      },
-    });
+      const response = await dispatchScrape.mutateAsync({
+        brandId: id,
+        handles: {
+          instagram: data.instagram || undefined,
+          tiktok: data.tiktok || undefined,
+          youtube: data.youtube || undefined,
+          twitter: data.twitter || undefined,
+          facebook: data.facebook || undefined,
+          websiteUrl: data.websiteUrl || undefined,
+        },
+      });
 
-    // If the server returned the dossier directly (no BullMQ), use it immediately
-    if (response?.dossier) {
-      setDirectDossier(response.dossier as Partial<CreatorDossier>);
-      setDirectComplete(true);
+      // If the server returned the dossier directly (no BullMQ), use it immediately
+      if (response?.dossier) {
+        setDirectDossier(response.dossier as Partial<CreatorDossier>);
+        setDirectComplete(true);
+      }
+    } catch (err) {
+      // Error is handled by React Query's mutation state (dispatchScrape.isError)
+      console.error('Social analysis failed:', err);
     }
   };
 

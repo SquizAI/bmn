@@ -451,25 +451,36 @@ IMPORTANT:
 - ALL numbers must be realistic for the creator's likely tier (follower count, engagement, etc.)
 - Return ONLY the JSON object, no markdown code blocks, no explanatory text`;
 
-    logger.info({ brandId, userId, handles: handleParts }, 'Calling Claude for social analysis dossier');
+    const AI_TIMEOUT_MS = 90_000; // 90 seconds max for Claude call
+
+    logger.info({ brandId, userId, handles: handleParts, handleCount: handleParts.length }, 'Starting Claude social analysis...');
+    const startTime = Date.now();
 
     let aiResult;
     try {
-      aiResult = await routeModel('social-analysis', {
-        systemPrompt,
-        prompt: taskPrompt,
-        maxTokens: 8192,
-        temperature: 0.7,
-        jsonMode: true,
-      });
+      aiResult = await Promise.race([
+        routeModel('social-analysis', {
+          systemPrompt,
+          prompt: taskPrompt,
+          maxTokens: 8192,
+          temperature: 0.7,
+          jsonMode: true,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('AI analysis timed out after 90 seconds')), AI_TIMEOUT_MS)
+        ),
+      ]);
     } catch (aiError) {
       logger.error({ brandId, error: aiError.message }, 'AI model call failed for social analysis');
       return res.status(503).json({
         success: false,
-        error: 'AI analysis service is temporarily unavailable. Please try again in a moment.',
-        detail: process.env.NODE_ENV !== 'production' ? aiError.message : undefined,
+        error: aiError.message.includes('timed out')
+          ? 'Analysis is taking longer than expected. Please try again.'
+          : 'AI analysis service is temporarily unavailable. Please try again in a moment.',
       });
     }
+
+    logger.info({ brandId, userId, model: aiResult.model, durationMs: Date.now() - startTime }, 'Claude social analysis completed');
 
     // Parse the AI response
     let parsed;
