@@ -283,14 +283,19 @@ function sanitizeDossier(d: Partial<CreatorDossier>): Partial<CreatorDossier> {
 // ------ Simulated Progress Timeline ------
 
 const SIM_TIMELINE: { delay: number; phase: DossierPhase; progress: number; message: string }[] = [
-  { delay: 0, phase: 'scraping', progress: 5, message: 'Scanning social profiles...' },
-  { delay: 2000, phase: 'profile-loaded', progress: 15, message: 'Profile data loaded' },
-  { delay: 5000, phase: 'posts-loaded', progress: 25, message: 'Posts retrieved' },
-  { delay: 8000, phase: 'analyzing-aesthetic', progress: 40, message: 'Analyzing visual aesthetic...' },
-  { delay: 12000, phase: 'detecting-niche', progress: 55, message: 'Detecting your niche...' },
-  { delay: 16000, phase: 'analyzing-audience', progress: 65, message: 'Analyzing audience...' },
-  { delay: 20000, phase: 'extracting-palette', progress: 78, message: 'Extracting color palette...' },
-  { delay: 25000, phase: 'calculating-readiness', progress: 88, message: 'Calculating readiness score...' },
+  { delay: 0, phase: 'scraping', progress: 3, message: 'Connecting to social platforms...' },
+  { delay: 4000, phase: 'scraping', progress: 8, message: 'Scanning social profiles...' },
+  { delay: 9000, phase: 'profile-loaded', progress: 15, message: 'Profile data loaded' },
+  { delay: 15000, phase: 'posts-loaded', progress: 22, message: 'Retrieving recent posts...' },
+  { delay: 22000, phase: 'posts-loaded', progress: 28, message: 'Posts retrieved — analyzing content...' },
+  { delay: 30000, phase: 'analyzing-aesthetic', progress: 36, message: 'Studying your visual aesthetic...' },
+  { delay: 38000, phase: 'analyzing-aesthetic', progress: 42, message: 'Mapping color patterns and composition...' },
+  { delay: 46000, phase: 'detecting-niche', progress: 50, message: 'Detecting your niche...' },
+  { delay: 54000, phase: 'detecting-niche', progress: 56, message: 'Cross-referencing market data...' },
+  { delay: 62000, phase: 'analyzing-audience', progress: 63, message: 'Analyzing audience demographics...' },
+  { delay: 70000, phase: 'extracting-palette', progress: 72, message: 'Extracting color palette...' },
+  { delay: 80000, phase: 'calculating-readiness', progress: 82, message: 'Calculating brand readiness score...' },
+  { delay: 90000, phase: 'calculating-readiness', progress: 88, message: 'Compiling your Creator Dossier...' },
 ];
 
 // ------ Component ------
@@ -318,6 +323,9 @@ export default function SocialAnalysisPage() {
   const [simProgress, setSimProgress] = useState(0);
   const [simMessage, setSimMessage] = useState('');
   const simTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Creeping progress: slowly increments after the last simulated step to prevent a frozen bar
+  const [creepProgress, setCreepProgress] = useState(0);
 
   useEffect(() => {
     if (dispatchScrape.isPending) {
@@ -371,13 +379,29 @@ export default function SocialAnalysisPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatchScrape.isPending, directComplete]);
 
+  // Creep effect: slowly increment progress after the last simulated step
+  useEffect(() => {
+    if (!dispatchScrape.isPending) {
+      setCreepProgress(0);
+      return;
+    }
+    // Only creep when we've reached the last simulated step
+    if (simProgress < 85) return;
+
+    const timer = setInterval(() => {
+      setCreepProgress((prev) => Math.min(prev + 1, 12));
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [dispatchScrape.isPending, simProgress]);
+
   // Merge: direct dossier > socket > simulated
   const dossier = directDossier || socketDossier;
   const isComplete = directComplete || socketIsComplete;
   const isError = socketIsError || dispatchScrape.isError;
   const error = socketError || (dispatchScrape.isError ? (dispatchScrape.error as Error)?.message || 'Analysis failed. Please try again.' : null);
   const phase = directComplete ? 'complete' as const : (socketPhase !== 'idle' ? socketPhase : simPhase);
-  const progress = directComplete ? 100 : (socketProgress > 0 ? socketProgress : simProgress);
+  const progress = directComplete ? 100 : (socketProgress > 0 ? socketProgress : Math.min(simProgress + creepProgress, 95));
   const message = directComplete ? 'Your Creator Dossier is ready!' : (socketMessage || simMessage);
 
   // Track whether we've already persisted this dossier to avoid re-running

@@ -378,12 +378,13 @@ export function createSocketServer(httpServer) {
 
         // 4. Save user message to DB
         await supabaseAdmin.from('chat_messages').insert({
+          user_id: userId,
           brand_id: brandId || null,
           session_id: sessionId,
           role: 'user',
           content,
           message_type: 'text',
-          page_context: pageContext ? JSON.stringify(pageContext) : null,
+          metadata: pageContext ? { page_context: pageContext } : {},
         });
 
         // Update session metadata
@@ -460,6 +461,7 @@ export function createSocketServer(httpServer) {
         // 8. Save assistant response to DB
         if (fullContent) {
           await supabaseAdmin.from('chat_messages').insert({
+            user_id: userId,
             brand_id: brandId || null,
             session_id: sessionId,
             role: 'assistant',

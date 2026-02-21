@@ -90,12 +90,23 @@ const FONT_OPTIONS = [
 
 const GENERATION_MESSAGES = [
   'Analyzing your social DNA...',
+  'Studying your content themes...',
   'Mapping brand archetypes...',
   'Crafting color palettes...',
   'Pairing typography...',
   'Defining brand voice...',
   'Writing brand narratives...',
+  'Composing visual identity...',
+  'Building direction concepts...',
+  'Refining creative details...',
   'Finalizing directions...',
+];
+
+const FINALIZING_EXPLAINERS = [
+  'We\'re generating three distinct brand directions — each with its own color palette, typography, voice, and visual identity. Great branding takes a moment.',
+  'Our AI is cross-referencing your content themes, audience demographics, and aesthetic style to ensure each direction is uniquely tailored to your presence.',
+  'Each brand direction includes a complete narrative, archetype mapping, and font pairing. We\'re making sure everything is cohesive before presenting your options.',
+  'Almost there — we\'re polishing the final details on your color harmonies, voice guidelines, and brand positioning.',
 ];
 
 // ── Phase enum ──────────────────────────────────────────────────
@@ -126,6 +137,8 @@ export default function BrandIdentityPage() {
   const [selectedDirection, setSelectedDirection] = useState<BrandDirection | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [genError, setGenError] = useState<string | null>(null);
+  const [creepProgress, setCreepProgress] = useState(0);
+  const [explainerIndex, setExplainerIndex] = useState(0);
   const [selectedTagline, setSelectedTagline] = useState<string>('');
   const [showCelebration, setShowCelebration] = useState(false);
   const hasDispatchedRef = useRef(false);
@@ -188,10 +201,39 @@ export default function BrandIdentityPage() {
       setLoadingMessageIndex((prev) =>
         prev < GENERATION_MESSAGES.length - 1 ? prev + 1 : prev,
       );
-    }, 4000);
+    }, 7000);
 
     return () => clearInterval(interval);
   }, [phase]);
+
+  // ── Creeping progress when on last message ───────────────────
+  useEffect(() => {
+    if (phase !== 'loading') {
+      setCreepProgress(0);
+      return;
+    }
+    if (loadingMessageIndex < GENERATION_MESSAGES.length - 1) {
+      setCreepProgress(0);
+      return;
+    }
+    // On the last message, slowly inch forward
+    const timer = setInterval(() => {
+      setCreepProgress((prev) => Math.min(prev + 1, 10));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [phase, loadingMessageIndex]);
+
+  // ── Rotate finalizing explainer ──────────────────────────────
+  useEffect(() => {
+    if (phase !== 'loading' || loadingMessageIndex < GENERATION_MESSAGES.length - 1) {
+      setExplainerIndex(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setExplainerIndex((prev) => (prev + 1) % FINALIZING_EXPLAINERS.length);
+    }, 9000);
+    return () => clearInterval(timer);
+  }, [phase, loadingMessageIndex]);
 
   const [toneValues, setToneValues] = useState<ToneValues>({
     casualToFormal: 50,
@@ -492,14 +534,14 @@ export default function BrandIdentityPage() {
                   animate={{
                     width: `${Math.max(
                       brandGen.progress > 0 ? brandGen.progress : 0,
-                      Math.min(5 + loadingMessageIndex * 14, 95),
+                      Math.min(5 + loadingMessageIndex * 7 + creepProgress, 95),
                     )}%`,
                   }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  transition={{ duration: 1.5, ease: [0.25, 0.46, 0.45, 0.94] }}
                   role="progressbar"
                   aria-valuenow={Math.round(Math.max(
                     brandGen.progress > 0 ? brandGen.progress : 0,
-                    Math.min(5 + loadingMessageIndex * 14, 95),
+                    Math.min(5 + loadingMessageIndex * 7 + creepProgress, 95),
                   ))}
                   aria-valuemin={0}
                   aria-valuemax={100}
@@ -542,6 +584,29 @@ export default function BrandIdentityPage() {
                 ),
               )}
             </div>
+
+            {/* Finalizing explainer — appears when messages are exhausted */}
+            {loadingMessageIndex >= GENERATION_MESSAGES.length - 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="mx-auto max-w-md text-center"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={explainerIndex}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="text-sm leading-relaxed text-text-muted"
+                  >
+                    {FINALIZING_EXPLAINERS[explainerIndex]}
+                  </motion.p>
+                </AnimatePresence>
+              </motion.div>
+            )}
 
             {/* Educational tips while loading */}
             <LoadingTip />

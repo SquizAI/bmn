@@ -46,9 +46,10 @@ function ChatSidebar() {
 
   const handleSend = useCallback(
     (content: string) => {
-      sendMessage(content, brandId ?? undefined, route);
+      if (!sessionId) return;
+      sendMessage(content, sessionId, brandId ?? undefined, route ? { route } : undefined);
     },
-    [sendMessage, brandId, route],
+    [sendMessage, sessionId, brandId, route],
   );
 
   const handleNewSession = useCallback(() => {
@@ -160,7 +161,7 @@ function ChatSidebar() {
             {/* Input */}
             <ChatInput
               onSend={handleSend}
-              onCancel={cancelStream}
+              onCancel={() => sessionId && cancelStream(sessionId)}
               disabled={!sessionId}
               isStreaming={isStreaming}
             />
