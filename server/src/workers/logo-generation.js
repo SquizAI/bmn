@@ -89,15 +89,14 @@ export function initLogoGenerationWorker(io) {
       } = job.data;
 
       const jobLog = createJobLogger(job, 'logo-generation');
-      const room = `brand:${brandId}`;
-      const jobRoom = `job:${job.id}`;
+      const userRoom = `user:${userId}`;
       const logos = [];
 
       jobLog.info({ count, logoStyle }, 'Logo generation started');
 
       try {
         // Step 1: Compose prompts (5-10%)
-        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+        io.to(userRoom).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 5, message: 'Composing logo prompts...', timestamp: Date.now(),
         });
@@ -108,7 +107,7 @@ export function initLogoGenerationWorker(io) {
           isRefinement, previousLogoUrl, refinementNotes, count,
         });
 
-        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+        io.to(userRoom).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 10, message: 'Prompts ready. Starting generation...', timestamp: Date.now(),
         });
@@ -121,7 +120,7 @@ export function initLogoGenerationWorker(io) {
           prompts.map(async (prompt, index) => {
             const logoNumber = index + 1;
 
-            io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+            io.to(userRoom).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',
               progress: Math.round(10 + (index * progressPerLogo)),
               message: `Generating logo ${logoNumber} of ${count}...`,
@@ -134,7 +133,7 @@ export function initLogoGenerationWorker(io) {
               colors: colorPalette,
             });
 
-            io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+            io.to(userRoom).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',
               progress: Math.round(10 + ((index + 1) * progressPerLogo)),
               message: `Logo ${logoNumber} generated!`,
@@ -149,7 +148,7 @@ export function initLogoGenerationWorker(io) {
         await job.updateProgress(80);
 
         // Step 3: Upload to storage (80-90%)
-        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+        io.to(userRoom).emit('job:progress', {
           jobId: job.id, brandId, status: 'uploading',
           progress: 80, message: 'Uploading logos to storage...', timestamp: Date.now(),
         });
@@ -185,7 +184,7 @@ export function initLogoGenerationWorker(io) {
         await job.updateProgress(90);
 
         // Step 4: Save to brand_assets (90-95%)
-        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+        io.to(userRoom).emit('job:progress', {
           jobId: job.id, brandId, status: 'saving',
           progress: 90, message: 'Saving logo records...', timestamp: Date.now(),
         });
@@ -224,7 +223,7 @@ export function initLogoGenerationWorker(io) {
         await job.updateProgress(100);
 
         // Emit: complete
-        io.of('/wizard').to(jobRoom).to(room).emit('job:complete', {
+        io.to(userRoom).emit('job:complete', {
           jobId: job.id,
           brandId,
           status: 'complete',
@@ -246,7 +245,7 @@ export function initLogoGenerationWorker(io) {
           jobLog.error({ err: dbErr }, 'Failed to update generation_jobs on failure');
         });
 
-        io.of('/wizard').to(jobRoom).to(room).emit('job:failed', {
+        io.to(userRoom).emit('job:failed', {
           jobId: job.id, brandId,
           error: error.message,
           retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),

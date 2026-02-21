@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { QUERY_KEYS } from '@/lib/constants';
 import { useWizardStore } from '@/stores/wizard-store';
 
@@ -65,6 +66,18 @@ interface SaveProjectionsPayload {
     retailPrice: number;
     projectedMonthlySales: number;
   }>;
+}
+
+interface UploadLogoPayload {
+  brandId: string;
+  file: File;
+}
+
+interface UploadLogoAsset {
+  id: string;
+  url: string;
+  asset_type: string;
+  metadata: Record<string, unknown>;
 }
 
 // ------ Hooks ------
@@ -140,6 +153,41 @@ export function useRegenerateLogo() {
       ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);
+    },
+  });
+}
+
+/**
+ * Upload a user's existing logo to Supabase Storage, then register it as a brand asset.
+ */
+export function useUploadLogo() {
+  return useMutation({
+    mutationFn: async ({ brandId, file }: UploadLogoPayload): Promise<UploadLogoAsset> => {
+      const ext = file.name.split('.').pop() || 'png';
+      const storagePath = `brand-assets/${brandId}/logos/upload-${Date.now()}.${ext}`;
+
+      // 1. Upload file to Supabase Storage
+      const { error: uploadErr } = await supabase.storage
+        .from('brand-assets')
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`);
+
+      // 2. Get public URL
+      const { data: urlData } = supabase.storage
+        .from('brand-assets')
+        .getPublicUrl(storagePath);
+
+      // 3. Register asset on the server
+      const asset = await apiClient.post<UploadLogoAsset>(
+        `/api/v1/brands/${brandId}/upload-logo`,
+        { url: urlData.publicUrl, fileName: file.name },
+      );
+
+      return asset;
     },
   });
 }

@@ -55,6 +55,13 @@ brandRoutes.post(
   brandController.generateLogos
 );
 
+// POST /api/v1/brands/:brandId/upload-logo -- Register a user-uploaded logo
+brandRoutes.post(
+  '/:brandId/upload-logo',
+  validate({ params: brandIdParamsSchema }),
+  brandController.uploadLogo
+);
+
 // POST /api/v1/brands/:brandId/generate/mockups -- Queue mockup generation
 brandRoutes.post(
   '/:brandId/generate/mockups',

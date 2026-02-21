@@ -416,6 +416,70 @@ export async function generateLogos(req, res, next) {
     const userId = req.user.id;
     const { brandId } = req.params;
 
+    // Load brand with wizard_state to extract identity data for logo prompts
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id, name, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    // Extract brand identity from wizard_state
+    const ws = brand.wizard_state || {};
+    const identity = ws['brand-identity'] || {};
+    const directions = identity.directions || [];
+    const selectedDir = directions.find((d) => d.id === identity.selectedDirectionId) || directions[0];
+
+    const colorPalette = (selectedDir?.colorPalette || identity.colorPalette || [])
+      .map((c) => (typeof c === 'string' ? c : c.hex))
+      .filter(Boolean);
+
+    const result = await dispatchJob('logo-generation', {
+      userId,
+      brandId,
+      brandName: brand.name || 'Brand',
+      logoStyle: req.body.style || selectedDir?.logoStyle?.style || identity.logoStyle || 'modern',
+      colorPalette: colorPalette.length > 0 ? colorPalette : ['#6366F1', '#EC4899', '#F59E0B'],
+      brandVision: selectedDir?.vision || identity.vision || '',
+      archetype: selectedDir?.archetype?.name || identity.archetype || '',
+      count: req.body.count || 4,
+    });
+
+    logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');
+
+    res.status(202).json({
+      success: true,
+      data: { jobId: result.jobId, queueName: result.queueName },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/brands/:brandId/upload-logo
+ * Register a user-uploaded logo (uploaded to Supabase Storage from the client).
+ * Expects { url: string, fileName: string } in the body.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function uploadLogo(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+    const { url, fileName } = req.body;
+
+    if (!url || typeof url !== 'string') {
+      return res.status(400).json({ success: false, error: 'Missing logo URL' });
+    }
+
     // Verify brand ownership
     const { data: brand, error: brandErr } = await supabaseAdmin
       .from('brands')
@@ -429,19 +493,33 @@ export async function generateLogos(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    const result = await dispatchJob('brand-wizard', {
-      userId,
-      brandId,
-      step: 'logo-generation',
-      input: req.body,
-      creditCost: req.body.creditCost || 1,
-    });
+    // Create brand_asset record for the uploaded logo
+    const { data: asset, error: insertErr } = await supabaseAdmin
+      .from('brand_assets')
+      .insert({
+        brand_id: brandId,
+        asset_type: 'logo',
+        url,
+        is_selected: false,
+        metadata: {
+          source: 'user_upload',
+          file_name: fileName || 'uploaded-logo',
+          uploaded_at: new Date().toISOString(),
+        },
+      })
+      .select()
+      .single();
 
-    logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');
+    if (insertErr) {
+      logger.error({ err: insertErr, brandId }, 'Failed to save uploaded logo asset');
+      return res.status(500).json({ success: false, error: 'Failed to save logo' });
+    }
 
-    res.status(202).json({
+    logger.info({ assetId: asset.id, brandId, userId }, 'User logo uploaded');
+
+    res.json({
       success: true,
-      data: { jobId: result.jobId, queueName: result.queueName },
+      data: asset,
     });
   } catch (err) {
     next(err);
