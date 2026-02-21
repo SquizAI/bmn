@@ -242,6 +242,7 @@ export default function ProfitProjectionPage() {
               value={salesVolume}
               onChange={(e) => setSalesVolume(Number(e.target.value))}
               className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-hover accent-primary"
+              aria-label={`Monthly sales per product: ${salesVolume} units`}
             />
             <div className="mt-1 flex justify-between text-xs text-text-muted">
               <span>10</span>
@@ -264,6 +265,7 @@ export default function ProfitProjectionPage() {
               value={markupPercent}
               onChange={(e) => setMarkupPercent(Number(e.target.value))}
               className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-surface-hover accent-primary"
+              aria-label={`Markup percentage: ${markupPercent}%`}
             />
             <div className="mt-1 flex justify-between text-xs text-text-muted">
               <span>25%</span>
@@ -275,7 +277,7 @@ export default function ProfitProjectionPage() {
       </Card>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" aria-live="polite">
         <Card variant="default" padding="md">
           <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Retail Price

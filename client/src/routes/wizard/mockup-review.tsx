@@ -227,20 +227,24 @@ export default function MockupReviewPage() {
 
       {/* Progress */}
       {isGenerating && (
-        <GenerationProgress
-          progress={generation.progress}
-          status={generation.status}
-          message={generation.message}
-          error={generation.error}
-        />
+        <div role="status" aria-busy="true" aria-live="polite">
+          <GenerationProgress
+            progress={generation.progress}
+            status={generation.status}
+            message={generation.message}
+            error={generation.error}
+          />
+        </div>
       )}
 
       {/* View mode tabs */}
       {hasMockups && !isGenerating && (
         <div className="flex items-center justify-between">
-          <div className="flex gap-1 rounded-lg bg-surface-hover p-1">
+          <div className="flex gap-1 rounded-lg bg-surface-hover p-1" role="tablist" aria-label="Mockup view modes">
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === 'gallery'}
               onClick={() => setViewMode('gallery')}
               className={cn(
                 'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
@@ -254,6 +258,8 @@ export default function MockupReviewPage() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === 'editor'}
               onClick={() => {
                 if (mockups.length > 0) handleOpenEditor(mockups[0].id);
               }}
@@ -269,6 +275,8 @@ export default function MockupReviewPage() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === 'comparison'}
               onClick={() => {
                 if (mockups.length > 0) handleOpenComparison(mockups[0].id);
               }}
@@ -285,7 +293,7 @@ export default function MockupReviewPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <p className="text-sm text-text-secondary">
+            <p className="text-sm text-text-secondary" aria-live="polite">
               {approvedCount} of {mockups.length} approved
             </p>
             <Button
@@ -369,13 +377,15 @@ export default function MockupReviewPage() {
 
       {/* Editor View */}
       {hasMockups && !isGenerating && viewMode === 'editor' && editingMockup && (
-        <div className="space-y-4">
+        <div className="space-y-4" role="tabpanel" aria-label="Mockup editor">
           {/* Mockup selector tabs */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Select mockup to edit">
             {mockups.map((m) => (
               <button
                 key={m.id}
                 type="button"
+                role="tab"
+                aria-selected={m.id === editingMockupId}
                 onClick={() => setEditingMockupId(m.id)}
                 className={cn(
                   'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
@@ -402,13 +412,15 @@ export default function MockupReviewPage() {
 
       {/* Comparison View */}
       {hasMockups && !isGenerating && viewMode === 'comparison' && comparingMockup && (
-        <div className="space-y-4">
+        <div className="space-y-4" role="tabpanel" aria-label="Mockup comparison">
           {/* Mockup selector tabs */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Select mockup to compare">
             {mockups.map((m) => (
               <button
                 key={m.id}
                 type="button"
+                role="tab"
+                aria-selected={m.id === comparingMockupId}
                 onClick={() => setComparingMockupId(m.id)}
                 className={cn(
                   'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',

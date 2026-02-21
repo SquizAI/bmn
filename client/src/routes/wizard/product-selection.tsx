@@ -625,6 +625,9 @@ export default function ProductSelectionPage() {
               exit={{ opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
               className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-surface p-6 shadow-xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Compare products"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-text">Compare Products</h3>

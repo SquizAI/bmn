@@ -182,7 +182,7 @@ export default function BundleBuilderPage() {
 
       {/* Revenue from bundles */}
       {bundleRevenueSummary && selectedBundleIds.size > 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} aria-live="polite">
           <div className="mb-2 flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-success" />
             <span className="text-sm font-semibold text-text">
@@ -196,7 +196,7 @@ export default function BundleBuilderPage() {
 
       {/* Bundle builder content */}
       {recsLoading ? (
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12" role="status" aria-busy="true" aria-label="Loading bundle suggestions">
           <Spinner size="lg" />
         </div>
       ) : (

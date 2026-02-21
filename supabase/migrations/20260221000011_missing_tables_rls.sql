@@ -263,3 +263,10 @@ CREATE POLICY "custom_product_requests_update_admin"
   WITH CHECK (public.is_admin());
 
 -- No delete — requests are tracked for fulfillment history.
+
+-- ── 13. webhook_events ──────────────────────────────────────────────────────
+-- Server-only table (Stripe webhooks use service_role). No user access needed.
+
+ALTER TABLE public.webhook_events ENABLE ROW LEVEL SECURITY;
+
+-- Service role has implicit bypass. No user-facing policies needed.

@@ -442,3 +442,19 @@ COMMENT ON TABLE  public.custom_product_requests IS 'Custom product requests sub
 COMMENT ON COLUMN public.custom_product_requests.description IS 'User-provided description of the custom product they want.';
 COMMENT ON COLUMN public.custom_product_requests.category IS 'Product category hint (apparel, accessories, etc.).';
 COMMENT ON COLUMN public.custom_product_requests.price_range IS 'User-indicated price range preference.';
+
+-- =============================================================================
+-- 13. webhook_events — Stripe webhook idempotency guard
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.webhook_events (
+  id          TEXT PRIMARY KEY,                            -- Stripe event ID (evt_xxx)
+  event_type  TEXT NOT NULL,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_webhook_events_type ON public.webhook_events (event_type);
+
+COMMENT ON TABLE  public.webhook_events IS 'Stripe webhook idempotency guard — prevents duplicate event processing.';
+COMMENT ON COLUMN public.webhook_events.id IS 'Stripe event ID used as natural primary key.';
+COMMENT ON COLUMN public.webhook_events.event_type IS 'Stripe event type (e.g. invoice.paid, customer.subscription.updated).';

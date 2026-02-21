@@ -113,6 +113,7 @@ export default function CompletionPage() {
           animate={{ y: 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
           className="text-center"
+          aria-live="polite"
         >
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-success/10">
             <PartyPopper className="h-10 w-10 text-success" />
@@ -152,13 +153,14 @@ export default function CompletionPage() {
 
               {/* Color palette preview */}
               {design.colorPalette.length > 0 && (
-                <div className="flex gap-1 pl-11">
+                <div className="flex gap-1 pl-11" aria-label="Brand color palette">
                   {design.colorPalette.map((color, i) => (
                     <div
                       key={i}
                       className="h-6 w-6 rounded-full border border-border"
                       style={{ backgroundColor: color.hex }}
                       title={color.name}
+                      aria-label={`${color.name}: ${color.hex}`}
                     />
                   ))}
                 </div>
