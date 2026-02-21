@@ -111,6 +111,34 @@ export async function getWizardState(req, res, next) {
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
+// Map client step names → valid DB wizard_step values.
+// The DB trigger only accepts these: onboarding, social, identity, colors, fonts,
+// logos, products, mockups, bundles, projections, checkout, complete.
+const CLIENT_STEP_TO_DB = {
+  'social-analysis': 'social',
+  'brand-name': 'social',
+  'brand-identity': 'identity',
+  'logo-generation': 'logos',
+  'product-selection': 'products',
+  'mockup-review': 'mockups',
+  'bundle-builder': 'bundles',
+  'profit-calculator': 'projections',
+  'completion': 'complete',
+  // Also allow DB step names directly
+  'onboarding': 'onboarding',
+  'social': 'social',
+  'identity': 'identity',
+  'colors': 'colors',
+  'fonts': 'fonts',
+  'logos': 'logos',
+  'products': 'products',
+  'mockups': 'mockups',
+  'bundles': 'bundles',
+  'projections': 'projections',
+  'checkout': 'checkout',
+  'complete': 'complete',
+};
+
 export async function saveStepData(req, res, next) {
   try {
     const userId = req.user.id;
@@ -129,19 +157,25 @@ export async function saveStepData(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Merge step data into wizard_state
+    // Merge step data into wizard_state (keyed by the client step name)
     const updatedState = {
       ...(brand.wizard_state || {}),
       [step]: data,
     };
 
+    // Only update wizard_step if the client step maps to a valid DB step
+    const dbStep = CLIENT_STEP_TO_DB[step];
+    const updatePayload = {
+      wizard_state: updatedState,
+      updated_at: new Date().toISOString(),
+    };
+    if (dbStep) {
+      updatePayload.wizard_step = dbStep;
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('brands')
-      .update({
-        wizard_step: step,
-        wizard_state: updatedState,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', brandId);
 
     if (updateError) {
