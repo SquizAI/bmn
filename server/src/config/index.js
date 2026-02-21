@@ -136,12 +136,12 @@ export const config = cleanEnv(process.env, {
 
   // ── Scraping ───────────────────────────────────────────────
   APIFY_API_TOKEN: str({
-    devDefault: 'placeholder',
-    desc: 'Apify API token for social media scraping',
+    default: '',
+    desc: 'Apify API token for social media scraping (optional — AI-only fallback when empty)',
   }),
   FIRECRAWL_API_KEY: str({
-    devDefault: 'placeholder',
-    desc: 'Firecrawl API key for web scraping and deep research',
+    default: '',
+    desc: 'Firecrawl API key for web scraping and deep research (optional — AI-only fallback when empty)',
   }),
 
   // ── Observability ──────────────────────────────────────────

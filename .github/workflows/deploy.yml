@@ -21,6 +21,8 @@
 #   STRIPE_PUBLISHABLE_KEY - Stripe publishable key
 #   SENTRY_DSN         - Sentry DSN for error tracking
 #   POSTHOG_API_KEY    - PostHog analytics key
+#   APIFY_API_TOKEN    - Apify token for social media scraping
+#   FIRECRAWL_API_KEY  - Firecrawl key for web scraping
 
 name: Deploy
 
@@ -44,7 +46,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME || 'deploy' }}
           key: ${{ secrets.DO_SSH_KEY }}
           script_stop: true
-          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,SENTRY_DSN,POSTHOG_API_KEY
+          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,SENTRY_DSN,POSTHOG_API_KEY,APIFY_API_TOKEN,FIRECRAWL_API_KEY
           script: |
             cd /opt/bmn
             echo "=== Fixing permissions ==="
@@ -81,6 +83,8 @@ jobs:
             inject_secret "STRIPE_PUBLISHABLE_KEY" "$STRIPE_PUBLISHABLE_KEY"
             inject_secret "SENTRY_DSN" "$SENTRY_DSN"
             inject_secret "POSTHOG_API_KEY" "$POSTHOG_API_KEY"
+            inject_secret "APIFY_API_TOKEN" "$APIFY_API_TOKEN"
+            inject_secret "FIRECRAWL_API_KEY" "$FIRECRAWL_API_KEY"
 
             echo "=== Building and deploying ==="
             bash deploy/deploy.sh
@@ -100,6 +104,8 @@ jobs:
           STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
+          FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
 
       - name: Notify on failure
         if: failure()
