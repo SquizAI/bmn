@@ -342,3 +342,171 @@ export async function getMetrics(req, res, next) {
     next(err);
   }
 }
+
+// ── Packaging Templates (admin CRUD) ──────────────────────────────────
+
+/**
+ * GET /api/v1/admin/templates
+ * List all packaging templates (admin sees inactive too).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function listTemplatesAdmin(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+    const { category, search } = req.query;
+
+    let query = supabaseAdmin
+      .from('packaging_templates')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (category) query = query.eq('category', category);
+    if (search) query = query.ilike('name', `%${search}%`);
+
+    const { data, error, count } = await query.range(offset, offset + limit - 1);
+    if (error) throw error;
+
+    res.json({ success: true, data: { items: data, total: count, page, limit } });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/v1/admin/templates/:templateId
+ * Get a single packaging template (admin view).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function getTemplateAdmin(req, res, next) {
+  try {
+    const { templateId } = req.params;
+    const { data, error } = await supabaseAdmin
+      .from('packaging_templates')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/admin/templates
+ * Create a new packaging template.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function createTemplate(req, res, next) {
+  try {
+    const {
+      slug, name, category, description,
+      template_image_url, template_width_px, template_height_px,
+      branding_zones, print_specs, ai_prompt_template, reference_images,
+    } = req.body;
+
+    const { data, error } = await supabaseAdmin
+      .from('packaging_templates')
+      .insert({
+        slug,
+        name,
+        category,
+        description: description || '',
+        template_image_url,
+        template_width_px: template_width_px || 1024,
+        template_height_px: template_height_px || 1024,
+        branding_zones: branding_zones || [],
+        print_specs: print_specs || {},
+        ai_prompt_template: ai_prompt_template || '',
+        reference_images: reference_images || [],
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, error: 'Template with this slug already exists' });
+      }
+      throw error;
+    }
+
+    logger.info({ templateId: data.id, slug }, 'Packaging template created');
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PATCH /api/v1/admin/templates/:templateId
+ * Update an existing packaging template.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function updateTemplate(req, res, next) {
+  try {
+    const { templateId } = req.params;
+    const { data: existing } = await supabaseAdmin
+      .from('packaging_templates')
+      .select('id')
+      .eq('id', templateId)
+      .single();
+
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('packaging_templates')
+      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .eq('id', templateId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * DELETE /api/v1/admin/templates/:templateId
+ * Soft-delete a packaging template (sets is_active = false).
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function deleteTemplate(req, res, next) {
+  try {
+    const { templateId } = req.params;
+    const { error } = await supabaseAdmin
+      .from('packaging_templates')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', templateId);
+
+    if (error) throw error;
+    logger.info({ templateId }, 'Template disabled by admin');
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+}

@@ -9,6 +9,7 @@ import {
   brandUpdateSchema,
   brandIdParamsSchema,
 } from '../validation/brands.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 
 export const brandRoutes = Router();
 
@@ -68,3 +69,37 @@ brandRoutes.get(
   validate({ params: brandIdParamsSchema }),
   brandController.downloadBrandAssets
 );
+
+// POST /api/v1/brands/:brandId/products/:productId/export-print -- Queue print export job
+brandRoutes.post('/:brandId/products/:productId/export-print', async (req, res, next) => {
+  try {
+    const { brandId, productId } = req.params;
+    const { format } = req.body;
+    const userId = req.user?.id || req.auth?.userId;
+
+    // Load product to get template_id
+    const { data: product } = await supabaseAdmin
+      .from('products')
+      .select('template_id')
+      .eq('id', productId)
+      .single();
+
+    if (!product?.template_id) {
+      return res.status(400).json({ success: false, error: 'Product has no packaging template assigned' });
+    }
+
+    // Dispatch print export job
+    const { dispatchJob } = await import('../queues/dispatch.js');
+    const result = await dispatchJob('print-export', {
+      userId: userId || brandId,
+      brandId,
+      productId,
+      templateId: product.template_id,
+      format: format || 'pdf',
+    });
+
+    res.json({ success: true, data: { jobId: result.jobId } });
+  } catch (err) {
+    next(err);
+  }
+});

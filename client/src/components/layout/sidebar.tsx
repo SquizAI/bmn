@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router';
-import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity, Building2 } from 'lucide-react';
+import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity, Building2, Layers } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { ROUTES } from '@/lib/constants';
@@ -21,6 +21,7 @@ const dashboardNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { label: 'Users', path: ROUTES.ADMIN_USERS, icon: <Users className="h-4 w-4" /> },
   { label: 'Products', path: ROUTES.ADMIN_PRODUCTS, icon: <Package className="h-4 w-4" /> },
+  { label: 'Templates', path: ROUTES.ADMIN_TEMPLATES, icon: <Layers className="h-4 w-4" /> },
   { label: 'Jobs', path: ROUTES.ADMIN_JOBS, icon: <Activity className="h-4 w-4" /> },
 ];
 

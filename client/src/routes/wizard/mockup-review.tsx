@@ -9,6 +9,7 @@ import {
   SlidersHorizontal,
   ArrowLeftRight,
   RefreshCw,
+  Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
 import { GenerationProgress } from '@/components/generation-progress';
 import { MockupEditor } from '@/components/products/MockupEditor';
 import { MockupComparison } from '@/components/products/MockupComparison';
+import PrintExportDialog from '@/components/products/PrintExportDialog';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import {
@@ -60,6 +62,7 @@ export default function MockupReviewPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [editingMockupId, setEditingMockupId] = useState<string | null>(null);
   const [comparingMockupId, setComparingMockupId] = useState<string | null>(null);
+  const [printExportMockupId, setPrintExportMockupId] = useState<string | null>(null);
 
   // Get the selected logo URL for the editor
   const selectedLogo = logos.find((l) => l.id === selectedLogoId);
@@ -346,6 +349,17 @@ export default function MockupReviewPage() {
                     <RefreshCw className="mr-1 h-3 w-3" />
                     Redo
                   </Button>
+                  {mockup.status === 'approved' && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPrintExportMockupId(mockup.id)}
+                      className="text-xs"
+                    >
+                      <Printer className="mr-1 h-3 w-3" />
+                      Print
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -456,6 +470,19 @@ export default function MockupReviewPage() {
             : 'Review All Mockups to Continue'}
         </Button>
       </div>
+
+      {/* Print Export Dialog */}
+      {brandId && printExportMockupId && (
+        <PrintExportDialog
+          isOpen={!!printExportMockupId}
+          onClose={() => setPrintExportMockupId(null)}
+          brandId={brandId}
+          productId={printExportMockupId}
+          productName={
+            mockups.find((m) => m.id === printExportMockupId)?.productSku || 'Product'
+          }
+        />
+      )}
     </motion.div>
   );
 }

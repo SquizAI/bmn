@@ -50,6 +50,7 @@ export const MockupGenerationJobSchema = z.object({
   productId: z.string().uuid(),
   productName: z.string(),
   productCategory: z.string(),
+  brandName: z.string().optional(),
   logoUrl: z.string().url(),
   colorPalette: z.array(z.string()).min(1).max(8),
   mockupTemplateUrl: z.string().url().optional(),
@@ -140,6 +141,17 @@ export const ImageUploadJobSchema = z.object({
 });
 
 /**
+ * Print Export job -- generates print-ready artwork from a packaging template.
+ */
+export const PrintExportJobSchema = z.object({
+  userId: z.string().uuid(),
+  brandId: z.string().uuid(),
+  productId: z.string().uuid(),
+  templateId: z.string().uuid(),
+  format: z.enum(['pdf', 'png_300dpi']).default('pdf'),
+});
+
+/**
  * Cleanup job -- periodic maintenance.
  */
 export const CleanupJobSchema = z.object({
@@ -159,5 +171,6 @@ export const JOB_SCHEMAS = {
   'crm-sync': CRMSyncJobSchema,
   'email-send': EmailSendJobSchema,
   'image-upload': ImageUploadJobSchema,
+  'print-export': PrintExportJobSchema,
   'cleanup': CleanupJobSchema,
 };

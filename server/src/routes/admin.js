@@ -7,6 +7,8 @@ import {
   adminUserQuerySchema,
   adminProductCreateSchema,
   adminProductUpdateSchema,
+  adminTemplateCreateSchema,
+  adminTemplateUpdateSchema,
 } from '../validation/admin.js';
 
 export const adminRoutes = Router();
@@ -39,6 +41,30 @@ adminRoutes.patch(
 
 // DELETE /api/v1/admin/products/:productId -- Disable product
 adminRoutes.delete('/products/:productId', adminController.disableProduct);
+
+// -- Templates (packaging management) --
+// GET /api/v1/admin/templates -- List all templates (paginated, admin sees inactive)
+adminRoutes.get('/templates', adminController.listTemplatesAdmin);
+
+// GET /api/v1/admin/templates/:templateId -- Get template details
+adminRoutes.get('/templates/:templateId', adminController.getTemplateAdmin);
+
+// POST /api/v1/admin/templates -- Create packaging template
+adminRoutes.post(
+  '/templates',
+  validate({ body: adminTemplateCreateSchema }),
+  adminController.createTemplate
+);
+
+// PATCH /api/v1/admin/templates/:templateId -- Update packaging template
+adminRoutes.patch(
+  '/templates/:templateId',
+  validate({ body: adminTemplateUpdateSchema }),
+  adminController.updateTemplate
+);
+
+// DELETE /api/v1/admin/templates/:templateId -- Soft-delete packaging template
+adminRoutes.delete('/templates/:templateId', adminController.deleteTemplate);
 
 // -- System --
 // GET /api/v1/admin/jobs -- BullMQ job queue status

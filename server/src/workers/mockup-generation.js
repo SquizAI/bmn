@@ -56,10 +56,52 @@ async function generateMockupImage(prompt, { useIdeogram = false } = {}) {
 
 /**
  * Compose a mockup generation prompt.
+ * When a packaging template with branding zones is available, builds a structured
+ * prompt from the template's ai_prompt_template and zone definitions. Otherwise
+ * falls back to the generic free-text prompt.
+ *
  * @param {Object} params
+ * @param {string} params.productName
+ * @param {string} params.productCategory
+ * @param {string[]} params.colorPalette
+ * @param {string} [params.mockupInstructions]
+ * @param {Object} [params.template] - Packaging template row (nullable)
+ * @param {string} [params.brandName]
  * @returns {string}
  */
-function composeMockupPrompt({ productName, productCategory, colorPalette, mockupInstructions }) {
+function composeMockupPrompt({ productName, productCategory, colorPalette, mockupInstructions, template, brandName }) {
+  // If template with zones exists, use structured prompt
+  if (template && template.branding_zones?.length > 0) {
+    let prompt = template.ai_prompt_template || '';
+
+    // Replace template placeholders
+    prompt = prompt
+      .replace(/\{\{productName\}\}/g, productName)
+      .replace(/\{\{brandName\}\}/g, brandName || 'Brand')
+      .replace(/\{\{primaryColor\}\}/g, colorPalette[0] || '#000000')
+      .replace(/\{\{secondaryColor\}\}/g, colorPalette[1] || colorPalette[0] || '#333333')
+      .replace(/\{\{accentColor\}\}/g, colorPalette[2] || colorPalette[0] || '#666666');
+
+    // If no ai_prompt_template, build from zones
+    if (!prompt) {
+      prompt = `Professional product photo of "${productName}" (${productCategory}). Brand colors: ${colorPalette.join(', ')}. `;
+      prompt += 'Clean studio photography, white background, photorealistic. ';
+
+      for (const zone of template.branding_zones) {
+        if (zone.type === 'logo') {
+          prompt += `The brand logo is placed at the ${zone.label.toLowerCase()} area. `;
+        } else if (zone.type === 'text') {
+          prompt += `"${brandName || productName}" text appears in the ${zone.label.toLowerCase()} area. `;
+        } else if (zone.type === 'color_fill') {
+          prompt += `${zone.label}: filled with brand color. `;
+        }
+      }
+    }
+
+    return prompt;
+  }
+
+  // Fallback to existing free-text behavior
   let prompt = `Professional product mockup of a ${productCategory} product called "${productName}". `;
   prompt += `Brand colors: ${colorPalette.join(', ')}. `;
   prompt += 'Clean studio photography style, white or neutral background, photorealistic, high detail. ';
@@ -86,7 +128,7 @@ export function initMockupGenerationWorker(io) {
     async (job) => {
       const {
         userId, brandId, productId, productName, productCategory,
-        logoUrl, colorPalette, mockupTemplateUrl, mockupInstructions,
+        brandName, logoUrl, colorPalette, mockupTemplateUrl, mockupInstructions,
       } = job.data;
 
       const jobLog = createJobLogger(job, 'mockup-generation');
@@ -96,6 +138,25 @@ export function initMockupGenerationWorker(io) {
       jobLog.info({ productName }, 'Mockup generation started');
 
       try {
+        // Load product's packaging template if available
+        let template = null;
+        if (productId) {
+          const { data: product } = await supabaseAdmin
+            .from('products')
+            .select('template_id')
+            .eq('id', productId)
+            .single();
+
+          if (product?.template_id) {
+            const { data: tmpl } = await supabaseAdmin
+              .from('packaging_templates')
+              .select('*')
+              .eq('id', product.template_id)
+              .single();
+            template = tmpl;
+          }
+        }
+
         // Step 1: Compose prompt (10%)
         io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
@@ -105,7 +166,7 @@ export function initMockupGenerationWorker(io) {
 
         const prompt = composeMockupPrompt({
           productName, productCategory, logoUrl, colorPalette,
-          mockupTemplateUrl, mockupInstructions,
+          mockupTemplateUrl, mockupInstructions, template, brandName,
         });
 
         // Step 2: Generate via GPT Image 1.5 (or Ideogram for text-heavy products) (10-70%)

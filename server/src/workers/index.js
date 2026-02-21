@@ -10,6 +10,7 @@ import { initCRMSyncWorker } from './crm-sync.js';
 import { initEmailSendWorker } from './email-send.js';
 import { initImageUploadWorker } from './image-upload.js';
 import { initCleanupWorker } from './cleanup.js';
+import { initPrintExportWorker } from './print-export.js';
 
 /** @type {import('bullmq').Worker[]} */
 let workers = [];
@@ -32,6 +33,7 @@ export function initWorkers(io) {
     initCRMSyncWorker(io),
     initEmailSendWorker(io),
     initImageUploadWorker(io),
+    initPrintExportWorker(io),
     initCleanupWorker(io),
   ];
 

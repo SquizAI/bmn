@@ -9,6 +9,7 @@ import { billingRoutes } from './billing.js';
 import { adminRoutes } from './admin.js';
 import { webhookRoutes } from './webhooks.js';
 import { healthRoute } from './health.js';
+import { packagingTemplateRoutes } from './packaging-templates.js';
 import { dashboardRoutes } from './api/v1/dashboard/index.js';
 import { analyticsRoutes } from './analytics.js';
 import { integrationRoutes } from './integrations.js';
@@ -48,6 +49,7 @@ export function registerRoutes(app) {
   app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
 
   // -- Authenticated routes --
+  app.use('/api/v1/packaging-templates', requireAuth, packagingTemplateRoutes);
   app.use('/api/v1/brands', requireAuth, brandRoutes);
   app.use('/api/v1/wizard', requireAuth, wizardRoutes);
   app.use('/api/v1/products', requireAuth, productRoutes);

@@ -149,6 +149,22 @@ export const QUEUE_CONFIGS = {
     },
   },
 
+  'print-export': {
+    name: 'print-export',
+    concurrency: 2,
+    timeout: 180_000,       // 3 minutes
+    priority: 3,
+    retry: {
+      attempts: 2,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 200, age: 86_400 },
+      removeOnFail: { count: 200, age: 604_800 },
+    },
+  },
+
   'cleanup': {
     name: 'cleanup',
     concurrency: 1,
