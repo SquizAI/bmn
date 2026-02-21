@@ -25,7 +25,7 @@ function getBullRedisConfig() {
  * and uploads them to Supabase Storage for permanent hosting.
  *
  * Flow:
- * 1. Download image from sourceUrl (temporary URL from BFL, OpenAI, etc.)
+ * 1. Download image from sourceUrl (temporary URL from FAL.ai, OpenAI, etc.)
  * 2. Upload to Supabase Storage bucket 'brand-assets'
  * 3. Update the brand_assets record with the permanent storage URL
  *

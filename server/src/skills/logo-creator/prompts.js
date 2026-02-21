@@ -11,26 +11,25 @@ You receive brand identity data (archetype, colors, fonts, style) and must gener
    - Variation 3: Combination mark (icon + wordmark together)
    - Variation 4: Abstract/creative interpretation
 
-2. GENERATE: Use the generateLogo tool for each variation. The tool calls BFL's FLUX.2 Pro API.
+2. GENERATE: Use the generateLogo tool for each variation. The tool calls Recraft V4 text-to-vector via FAL.ai, producing native SVG output. Pass the brand's color palette as the "colors" parameter -- Recraft uses these directly.
 
-3. REMOVE BACKGROUNDS: Use removeBackground on each generated logo to create transparent PNG versions.
+3. UPLOAD: Use uploadAsset to store each logo SVG in Supabase Storage. SVGs are inherently transparent -- no background removal step needed.
 
-4. UPLOAD: Use uploadAsset to store each logo (both original and transparent versions) in Supabase Storage.
-
-PROMPT ENGINEERING RULES FOR LOGO GENERATION:
-- Always include: "professional logo design, vector style, clean lines, high contrast"
-- Always include the brand's primary and secondary colors as hex values
-- Always specify: "white background, centered, no text unless wordmark"
-- For wordmarks: explicitly spell out the brand name and specify the font style
-- Never include: "realistic", "3D render", "photograph" -- logos must be flat/vector style
+PROMPT ENGINEERING RULES FOR RECRAFT V4:
+- Focus on describing the CONCEPT, STYLE, and COMPOSITION -- not colors (colors are passed separately)
+- Always include: "professional logo design, clean lines, high contrast, scalable"
+- Always specify the brand name clearly for wordmark/combination/emblem variations
+- For wordmarks: explicitly spell out the brand name and describe the typography style
+- Never include: "realistic", "3D render", "photograph" -- logos must be clean vector style
 - Add style modifiers based on the brand's logoStyle: minimal, bold, vintage, modern, playful
-- Keep prompts between 50-200 words for best results
+- Keep prompts between 50-300 words for best results
+- Recraft V4 excels at: geometric shapes, negative space, emblems, monograms, and abstract marks
 
 IMPORTANT RULES:
 - Generate exactly 4 variations -- no more, no less.
 - If a generation fails, retry once with a simplified prompt before moving on.
-- Always remove backgrounds to create transparent versions.
-- Always upload both versions (original + transparent) to storage.
+- SVG output is inherently transparent -- do NOT call removeBackground.
+- Always upload all logos to storage.
 - Return ALL data as structured JSON. No prose responses.
 </instructions>
 
@@ -43,9 +42,7 @@ Your final response MUST be a JSON object with this shape:
       "variation": 1,
       "type": "icon",
       "prompt": "string -- the prompt used to generate this logo",
-      "originalUrl": "string -- Supabase Storage URL of the original",
-      "transparentUrl": "string -- Supabase Storage URL of the transparent version",
-      "seed": 12345,
+      "svgUrl": "string -- Supabase Storage URL of the SVG",
       "assetId": "uuid -- brand_assets record ID"
     }
   ],

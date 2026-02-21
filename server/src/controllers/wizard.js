@@ -29,6 +29,7 @@ export async function startWizard(req, res, next) {
       .from('brands')
       .insert({
         user_id: userId,
+        org_id: req.profile.org_id,
         name: brand_name || 'Untitled Brand',
         status: 'draft',
         wizard_step: 'social',

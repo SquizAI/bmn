@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   PartyPopper,
@@ -19,6 +19,7 @@ import { Confetti } from '@/components/confetti';
 import { useWizardStore } from '@/stores/wizard-store';
 import { ROUTES } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
+import { apiClient } from '@/lib/api';
 
 // ------ Component ------
 
@@ -34,6 +35,20 @@ export default function CompletionPage() {
 
   const [showConfetti, setShowConfetti] = useState(true);
   const [copied, setCopied] = useState(false);
+  const completedRef = useRef(false);
+
+  // Finalize the brand on the server when completion page loads
+  useEffect(() => {
+    if (!brandId || completedRef.current) return;
+    completedRef.current = true;
+
+    apiClient
+      .post(`/api/v1/wizard/${brandId}/complete`)
+      .catch((err) => {
+        // Non-fatal: brand data is already saved per-step, this just sets status
+        console.warn('Failed to mark brand as complete:', err);
+      });
+  }, [brandId]);
 
   // Show confetti on mount
   useEffect(() => {

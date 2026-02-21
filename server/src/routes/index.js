@@ -13,6 +13,7 @@ import { dashboardRoutes } from './api/v1/dashboard/index.js';
 import { analyticsRoutes } from './analytics.js';
 import { integrationRoutes } from './integrations.js';
 import { chatRoutes } from './chat.js';
+import { organizationRoutes } from './organizations.js';
 import { userWebhookRoutes } from './api/v1/webhooks-user.js';
 import { apiKeyRoutes } from './api/v1/api-keys.js';
 import { publicApiRoutes } from './api/v1/public-api.js';
@@ -52,6 +53,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/products', requireAuth, productRoutes);
   app.use('/api/v1/billing', requireAuth, billingRoutes);
   app.use('/api/v1/payments', requireAuth, paymentRoutes);
+
+  // -- Organization routes --
+  app.use('/api/v1/organizations', requireAuth, organizationRoutes);
 
   // -- Chat routes (AI brand assistant) --
   app.use('/api/v1/chat', requireAuth, chatRoutes);

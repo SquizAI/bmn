@@ -85,9 +85,9 @@ export const config = cleanEnv(process.env, {
     devDefault: 'placeholder',
     desc: 'Google AI API key (Gemini models)',
   }),
-  BFL_API_KEY: str({
+  FAL_API_KEY: str({
     devDefault: 'placeholder',
-    desc: 'Black Forest Labs API key (FLUX.2 Pro)',
+    desc: 'FAL.ai API key (FLUX Pro via fal.run)',
   }),
   IDEOGRAM_API_KEY: str({
     devDefault: 'placeholder',

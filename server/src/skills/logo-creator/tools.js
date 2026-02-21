@@ -12,12 +12,12 @@ export const tools = {
   /**
    * composeLogoPrompt
    *
-   * Build a detailed FLUX.2 Pro prompt from brand identity attributes.
+   * Build a detailed Recraft V4 prompt from brand identity attributes.
    * Pure function -- no API call, no cost.
    */
   composeLogoPrompt: {
     name: 'composeLogoPrompt',
-    description: 'Build a detailed, optimized FLUX.2 Pro image generation prompt from brand identity attributes (colors, archetype, style, name). Pure function, no API call.',
+    description: 'Build a detailed, optimized Recraft V4 text-to-vector prompt from brand identity attributes (archetype, style, name). Pure function, no API call. Colors are passed separately to Recraft.',
     inputSchema: z.object({
       brandName: z
         .string()
@@ -93,10 +93,8 @@ export const tools = {
         'emblem': `emblem/badge style logo with "${brandName}" text integrated into a contained shape or crest`,
       };
 
-      // Build the color description
-      const colorDesc = colors.length > 0
-        ? `using these exact brand colors: ${colors.join(', ')}`
-        : 'using professional brand-appropriate colors';
+      // Note: Colors are passed separately to Recraft V4 as RGB objects,
+      // so we don't embed hex values in the prompt text.
 
       // Assemble the full prompt
       const promptParts = [
@@ -104,11 +102,10 @@ export const tools = {
         variationInstructions[variation] || variationInstructions.combination,
         styleFragments[style] || styleFragments.modern,
         archetypeVisuals[archetype] || '',
-        colorDesc,
         mood ? `visual mood: ${mood}` : '',
         industry ? `for a ${industry} brand` : '',
         iconPreference ? `incorporating a ${iconPreference} symbol/icon` : '',
-        'white background, vector-style, high resolution, centered composition, professional brand identity design, no mockup, no context, isolated logo on white',
+        'clean vector design, scalable, centered composition, professional brand identity, isolated logo',
       ];
 
       const prompt = promptParts
@@ -144,133 +141,89 @@ export const tools = {
   /**
    * generateLogo
    *
-   * Generate a logo image using BFL FLUX.2 Pro API.
-   * Submits a generation request, polls for completion, returns the image URL.
+   * Generate a vector logo using Recraft V4 text-to-vector via FAL.ai.
+   * #1 rated model for logos -- outputs native SVG (scalable, no pixelation).
+   * Accepts brand color palette for consistent brand identity.
    *
-   * Cost estimate: ~$0.05 per generation (FLUX.2 Pro standard rate)
+   * Cost estimate: ~$0.08 per generation
    */
   generateLogo: {
     name: 'generateLogo',
-    description: 'Generate a logo image using BFL FLUX.2 Pro API. Submits async request and polls for result. Returns the generated image URL.',
+    description: 'Generate a vector SVG logo using Recraft V4 text-to-vector via FAL.ai. Best-in-class logo model. Returns SVG URL directly.',
     inputSchema: z.object({
       prompt: z
         .string()
         .min(10)
-        .max(2000)
+        .max(10000)
         .describe('Detailed logo generation prompt (use composeLogoPrompt to build this)'),
-      width: z
-        .number()
-        .int()
-        .default(1024)
-        .describe('Image width in pixels (default 1024)'),
-      height: z
-        .number()
-        .int()
-        .default(1024)
-        .describe('Image height in pixels (default 1024)'),
-      seed: z
-        .number()
-        .int()
+      image_size: z
+        .enum(['square_hd', 'square', 'landscape_4_3', 'landscape_16_9', 'portrait_4_3', 'portrait_16_9'])
+        .default('square_hd')
+        .describe('Image size preset (default square_hd for logos)'),
+      colors: z
+        .array(z.string())
         .optional()
-        .describe('Random seed for reproducibility (optional)'),
-      steps: z
-        .number()
-        .int()
-        .min(20)
-        .max(100)
-        .default(50)
-        .describe('Number of diffusion steps (default 50, higher = better quality)'),
+        .describe('Brand hex colors to use in the logo (e.g. ["#2D3436", "#00CEC9"])'),
     }),
 
     /**
-     * @param {{ prompt: string, width: number, height: number, seed?: number, steps: number }} input
+     * @param {{ prompt: string, image_size?: string, colors?: string[] }} input
      * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
      */
-    async execute({ prompt, width = 1024, height = 1024, seed, steps = 50 }) {
-      logger.info({ msg: 'Generating logo via FLUX.2 Pro', promptLength: prompt.length, width, height, steps });
+    async execute({ prompt, image_size = 'square_hd', colors }) {
+      logger.info({ msg: 'Generating logo via Recraft V4 text-to-vector', promptLength: prompt.length, image_size });
 
       try {
-        // Step 1: Submit generation request
-        const submitResponse = await fetch('https://api.bfl.ml/v1/flux-pro-1.1', {
+        /** @param {string} hex */
+        const hexToRgb = (hex) => {
+          const h = hex.replace(/^#/, '');
+          return {
+            r: parseInt(h.substring(0, 2), 16) || 0,
+            g: parseInt(h.substring(2, 4), 16) || 0,
+            b: parseInt(h.substring(4, 6), 16) || 0,
+          };
+        };
+
+        const body = { prompt, image_size };
+        if (colors && colors.length > 0) {
+          body.colors = colors.map(hexToRgb);
+        }
+
+        const response = await fetch('https://fal.run/fal-ai/recraft/v4/text-to-vector', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Key': config.BFL_API_KEY,
+            Authorization: `Key ${config.FAL_API_KEY}`,
           },
-          body: JSON.stringify({
-            prompt,
-            width,
-            height,
-            steps,
-            ...(seed !== undefined && { seed }),
-            safety_tolerance: 2,
-            output_format: 'png',
-          }),
+          body: JSON.stringify(body),
         });
 
-        if (!submitResponse.ok) {
-          const errorText = await submitResponse.text();
-          logger.error({ msg: 'BFL API submission failed', status: submitResponse.status, error: errorText });
-          return { success: false, error: `BFL API submission failed (${submitResponse.status}): ${errorText}` };
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error({ msg: 'Recraft V4 API request failed', status: response.status, error: errorText });
+          return { success: false, error: `Recraft V4 API request failed (${response.status}): ${errorText}` };
         }
 
-        const { id: taskId } = await submitResponse.json();
-        if (!taskId) {
-          return { success: false, error: 'BFL API returned no task ID.' };
+        const data = await response.json();
+        const image = data.images?.[0];
+
+        if (!image?.url) {
+          logger.error({ msg: 'Recraft V4 returned no image', responseKeys: Object.keys(data) });
+          return { success: false, error: 'Recraft V4 returned no image in response.' };
         }
 
-        logger.info({ msg: 'BFL task submitted', taskId });
+        logger.info({ msg: 'Logo generation complete (SVG)', imageUrl: image.url, contentType: image.content_type });
 
-        // Step 2: Poll for result with exponential backoff
-        const maxAttempts = 60;
-        const baseIntervalMs = 2000;
-        const maxIntervalMs = 10000;
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          // Exponential backoff: 2s, 3s, 4.5s, 6.75s, capped at 10s
-          const interval = Math.min(baseIntervalMs * Math.pow(1.5, attempt), maxIntervalMs);
-          await new Promise((resolve) => setTimeout(resolve, interval));
-
-          try {
-            const statusResponse = await fetch(`https://api.bfl.ml/v1/get_result?id=${taskId}`, {
-              headers: { 'X-Key': config.BFL_API_KEY },
-            });
-
-            if (!statusResponse.ok) {
-              logger.warn({ msg: 'BFL poll request failed', status: statusResponse.status, attempt });
-              continue;
-            }
-
-            const result = await statusResponse.json();
-
-            if (result.status === 'Ready' && result.result?.sample) {
-              logger.info({ msg: 'Logo generation complete', taskId, attempts: attempt + 1 });
-              return {
-                success: true,
-                data: {
-                  imageUrl: result.result.sample,
-                  taskId,
-                  seed: result.result.seed || seed,
-                  width,
-                  height,
-                  steps,
-                },
-              };
-            }
-
-            if (result.status === 'Error') {
-              logger.error({ msg: 'BFL generation error', taskId, error: result.error });
-              return { success: false, error: `BFL generation failed: ${result.error || 'Unknown error'}` };
-            }
-
-            // Status is 'Pending' or 'Processing' -- continue polling
-          } catch (pollErr) {
-            logger.warn({ msg: 'BFL poll exception', attempt, error: pollErr.message });
-            // Continue polling on transient errors
-          }
-        }
-
-        return { success: false, error: `Logo generation timed out after ${maxAttempts} poll attempts for task ${taskId}.` };
+        return {
+          success: true,
+          data: {
+            imageUrl: image.url,
+            image_size,
+            contentType: image.content_type || 'image/svg+xml',
+            fileSize: image.file_size || 0,
+            model: 'recraft-v4',
+          },
+        };
       } catch (err) {
         logger.error({ msg: 'Logo generation failed', error: err.message });
         return { success: false, error: `Logo generation failed: ${err.message}` };
@@ -282,14 +235,13 @@ export const tools = {
    * removeBackground
    *
    * Remove the background from a logo image for a transparent PNG.
-   * Primary: Uses BFL FLUX.2 Pro fill endpoint for AI-powered background removal.
-   * Fallback: Uses a Python worker service (rembg) if available.
+   * Uses a Python worker service (rembg) if available.
    *
-   * Cost estimate: ~$0.05 per call (BFL) or free (self-hosted rembg)
+   * Cost estimate: Free (self-hosted rembg)
    */
   removeBackground: {
     name: 'removeBackground',
-    description: 'Remove the background from a logo image to produce a transparent PNG. Uses BFL API or falls back to a Python rembg worker.',
+    description: 'Remove the background from a logo image to produce a transparent PNG. Uses a Python rembg worker.',
     inputSchema: z.object({
       imageUrl: z
         .string()
@@ -333,10 +285,8 @@ export const tools = {
         logger.warn({ msg: 'Python worker unavailable for bg removal', error: workerErr.message });
       }
 
-      // Strategy 2: Re-generate with BFL using a transparent-friendly prompt
-      // FLUX.2 Pro does not have a native bg removal endpoint, but we can
-      // re-generate the image with explicit "transparent background, PNG" in the prompt.
-      // This is a best-effort approach -- true bg removal requires an image processing library.
+      // Strategy 2: Return original if rembg is unavailable.
+      // True bg removal requires an image processing library (rembg or similar).
       try {
         // Download the original image to get its dimensions
         const imgResponse = await fetch(imageUrl);
@@ -414,7 +364,7 @@ export const tools = {
 
         const buffer = Buffer.from(await imageResponse.arrayBuffer());
         const contentType = imageResponse.headers.get('content-type') || 'image/png';
-        const extension = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+        const extension = contentType.includes('svg') ? 'svg' : contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
         const finalFilename = filename || `${assetType}-${randomUUID()}.${extension}`;
         const storagePath = `${brandId}/logos/${finalFilename}`;
 

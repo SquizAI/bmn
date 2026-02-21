@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router';
-import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity } from 'lucide-react';
+import { LayoutDashboard, Palette, Settings, ShieldCheck, Users, Package, Activity, Building2 } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { ROUTES } from '@/lib/constants';
@@ -14,6 +14,7 @@ interface NavItem {
 const dashboardNav: NavItem[] = [
   { label: 'My Brands', path: ROUTES.DASHBOARD_BRANDS, icon: <LayoutDashboard className="h-4 w-4" /> },
   { label: 'Create Brand', path: ROUTES.WIZARD, icon: <Palette className="h-4 w-4" /> },
+  { label: 'Organization', path: ROUTES.DASHBOARD_ORGANIZATION, icon: <Building2 className="h-4 w-4" /> },
   { label: 'Settings', path: ROUTES.DASHBOARD_SETTINGS, icon: <Settings className="h-4 w-4" /> },
 ];
 

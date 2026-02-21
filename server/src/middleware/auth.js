@@ -55,7 +55,7 @@ async function authenticateRequest(token, req) {
   // Fetch profile from the profiles table
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, full_name, role, subscription_tier, onboarding_done, stripe_customer_id')
+    .select('id, full_name, role, subscription_tier, onboarding_done, stripe_customer_id, org_id')
     .eq('id', user.id)
     .single();
 
@@ -68,8 +68,22 @@ async function authenticateRequest(token, req) {
     throw new AuthError('User profile not found');
   }
 
+  // Fetch org membership role
+  let orgRole = null;
+  if (profile.org_id) {
+    const { data: membership } = await supabaseAdmin
+      .from('organization_members')
+      .select('role')
+      .eq('org_id', profile.org_id)
+      .eq('user_id', user.id)
+      .single();
+
+    orgRole = membership?.role || null;
+  }
+
   req.user = user;
   req.profile = profile;
+  req.orgRole = orgRole;
   req.token = token;
   req.supabase = createUserClient(token);
 }
@@ -191,6 +205,7 @@ export async function optionalAuth(req, res, next) {
   if (!token) {
     req.user = null;
     req.profile = null;
+    req.orgRole = null;
     req.token = null;
     req.supabase = null;
     return next();
@@ -201,9 +216,57 @@ export async function optionalAuth(req, res, next) {
   } catch {
     req.user = null;
     req.profile = null;
+    req.orgRole = null;
     req.token = null;
     req.supabase = null;
   }
 
   next();
+}
+
+/**
+ * Org role middleware factory.
+ * Must be used AFTER requireAuth (depends on req.orgRole).
+ * Checks if the user has the minimum required org role.
+ *
+ * Role hierarchy: member < manager < admin < owner
+ *
+ * @param {string} minRole - Minimum required role ('member' | 'manager' | 'admin' | 'owner')
+ * @returns {import('express').RequestHandler}
+ */
+export function requireOrgRole(minRole) {
+  const roleOrder = ['member', 'manager', 'admin', 'owner'];
+  const minIdx = roleOrder.indexOf(minRole);
+
+  return (req, res, next) => {
+    if (!req.profile) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    // Platform admins bypass org role checks
+    if (req.profile.role === 'admin' || req.profile.role === 'super_admin') {
+      return next();
+    }
+
+    if (!req.orgRole) {
+      return res.status(403).json({
+        success: false,
+        error: 'Organization membership required',
+      });
+    }
+
+    const userIdx = roleOrder.indexOf(req.orgRole);
+
+    if (userIdx < minIdx) {
+      return res.status(403).json({
+        success: false,
+        error: `Organization ${minRole} role or higher required`,
+      });
+    }
+
+    next();
+  };
 }

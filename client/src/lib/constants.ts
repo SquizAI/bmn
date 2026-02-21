@@ -17,6 +17,7 @@ export const ROUTES = {
   DASHBOARD_REFERRALS: '/dashboard/referrals',
   DASHBOARD_INTEGRATIONS: '/dashboard/integrations',
   DASHBOARD_SETTINGS: '/dashboard/settings',
+  DASHBOARD_ORGANIZATION: '/dashboard/organization',
   WIZARD: '/wizard',
   WIZARD_ONBOARDING: '/wizard/onboarding',
   WIZARD_SOCIAL_ANALYSIS: '/wizard/social-analysis',

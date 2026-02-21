@@ -101,75 +101,127 @@ export function getGoogleAIClient() {
 // ── Direct API Clients (no SDK -- fetch-based) ──────────────────
 
 /**
- * BFL API client (no SDK -- direct fetch).
- * Provides a consistent interface for FLUX.2 Pro calls.
+ * Helper: convert hex color string to RGB object for Recraft API.
+ * @param {string} hex - e.g. '#2D3436' or '2D3436'
+ * @returns {{ r: number, g: number, b: number }}
  */
-export const bflClient = {
+function hexToRgb(hex) {
+  const h = hex.replace(/^#/, '');
+  return {
+    r: parseInt(h.substring(0, 2), 16) || 0,
+    g: parseInt(h.substring(2, 4), 16) || 0,
+    b: parseInt(h.substring(4, 6), 16) || 0,
+  };
+}
+
+/**
+ * FAL.ai API client (no SDK -- direct fetch).
+ * Provides a consistent interface for FLUX Pro v1.1 calls via fal.run.
+ * FAL.ai is synchronous -- POST and receive the result immediately (no polling).
+ */
+export const falClient = {
   /**
-   * Submit an image generation request to BFL FLUX.2 Pro.
+   * Generate an image using FAL.ai FLUX Pro v1.1.
    * @param {Object} params
    * @param {string} params.prompt
-   * @param {number} [params.width=1024]
-   * @param {number} [params.height=1024]
+   * @param {string} [params.image_size='square_hd'] - Image size preset (e.g., 'square_hd', 'landscape_4_3', 'portrait_4_3')
+   * @param {number} [params.num_images=1]
    * @param {number} [params.seed]
-   * @returns {Promise<{ taskId: string }>}
+   * @returns {Promise<{ imageUrl: string, seed: number | undefined }>}
    */
-  async submit({ prompt, width = 1024, height = 1024, seed }) {
-    const response = await fetch('https://api.bfl.ml/v1/flux-pro-1.1', {
+  async generate({ prompt, image_size = 'square_hd', num_images = 1, seed }) {
+    const response = await fetch('https://fal.run/fal-ai/flux-pro/v1.1', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Key': config.BFL_API_KEY,
+        Authorization: `Key ${config.FAL_API_KEY}`,
       },
       body: JSON.stringify({
         prompt,
-        width,
-        height,
+        image_size,
+        num_images,
+        safety_tolerance: '2',
         ...(seed !== undefined && { seed }),
-        safety_tolerance: 2,
-        output_format: 'png',
       }),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       throw new Error(
-        `BFL submit failed: ${response.status} — ${await response.text()}`
+        `FAL.ai request failed: ${response.status} — ${errorText}`
       );
     }
 
-    const { id } = await response.json();
-    return { taskId: id };
+    const data = await response.json();
+    const image = data.images?.[0];
+
+    if (!image?.url) {
+      throw new Error('FAL.ai returned no image in response');
+    }
+
+    return { imageUrl: image.url, seed: data.seed };
   },
+};
 
+/**
+ * Recraft V4 client via FAL.ai (no SDK -- direct fetch).
+ * #1 rated model for logo/design generation. Outputs native SVG vectors.
+ * Uses the same FAL_API_KEY for authentication.
+ */
+export const recraftClient = {
   /**
-   * Poll for a completed BFL generation result.
-   * @param {string} taskId
-   * @param {number} [timeoutMs=60000]
-   * @returns {Promise<{ imageUrl: string }>}
+   * Generate a vector logo using Recraft V4 text-to-vector via FAL.ai.
+   * @param {Object} params
+   * @param {string} params.prompt - Logo description (1-10000 chars)
+   * @param {string} [params.image_size='square_hd'] - Output size preset
+   * @param {string[]} [params.colors] - Brand hex colors (e.g. ['#2D3436', '#00CEC9'])
+   * @param {string} [params.background_color] - Background hex color (default white)
+   * @returns {Promise<{ imageUrl: string, contentType: string, fileSize: number }>}
    */
-  async poll(taskId, timeoutMs = 60000) {
-    const deadline = Date.now() + timeoutMs;
+  async generateVector({ prompt, image_size = 'square_hd', colors, background_color }) {
+    const body = {
+      prompt,
+      image_size,
+    };
 
-    while (Date.now() < deadline) {
-      const response = await fetch(
-        `https://api.bfl.ml/v1/get_result?id=${taskId}`,
-        {
-          headers: { 'X-Key': config.BFL_API_KEY },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.status === 'Ready') return { imageUrl: data.result.sample };
-      if (data.status === 'Error')
-        throw new Error(`BFL error: ${data.error}`);
-
-      await new Promise((r) => setTimeout(r, 1000));
+    // Pass brand colors as RGB objects
+    if (colors && colors.length > 0) {
+      body.colors = colors.map(hexToRgb);
     }
 
-    throw new Error(
-      `BFL poll timeout after ${timeoutMs}ms for task ${taskId}`
-    );
+    // Background color (default white)
+    if (background_color) {
+      body.background_color = hexToRgb(background_color);
+    }
+
+    const response = await fetch('https://fal.run/fal-ai/recraft/v4/text-to-vector', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Key ${config.FAL_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Recraft V4 request failed: ${response.status} — ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    const image = data.images?.[0];
+
+    if (!image?.url) {
+      throw new Error('Recraft V4 returned no image in response');
+    }
+
+    return {
+      imageUrl: image.url,
+      contentType: image.content_type || 'image/svg+xml',
+      fileSize: image.file_size || 0,
+    };
   },
 };
 

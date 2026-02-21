@@ -4,6 +4,121 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { dispatchJob } from '../queues/dispatch.js';
 
+// ── Helpers: transform DB rows into client-expected shapes ──────────
+
+/**
+ * Transform a raw brand row into the summary shape for brand list cards.
+ * Maps snake_case DB fields to camelCase and extracts key summary data.
+ *
+ * @param {object} row - Raw Supabase brand row
+ * @param {string|null} [thumbnailUrl] - Optional first logo URL
+ * @returns {object} Brand summary for list view
+ */
+function toBrandSummary(row, thumbnailUrl = null) {
+  const ws = row.wizard_state || {};
+  const identity = ws['brand-identity'];
+  const selectedDir = identity?.directions?.find(
+    (d) => d.id === identity?.selectedDirectionId
+  );
+
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    wizardStep: row.wizard_step || 'onboarding',
+    thumbnailUrl: thumbnailUrl || null,
+    archetype: selectedDir?.archetype || null,
+    primaryColor: selectedDir?.colorPalette?.[0]?.hex || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/**
+ * Transform a raw brand row + assets into the full BrandDetail shape.
+ *
+ * @param {object} row - Raw Supabase brand row
+ * @param {object[]} logoAssets - brand_assets rows with asset_type='logo'
+ * @param {object[]} mockupAssets - brand_assets rows with asset_type='mockup'
+ * @returns {object} BrandDetail matching client TypeScript interface
+ */
+function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
+  const ws = row.wizard_state || {};
+  const identityState = ws['brand-identity'];
+  const productsState = ws['product-recommendations'];
+
+  // Extract the selected direction's identity data
+  const selectedDir = identityState?.directions?.find(
+    (d) => d.id === identityState?.selectedDirectionId
+  ) || identityState?.directions?.[0] || null;
+
+  let identity = null;
+  if (selectedDir) {
+    identity = {
+      vision: selectedDir.vision || identityState?.vision || '',
+      archetype: selectedDir.archetype || '',
+      values: selectedDir.values || [],
+      targetAudience: selectedDir.targetAudience || '',
+      colorPalette: (selectedDir.colorPalette || []).map((c) => ({
+        hex: c.hex || c.color || '',
+        name: c.name || '',
+        role: c.role || 'accent',
+      })),
+      fonts: {
+        primary: selectedDir.fonts?.primary || selectedDir.typography?.primary || 'Inter',
+        secondary: selectedDir.fonts?.secondary || selectedDir.typography?.secondary || 'Space Grotesk',
+      },
+    };
+  }
+
+  // Map logo assets to LogoAsset shape
+  const logos = logoAssets.map((a) => ({
+    id: a.id,
+    url: a.url || '',
+    thumbnailUrl: a.thumbnail_url || a.url || '',
+    status: a.metadata?.status || 'generated',
+    prompt: a.metadata?.prompt || undefined,
+    model: a.metadata?.model || undefined,
+  }));
+
+  // Map mockup assets to MockupAsset shape
+  const mockups = mockupAssets.map((a) => ({
+    id: a.id,
+    url: a.url || '',
+    productSku: a.metadata?.product_sku || '',
+    productName: a.metadata?.product_name || '',
+    status: a.metadata?.status || 'pending',
+  }));
+
+  // Extract projections from product recommendations
+  const projections = (productsState?.revenueProjection || productsState?.products || [])
+    .map((p) => ({
+      productSku: p.sku || p.productSku || '',
+      productName: p.name || p.productName || '',
+      costPrice: p.costPrice || p.cost_price || 0,
+      retailPrice: p.retailPrice || p.retail_price || 0,
+      margin: p.margin || 0,
+      projectedMonthlySales: p.projectedMonthlySales || p.projected_monthly_sales || 0,
+      monthlyRevenue: p.monthlyRevenue || p.monthly_revenue || 0,
+      monthlyProfit: p.monthlyProfit || p.monthly_profit || 0,
+    }));
+
+  return {
+    id: row.id,
+    name: row.name,
+    status: row.status,
+    wizardStep: row.wizard_step || 'onboarding',
+    identity,
+    logos,
+    mockups,
+    projections,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// ── Route Handlers ──────────────────────────────────────────────────
+
 /**
  * GET /api/v1/brands
  * List all brands for the authenticated user.
@@ -32,9 +147,31 @@ export async function listBrands(req, res, next) {
       throw error;
     }
 
+    // Fetch first logo asset for each brand (for thumbnail)
+    const brandIds = data.map((b) => b.id);
+    let logoMap = {};
+    if (brandIds.length > 0) {
+      const { data: logos } = await supabaseAdmin
+        .from('brand_assets')
+        .select('brand_id, url')
+        .in('brand_id', brandIds)
+        .eq('asset_type', 'logo')
+        .order('created_at', { ascending: true });
+
+      if (logos) {
+        for (const logo of logos) {
+          if (!logoMap[logo.brand_id]) {
+            logoMap[logo.brand_id] = logo.url;
+          }
+        }
+      }
+    }
+
+    const items = data.map((row) => toBrandSummary(row, logoMap[row.id] || null));
+
     res.json({
       success: true,
-      data: { items: data, total: count, page, limit },
+      data: { items, total: count, page, limit },
     });
   } catch (err) {
     next(err);
@@ -58,6 +195,7 @@ export async function createBrand(req, res, next) {
       .from('brands')
       .insert({
         user_id: userId,
+        org_id: req.profile.org_id,
         name,
         description: description || null,
         status: 'draft',
@@ -102,15 +240,19 @@ export async function getBrand(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Get brand_assets count
-    const { count: assetCount } = await supabaseAdmin
+    // Fetch logo and mockup assets for this brand
+    const { data: assets } = await supabaseAdmin
       .from('brand_assets')
-      .select('*', { count: 'exact', head: true })
-      .eq('brand_id', brandId);
+      .select('*')
+      .eq('brand_id', brandId)
+      .order('created_at', { ascending: true });
+
+    const logoAssets = (assets || []).filter((a) => a.asset_type === 'logo');
+    const mockupAssets = (assets || []).filter((a) => a.asset_type === 'mockup');
 
     res.json({
       success: true,
-      data: { ...brand, asset_count: assetCount || 0 },
+      data: toBrandDetail(brand, logoAssets, mockupAssets),
     });
   } catch (err) {
     next(err);

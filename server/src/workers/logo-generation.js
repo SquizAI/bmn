@@ -7,7 +7,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
-import { bflClient } from '../services/providers.js';
+import { recraftClient } from '../services/providers.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
@@ -24,39 +24,53 @@ function getBullRedisConfig() {
 
 /**
  * Compose prompts for logo generation based on brand identity.
+ * Optimized for Recraft V4 text-to-vector (SVG output).
  * @param {Object} params
  * @param {string} params.brandName
  * @param {string} params.logoStyle
  * @param {string[]} params.colorPalette
  * @param {string} params.brandVision
  * @param {string} [params.archetype]
- * @param {boolean} [params.isRefinement]
- * @param {string} [params.previousLogoUrl]
- * @param {string} [params.refinementNotes]
  * @param {number} params.count
- * @returns {Array<{text: string}>}
+ * @returns {Array<{text: string, variation: string}>}
  */
 function composeLogoPrompts({ brandName, logoStyle, colorPalette, brandVision, archetype, count }) {
-  const basePrompt = `Professional brand logo for "${brandName}". Style: ${logoStyle}. Colors: ${colorPalette.join(', ')}. Brand vision: ${brandVision}. ${archetype ? `Brand archetype: ${archetype}.` : ''} Clean vector-style logo on white background, suitable for business use. No text unless the brand name is the logo. High contrast, scalable design.`;
+  // Recraft V4 accepts brand colors as a separate parameter, so prompts
+  // focus on concept/style rather than repeating color hex values.
+  const styleHints = {
+    minimal: 'minimalist, geometric, lots of whitespace, flat design, Swiss-style simplicity',
+    bold: 'bold, impactful, high contrast, thick strokes, commanding presence',
+    vintage: 'vintage, retro, hand-drawn, distressed texture, classic heritage feel',
+    modern: 'contemporary, sleek, gradient accents, tech-inspired, forward-looking',
+    playful: 'playful, rounded shapes, vibrant, approachable, fun, energetic',
+  };
+
+  const style = styleHints[logoStyle] || styleHints.modern;
 
   const variations = [
-    'Icon-focused design with abstract symbol',
-    'Lettermark design using brand initials',
-    'Emblem or badge style',
-    'Modern minimalist wordmark',
-    'Combination mark (symbol + text)',
-    'Geometric abstract logo',
-    'Organic hand-drawn feel',
-    'Negative space design',
+    { label: 'icon', desc: `Icon-only symbol mark for "${brandName}". Abstract or symbolic representation, no text or letters. ${style}` },
+    { label: 'wordmark', desc: `Typographic wordmark logo spelling "${brandName}" in creative custom typography. Text-based logo, no icon. ${style}` },
+    { label: 'combination', desc: `Combination mark with an icon/symbol alongside the text "${brandName}". Balanced layout with both elements. ${style}` },
+    { label: 'emblem', desc: `Emblem or badge-style logo with "${brandName}" text integrated into a contained shape or crest. ${style}` },
+    { label: 'lettermark', desc: `Lettermark logo using the initials of "${brandName}". Elegant monogram design. ${style}` },
+    { label: 'abstract', desc: `Abstract geometric logo for "${brandName}". Unique abstract shapes that convey brand personality. ${style}` },
+    { label: 'negative-space', desc: `Clever negative-space logo for "${brandName}". Hidden meaning in whitespace. ${style}` },
+    { label: 'organic', desc: `Organic flowing logo for "${brandName}". Natural curves, hand-crafted feel. ${style}` },
   ];
 
-  return Array.from({ length: count }, (_, i) => ({
-    text: `${basePrompt} Variation: ${variations[i % variations.length]}.`,
-  }));
+  const base = `Professional brand logo design. Brand: "${brandName}". ${brandVision ? `Vision: ${brandVision}.` : ''} ${archetype ? `Archetype: ${archetype}.` : ''} Clean vector design, scalable, suitable for business use.`;
+
+  return Array.from({ length: count }, (_, i) => {
+    const v = variations[i % variations.length];
+    return {
+      text: `${base} ${v.desc}`,
+      variation: v.label,
+    };
+  });
 }
 
 /**
- * Logo Generation worker -- generates logos via FLUX.2 Pro (BFL direct API).
+ * Logo Generation worker -- generates logos via FLUX Pro v1.1 (FAL.ai API).
  * Generates `count` logos in parallel, emitting progress per logo.
  *
  * @param {import('socket.io').Server} io
@@ -100,7 +114,7 @@ export function initLogoGenerationWorker(io) {
         });
         await job.updateProgress(10);
 
-        // Step 2: Generate logos in parallel via BFL FLUX.2 Pro (10-80%)
+        // Step 2: Generate logos in parallel via Recraft V4 text-to-vector (10-80%)
         const progressPerLogo = 70 / count;
 
         const generationResults = await Promise.allSettled(
@@ -114,12 +128,11 @@ export function initLogoGenerationWorker(io) {
               timestamp: Date.now(),
             });
 
-            const { taskId } = await bflClient.submit({
+            const { imageUrl, contentType } = await recraftClient.generateVector({
               prompt: prompt.text,
-              width: 1024,
-              height: 1024,
+              image_size: 'square_hd',
+              colors: colorPalette,
             });
-            const { imageUrl } = await bflClient.poll(taskId, 90_000);
 
             io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',
@@ -129,7 +142,7 @@ export function initLogoGenerationWorker(io) {
               timestamp: Date.now(),
             });
 
-            return { index, imageUrl, prompt: prompt.text };
+            return { index, imageUrl, contentType, prompt: prompt.text, variation: prompt.variation };
           })
         );
 
@@ -143,16 +156,18 @@ export function initLogoGenerationWorker(io) {
 
         for (const result of generationResults) {
           if (result.status === 'fulfilled') {
-            const { index, imageUrl, prompt } = result.value;
+            const { index, imageUrl, contentType, prompt, variation } = result.value;
+            const isSvg = contentType === 'image/svg+xml';
+            const ext = isSvg ? 'svg' : 'png';
 
             const uploadResult = await dispatchJob('image-upload', {
               userId,
               brandId,
               assetType: 'logo',
               sourceUrl: imageUrl,
-              fileName: `logo-${brandId}-${index}-${Date.now()}.png`,
-              mimeType: 'image/png',
-              metadata: { prompt, logoStyle, index, isRefinement },
+              fileName: `logo-${brandId}-${index}-${Date.now()}.${ext}`,
+              mimeType: contentType || 'image/svg+xml',
+              metadata: { prompt, logoStyle, index, isRefinement, variation, model: 'recraft-v4' },
             });
 
             logos.push({
@@ -160,6 +175,7 @@ export function initLogoGenerationWorker(io) {
               tempUrl: imageUrl,
               uploadJobId: uploadResult.jobId,
               prompt,
+              variation,
             });
           } else {
             jobLog.warn({ err: result.reason }, 'Individual logo generation failed');

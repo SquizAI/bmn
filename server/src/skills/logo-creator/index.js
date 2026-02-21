@@ -7,8 +7,8 @@ import { tools } from './tools.js';
 /**
  * Logo Creator skill module.
  *
- * Generates 4 logo variations via BFL FLUX.2 Pro, removes backgrounds,
- * and uploads all assets to Supabase Storage.
+ * Generates 4 logo variations via Recraft V4 text-to-vector (FAL.ai),
+ * producing native SVG output, and uploads all assets to Supabase Storage.
  *
  * @type {import('../_shared/types.js').Skill}
  */

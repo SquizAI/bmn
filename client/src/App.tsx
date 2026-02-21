@@ -44,6 +44,7 @@ const DashboardAnalytics = lazy(() => import('@/routes/dashboard/analytics'));
 const DashboardReferrals = lazy(() => import('@/routes/dashboard/referrals'));
 const DashboardIntegrations = lazy(() => import('@/routes/dashboard/integrations'));
 const SettingsPage = lazy(() => import('@/routes/dashboard/settings'));
+const OrganizationPage = lazy(() => import('@/routes/dashboard/organization'));
 
 // Admin
 const AdminUsersPage = lazy(() => import('@/routes/admin/users'));
@@ -284,6 +285,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <SettingsPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'organization',
+            element: (
+              <SuspenseRoute>
+                <OrganizationPage />
               </SuspenseRoute>
             ),
           },
