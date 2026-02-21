@@ -60,11 +60,11 @@ jobs:
             inject_secret() {
               local key="$1" val="$2"
               if [ -n "$val" ]; then
-                if grep -q "^${key}=" "$ENV_FILE"; then
-                  sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
-                else
-                  echo "${key}=${val}" >> "$ENV_FILE"
-                fi
+                # Remove existing line (if any) and append new value
+                # Avoids sed which can break on special chars in values
+                grep -v "^${key}=" "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || touch "${ENV_FILE}.tmp"
+                printf '%s=%s\n' "$key" "$val" >> "${ENV_FILE}.tmp"
+                mv "${ENV_FILE}.tmp" "$ENV_FILE"
                 echo "  Injected: ${key}"
               fi
             }
