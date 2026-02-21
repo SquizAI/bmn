@@ -340,7 +340,7 @@ async function scrapeInstagramProfile(handle) {
       following: profile.followsCount || 0,
       postsCount: profile.postsCount || 0,
       isVerified: profile.verified || false,
-      profilePicUrl: profile.profilePicUrl || profile.profilePicUrlHD || null,
+      profilePicUrl: profile.profilePicUrlHD || profile.profilePicUrl || null,
       externalUrl: profile.externalUrl || null,
       posts: (profile.latestPosts || []).slice(0, 20).map((post) => ({
         id: post.id,

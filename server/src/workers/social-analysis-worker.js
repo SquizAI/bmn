@@ -516,10 +516,20 @@ async function runSubTask(taskDef, dataContext, hasData, jobLog) {
 
   const aiResult = await Promise.race([aiCall, timeoutPromise]);
 
-  // Parse JSON from response
+  // Parse JSON from response (handle markdown code blocks, unclosed blocks, etc.)
   let jsonText = aiResult.text.trim();
   const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) jsonText = jsonMatch[1].trim();
+  if (jsonMatch) {
+    jsonText = jsonMatch[1].trim();
+  } else if (jsonText.startsWith('```')) {
+    // Handle unclosed code blocks: strip leading ```json line
+    jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+  }
+  // Last resort: find the first { ... } or [ ... ] block
+  if (!jsonText.startsWith('{') && !jsonText.startsWith('[')) {
+    const braceMatch = jsonText.match(/(\{[\s\S]*\})/);
+    if (braceMatch) jsonText = braceMatch[1];
+  }
 
   const parsed = JSON.parse(jsonText);
   const durationMs = Date.now() - startTime;
@@ -679,7 +689,7 @@ function emitComplete(io, userId, jobId, dossier) {
   if (!io) return;
   io.to(`user:${userId}`).emit('generation:complete', {
     jobId,
-    dossier,
+    result: dossier,
   });
 }
 
@@ -850,7 +860,15 @@ export function initSocialAnalysisWorker(io) {
 
         let jsonText = aiResult.text.trim();
         const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-        if (jsonMatch) jsonText = jsonMatch[1].trim();
+        if (jsonMatch) {
+          jsonText = jsonMatch[1].trim();
+        } else if (jsonText.startsWith('```')) {
+          jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim();
+        }
+        if (!jsonText.startsWith('{') && !jsonText.startsWith('[')) {
+          const braceMatch = jsonText.match(/(\{[\s\S]*\})/);
+          if (braceMatch) jsonText = braceMatch[1];
+        }
 
         const parsed = JSON.parse(jsonText);
         readinessResult = { name: 'READINESS_SYNTHESIS', result: parsed, model: aiResult.model };
