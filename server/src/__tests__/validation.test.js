@@ -50,33 +50,28 @@ describe('wizardStartSchema', () => {
 // ─── wizardStepUpdateSchema ───────────────────────────────────────────────────
 
 describe('wizardStepUpdateSchema', () => {
-  it('should accept valid step and data', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: 0, data: { name: 'test' } });
+  it('should accept valid step name and data', () => {
+    const result = wizardStepUpdateSchema.safeParse({ step: 'brand-name', data: { name: 'test' } });
     expect(result.success).toBe(true);
   });
 
-  it('should accept step at max boundary (12)', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: 12, data: {} });
+  it('should accept various step names', () => {
+    const result = wizardStepUpdateSchema.safeParse({ step: 'brand-identity', data: {} });
     expect(result.success).toBe(true);
   });
 
-  it('should reject step below 0', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: -1, data: {} });
+  it('should reject empty step string', () => {
+    const result = wizardStepUpdateSchema.safeParse({ step: '', data: {} });
     expect(result.success).toBe(false);
   });
 
-  it('should reject step above 12', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: 13, data: {} });
-    expect(result.success).toBe(false);
-  });
-
-  it('should reject non-integer step', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: 1.5, data: {} });
+  it('should reject numeric step', () => {
+    const result = wizardStepUpdateSchema.safeParse({ step: 5, data: {} });
     expect(result.success).toBe(false);
   });
 
   it('should reject missing data field', () => {
-    const result = wizardStepUpdateSchema.safeParse({ step: 1 });
+    const result = wizardStepUpdateSchema.safeParse({ step: 'brand-name' });
     expect(result.success).toBe(false);
   });
 });
