@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { CreatorDossier, Platform } from '@/lib/dossier-types';
+import { normalizeFormats, getPostingFrequencyLabel } from '@/lib/dossier-types';
 import { formatCurrency, formatNumber, capitalize } from '@/lib/utils';
 
 interface DossierPdfExportProps {
@@ -69,6 +70,8 @@ async function imageToBase64(url: string): Promise<string | null> {
 
 function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | null): string {
   const { profile, platforms, content, aesthetic, niche, readinessScore, personality, revenueEstimate } = dossier;
+  const formatsArray = normalizeFormats(content.formats);
+  const frequencyLabel = getPostingFrequencyLabel(content.postingFrequency) || 'N/A';
   const generatedDate = new Date(dossier.createdAt).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -644,7 +647,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
         <div class="stat-label">Active Platforms</div>
       </div>
       <div class="stat-card">
-        <div class="stat-value">${content.postingFrequency || 'N/A'}</div>
+        <div class="stat-value">${frequencyLabel}</div>
         <div class="stat-label">Post Frequency</div>
       </div>
     </div>
@@ -667,11 +670,11 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
       .join('')}
 
     ${
-      content.formats.length > 0
+      formatsArray.length > 0
         ? `
       <div class="section-title" style="margin-top:20px;">Content Formats</div>
       <div class="stat-row">
-        ${content.formats
+        ${formatsArray
           .slice(0, 4)
           .map(
             (fmt) => `

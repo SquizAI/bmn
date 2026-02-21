@@ -100,16 +100,44 @@ export interface ContentFormatBreakdown {
   avgEngagement: number | null;
 }
 
+/** API returns posting frequency as a rich object (not a string). */
+export interface PostingFrequencyData {
+  postsPerWeek: number;
+  consistencyPercent: number;
+  avgGapHours: number;
+  bestDays: string[];
+  bestTimes: string[];
+  gaps: string[];
+  analysisSpan: {
+    firstPost: string;
+    lastPost: string;
+    totalDays: number;
+    totalPosts: number;
+  };
+}
+
+/** API returns formats as an object with breakdown map (not an array). */
+export interface ContentFormatsData {
+  breakdown: Record<string, number>;
+  bestFormat: string;
+  engagementByFormat: Record<string, number>;
+  totalPostsAnalyzed: number;
+}
+
 export interface ContentAnalysis {
   themes: ContentTheme[];
-  formats: ContentFormatBreakdown[];
-  postingFrequency: string | null;
+  /** Can be array (legacy) or object (current API response). */
+  formats: ContentFormatBreakdown[] | ContentFormatsData;
+  /** Can be string (legacy) or object (current API response). */
+  postingFrequency: string | PostingFrequencyData | null;
   consistencyScore: number | null;
   bestPerformingContentType: string | null;
   peakEngagementTopics: string[];
   hashtagStrategy: {
-    topHashtags: Array<{ tag: string; count: number }>;
-    avgHashtagsPerPost: number | null;
+    strategy?: string;
+    topHashtags: Array<{ tag: string; count: number; niche?: string; estimatedMarketSize?: string }>;
+    avgHashtagsPerPost?: number | null;
+    recommendations?: string[];
   };
 }
 
@@ -225,6 +253,43 @@ export interface CreatorDossier {
   revenueEstimate: RevenueProjection;
   createdAt: string;
   updatedAt: string;
+}
+
+// ── Type Guards & Helpers ─────────────────────────────────────────
+
+/** Check if postingFrequency is the rich object format (vs legacy string). */
+export function isPostingFrequencyObject(pf: ContentAnalysis['postingFrequency'] | undefined): pf is PostingFrequencyData {
+  return typeof pf === 'object' && pf !== null && 'postsPerWeek' in pf;
+}
+
+/** Check if formats is the object format (vs legacy array). */
+export function isFormatsObject(fmt: ContentAnalysis['formats'] | undefined): fmt is ContentFormatsData {
+  return !Array.isArray(fmt) && typeof fmt === 'object' && fmt !== null && 'breakdown' in fmt;
+}
+
+/** Convert formats (either shape) to a flat array for rendering. */
+export function normalizeFormats(formats: ContentAnalysis['formats'] | undefined): ContentFormatBreakdown[] {
+  if (!formats) return [];
+  if (Array.isArray(formats)) return formats;
+  if (typeof formats !== 'object' || !('breakdown' in formats)) return [];
+  const data = formats as ContentFormatsData;
+  return Object.entries(data.breakdown)
+    .map(([format, percentage]) => ({
+      format,
+      percentage: Math.round(percentage * 100),
+      avgEngagement: data.engagementByFormat?.[format] ?? null,
+    }))
+    .sort((a, b) => b.percentage - a.percentage);
+}
+
+/** Get a human-readable posting frequency string from either shape. */
+export function getPostingFrequencyLabel(pf: ContentAnalysis['postingFrequency'] | undefined): string | null {
+  if (!pf) return null;
+  if (typeof pf === 'string') return pf;
+  if (isPostingFrequencyObject(pf)) {
+    return `${pf.postsPerWeek.toFixed(1)}x / week`;
+  }
+  return null;
 }
 
 // ── Dossier Loading Phases ────────────────────────────────────────

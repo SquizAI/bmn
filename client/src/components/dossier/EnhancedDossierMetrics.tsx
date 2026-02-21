@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { Clock, Hash, Layers, TrendingUp } from 'lucide-react';
 import type { ContentAnalysis, AudienceEstimate } from '@/lib/dossier-types';
+import { normalizeFormats, getPostingFrequencyLabel, isPostingFrequencyObject } from '@/lib/dossier-types';
 
 interface EnhancedDossierMetricsProps {
   content: ContentAnalysis | null | undefined;
@@ -20,6 +21,11 @@ export default function EnhancedDossierMetrics({
   content,
   audience,
 }: EnhancedDossierMetricsProps) {
+  const formats = content ? normalizeFormats(content.formats) : [];
+  const frequencyLabel = content ? getPostingFrequencyLabel(content.postingFrequency) : null;
+  const pf = content?.postingFrequency;
+  const bestDays = isPostingFrequencyObject(pf) ? pf.bestDays : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -34,14 +40,14 @@ export default function EnhancedDossierMetrics({
           Posting Frequency
         </h4>
 
-        {content?.postingFrequency ? (
+        {frequencyLabel ? (
           <div className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-[var(--bmn-color-text)]">
-                {content.postingFrequency}
+                {frequencyLabel}
               </span>
             </div>
-            {content.consistencyScore !== null && content.consistencyScore !== undefined && (
+            {content?.consistencyScore !== null && content?.consistencyScore !== undefined && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-[var(--bmn-color-text-muted)]">Consistency</span>
@@ -59,7 +65,15 @@ export default function EnhancedDossierMetrics({
                 </div>
               </div>
             )}
-            {content.bestPerformingContentType && (
+            {bestDays && bestDays.length > 0 && (
+              <p className="text-xs text-[var(--bmn-color-text-muted)]">
+                Best days:{' '}
+                <span className="font-medium text-[var(--bmn-color-text)]">
+                  {bestDays.join(', ')}
+                </span>
+              </p>
+            )}
+            {content?.bestPerformingContentType && (
               <p className="text-xs text-[var(--bmn-color-text-muted)]">
                 Best performing:{' '}
                 <span className="font-medium capitalize text-[var(--bmn-color-text)]">
@@ -105,7 +119,7 @@ export default function EnhancedDossierMetrics({
                 </motion.div>
               ))}
             </div>
-            {content.hashtagStrategy.avgHashtagsPerPost !== null && (
+            {content.hashtagStrategy.avgHashtagsPerPost != null && (
               <p className="text-xs text-[var(--bmn-color-text-muted)]">
                 Avg{' '}
                 <span className="font-medium text-[var(--bmn-color-text)]">
@@ -132,9 +146,9 @@ export default function EnhancedDossierMetrics({
           Content Format Breakdown
         </h4>
 
-        {content?.formats && content.formats.length > 0 ? (
+        {formats.length > 0 ? (
           <div className="space-y-2.5">
-            {content.formats.slice(0, 5).map((fmt, i) => (
+            {formats.slice(0, 5).map((fmt, i) => (
               <motion.div
                 key={fmt.format}
                 initial={{ opacity: 0, x: -10 }}

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { BarChart3 } from 'lucide-react';
 import type { ContentAnalysis } from '@/lib/dossier-types';
+import { normalizeFormats, getPostingFrequencyLabel } from '@/lib/dossier-types';
 
 interface ContentThemeChartProps {
   content: ContentAnalysis;
@@ -9,6 +10,8 @@ interface ContentThemeChartProps {
 export default function ContentThemeChart({ content }: ContentThemeChartProps) {
   const themes = content.themes.slice(0, 5);
   const maxFreq = Math.max(...themes.map((t) => t.frequency), 0.01);
+  const formats = normalizeFormats(content.formats);
+  const frequencyLabel = getPostingFrequencyLabel(content.postingFrequency);
 
   return (
     <motion.div
@@ -51,7 +54,7 @@ export default function ContentThemeChart({ content }: ContentThemeChartProps) {
       </div>
 
       {/* Content Format Breakdown */}
-      {content.formats.length > 0 && (
+      {formats.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -60,7 +63,7 @@ export default function ContentThemeChart({ content }: ContentThemeChartProps) {
         >
           <p className="mb-1.5 text-xs text-[var(--bmn-color-text-muted)]">Content Formats</p>
           <div className="flex gap-2">
-            {content.formats.slice(0, 4).map((fmt) => (
+            {formats.slice(0, 4).map((fmt) => (
               <div
                 key={fmt.format}
                 className="flex-1 rounded-lg border border-[var(--bmn-color-border)] p-2 text-center"
@@ -78,14 +81,14 @@ export default function ContentThemeChart({ content }: ContentThemeChartProps) {
       )}
 
       {/* Posting Frequency */}
-      {content.postingFrequency && (
+      {frequencyLabel && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7 }}
           className="mt-3 text-xs text-[var(--bmn-color-text-muted)]"
         >
-          Posting: <span className="font-medium text-[var(--bmn-color-text)]">{content.postingFrequency}</span>
+          Posting: <span className="font-medium text-[var(--bmn-color-text)]">{frequencyLabel}</span>
         </motion.div>
       )}
     </motion.div>
