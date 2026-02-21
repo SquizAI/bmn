@@ -79,6 +79,7 @@ const {
 function mockReq(overrides = {}) {
   return {
     user: { id: 'user-abc-123' },
+    profile: { org_id: 'org-abc-123' },
     params: {},
     body: {},
     ...overrides,
