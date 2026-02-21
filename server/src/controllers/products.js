@@ -2,7 +2,10 @@
 
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
-import { SUBSCRIPTION_TIER_ORDER } from '../../../shared/schemas/product-tiers.js';
+// Subscription tier ordering for gating logic
+// (inlined to avoid shared/ import which is outside the Docker build context)
+/** @type {Record<string, number>} */
+const SUBSCRIPTION_TIER_ORDER = { free: 0, starter: 1, pro: 2, agency: 3 };
 
 /**
  * GET /api/v1/products
