@@ -16,7 +16,7 @@ import { redis } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
-import { buildSafePrompt } from '../utils/prompt-utils.js';
+import { buildSafePrompt } from '../skills/_shared/prompt-utils.js';
 
 /**
  * @returns {import('ioredis').RedisOptions}
