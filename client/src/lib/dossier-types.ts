@@ -67,7 +67,9 @@ export interface PlatformData {
 // ── Audience Estimate ─────────────────────────────────────────────
 
 export interface AudienceDemographic {
-  label: string;
+  /** API returns "range" (e.g. "18-24"), kept as "label" for backward compat */
+  label?: string;
+  range?: string;
   percentage: number;
 }
 
@@ -80,7 +82,8 @@ export interface AudienceEstimate {
     other: number;
   } | null;
   primaryInterests: string[];
-  geographicSignals: string[];
+  /** API returns this as "geographicIndicators" */
+  geographicIndicators: string[];
   incomeLevel: 'budget' | 'mid-range' | 'premium' | 'luxury' | null;
   loyaltySignals: string[];
 }

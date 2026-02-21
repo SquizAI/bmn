@@ -73,7 +73,7 @@ export default function AudienceDemographics({ audience }: AudienceDemographicsP
         )}
 
         {/* Interests */}
-        {audience.primaryInterests.length > 0 && (
+        {audience.primaryInterests?.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -100,7 +100,7 @@ export default function AudienceDemographics({ audience }: AudienceDemographicsP
         )}
 
         {/* Geography */}
-        {audience.geographicSignals.length > 0 && (
+        {audience.geographicIndicators?.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -111,7 +111,7 @@ export default function AudienceDemographics({ audience }: AudienceDemographicsP
               Geographic Signals
             </p>
             <p className="text-sm text-[var(--bmn-color-text)]">
-              {audience.geographicSignals.join(', ')}
+              {audience.geographicIndicators.join(', ')}
             </p>
           </motion.div>
         )}
