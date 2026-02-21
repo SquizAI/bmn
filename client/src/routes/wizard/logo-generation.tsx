@@ -57,9 +57,11 @@ export default function LogoGenerationPage() {
             metadata: logo.metadata || {},
           })),
         });
+      } else {
+        addToast({ type: 'warning', title: 'No logos were generated. Try generating again.' });
       }
     }
-  }, [generation.isComplete, generation.result, setAssets]);
+  }, [generation.isComplete, generation.result, setAssets, addToast]);
 
   const galleryImages: GalleryImage[] = logos.map((logo) => ({
     id: logo.id,

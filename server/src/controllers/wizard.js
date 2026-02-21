@@ -139,6 +139,56 @@ const CLIENT_STEP_TO_DB = {
   'complete': 'complete',
 };
 
+// Ordered list of all DB wizard steps. The Supabase validate_wizard_step()
+// trigger enforces sequential (+1) progression, so we must advance through
+// every intermediate step when the wizard UI skips steps like colors/fonts/checkout.
+const STEP_ORDER = [
+  'onboarding', 'social', 'identity', 'colors', 'fonts',
+  'logos', 'products', 'mockups', 'bundles', 'projections',
+  'checkout', 'complete',
+];
+
+/**
+ * Advance a brand's wizard_step through every intermediate step up to (and
+ * including) the target step. This satisfies the DB trigger which only allows
+ * moving forward by exactly one step at a time.
+ *
+ * @param {string} brandId
+ * @param {string} targetStep - one of the values in STEP_ORDER
+ * @returns {Promise<void>}
+ */
+async function advanceToStep(brandId, targetStep) {
+  // Fetch current step
+  const { data } = await supabaseAdmin
+    .from('brands')
+    .select('wizard_step')
+    .eq('id', brandId)
+    .single();
+
+  const currentStep = data?.wizard_step || 'onboarding';
+  const currentIdx = STEP_ORDER.indexOf(currentStep);
+  const targetIdx = STEP_ORDER.indexOf(targetStep);
+
+  // Already at or past this step — nothing to do
+  if (targetIdx <= currentIdx) return;
+
+  // Walk through each intermediate step one-by-one
+  for (let i = currentIdx + 1; i <= targetIdx; i++) {
+    const { error } = await supabaseAdmin
+      .from('brands')
+      .update({ wizard_step: STEP_ORDER[i], updated_at: new Date().toISOString() })
+      .eq('id', brandId);
+
+    if (error) {
+      logger.error(
+        { brandId, step: STEP_ORDER[i], error: error.message },
+        'advanceToStep: failed to advance wizard step',
+      );
+      throw new Error(`Failed to advance wizard to step: ${STEP_ORDER[i]}`);
+    }
+  }
+}
+
 export async function saveStepData(req, res, next) {
   try {
     const userId = req.user.id;
@@ -165,22 +215,30 @@ export async function saveStepData(req, res, next) {
 
     // Only update wizard_step if the client step maps to a valid DB step
     const dbStep = CLIENT_STEP_TO_DB[step];
-    const updatePayload = {
-      wizard_state: updatedState,
-      updated_at: new Date().toISOString(),
-    };
-    if (dbStep) {
-      updatePayload.wizard_step = dbStep;
-    }
 
-    const { error: updateError } = await supabaseAdmin
+    // First, save wizard_state (this never triggers the step validation)
+    const { error: stateError } = await supabaseAdmin
       .from('brands')
-      .update(updatePayload)
+      .update({
+        wizard_state: updatedState,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', brandId);
 
-    if (updateError) {
-      logger.error({ error: updateError.message, brandId }, 'Failed to save step data');
+    if (stateError) {
+      logger.error({ error: stateError.message, brandId }, 'Failed to save step data');
       return res.status(500).json({ success: false, error: 'Failed to save step data' });
+    }
+
+    // Then advance through any intermediate steps to reach the target DB step.
+    // This walks step-by-step so the DB trigger (which only allows +1) is satisfied.
+    if (dbStep) {
+      try {
+        await advanceToStep(brandId, dbStep);
+      } catch (advanceErr) {
+        logger.error({ error: advanceErr.message, brandId, dbStep }, 'Failed to advance wizard step');
+        return res.status(500).json({ success: false, error: 'Failed to advance wizard step' });
+      }
     }
 
     res.json({
@@ -1268,33 +1326,12 @@ export async function completeWizard(req, res, next) {
     }
 
     // The DB trigger enforces sequential step progression (max +1 at a time).
-    // Walk through every remaining step until we reach 'complete'.
-    const stepOrder = [
-      'onboarding', 'social', 'identity', 'colors', 'fonts',
-      'logos', 'products', 'mockups', 'bundles', 'projections',
-      'checkout', 'complete',
-    ];
-    const currentIdx = stepOrder.indexOf(brand.wizard_step);
-    const completeIdx = stepOrder.indexOf('complete');
-
-    if (currentIdx < 0) {
-      logger.warn({ brandId, wizardStep: brand.wizard_step }, 'Unknown current wizard step');
-    }
-
-    // Advance one step at a time to satisfy the trigger
-    for (let i = Math.max(currentIdx, 0) + 1; i <= completeIdx; i++) {
-      const { error: stepError } = await supabaseAdmin
-        .from('brands')
-        .update({
-          wizard_step: stepOrder[i],
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', brandId);
-
-      if (stepError) {
-        logger.error({ brandId, step: stepOrder[i], error: stepError.message }, 'Failed to advance wizard step');
-        return res.status(500).json({ success: false, error: `Failed to advance to step: ${stepOrder[i]}` });
-      }
+    // Use the shared advanceToStep helper to walk through every remaining step.
+    try {
+      await advanceToStep(brandId, 'complete');
+    } catch (stepError) {
+      logger.error({ brandId, error: stepError.message }, 'Failed to advance wizard to complete');
+      return res.status(500).json({ success: false, error: 'Failed to finalize wizard steps' });
     }
 
     // CRM sync and email will be dispatched via BullMQ once workers are ready

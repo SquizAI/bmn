@@ -44,11 +44,14 @@ export default function CompletionPage() {
 
     apiClient
       .post(`/api/v1/wizard/${brandId}/complete`)
+      .then(() => {
+        addToast({ type: 'success', title: 'Brand creation complete!' });
+      })
       .catch((err) => {
-        // Non-fatal: brand data is already saved per-step, this just sets status
         console.warn('Failed to mark brand as complete:', err);
+        addToast({ type: 'warning', title: 'Brand saved but status update failed. Your data is safe.' });
       });
-  }, [brandId]);
+  }, [brandId, addToast]);
 
   // Show confetti on mount
   useEffect(() => {

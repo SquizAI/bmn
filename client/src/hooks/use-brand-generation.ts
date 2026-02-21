@@ -113,10 +113,10 @@ export function useSelectBrandDirection() {
           values: direction.values,
           colorPalette: direction.colorPalette,
           fonts: {
-            primary: direction.fonts.heading.family,
-            secondary: direction.fonts.body.family,
+            primary: direction.fonts?.heading?.family || 'Inter',
+            secondary: direction.fonts?.body?.family || 'Space Grotesk',
           },
-          logoStyle: direction.logoStyle.style,
+          logoStyle: direction.logoStyle?.style || 'modern',
           voice: direction.voice,
         },
       }),
@@ -137,10 +137,10 @@ export function useSelectBrandDirection() {
           role: c.role as 'primary' | 'secondary' | 'accent' | 'background' | 'text' | 'custom',
         })),
         fonts: {
-          primary: direction.fonts.heading.family,
-          secondary: direction.fonts.body.family,
+          primary: direction.fonts?.heading?.family || 'Inter',
+          secondary: direction.fonts?.body?.family || 'Space Grotesk',
         },
-        logoStyle: direction.logoStyle.style,
+        logoStyle: direction.logoStyle?.style || 'modern',
       });
 
       queryClient.invalidateQueries({

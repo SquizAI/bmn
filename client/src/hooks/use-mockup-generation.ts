@@ -48,7 +48,7 @@ export function useMockupDetails(brandId: string | null) {
     queryKey: ['mockup-details', brandId],
     queryFn: () =>
       apiClient.get<MockupDetail[]>(`/api/v1/brands/${brandId}/assets`, {
-        params: { type: 'mockup' },
+        params: { asset_type: 'mockup' },
       }),
     enabled: !!brandId,
   });

@@ -90,12 +90,13 @@ export default function MockupReviewPage() {
             id: m.id,
             url: m.url,
             productSku: m.productSku,
-            status: 'pending' as const,
+            // Preserve existing approval status if mockup was already reviewed
+            status: mockups.find((old) => old.id === m.id)?.status || ('pending' as const),
           })),
         });
       }
     }
-  }, [generation.isComplete, generation.result, setAssets]);
+  }, [generation.isComplete, generation.result, setAssets, mockups]);
 
   const handleApprove = useCallback(
     (id: string) => {

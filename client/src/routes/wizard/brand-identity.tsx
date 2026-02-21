@@ -318,8 +318,8 @@ export default function BrandIdentityPage() {
         name: c.name,
         role: c.role,
       })),
-      fontPrimary: selectedDirection.fonts.heading.family,
-      fontSecondary: selectedDirection.fonts.body.family,
+      fontPrimary: selectedDirection.fonts?.heading?.family || 'Inter',
+      fontSecondary: selectedDirection.fonts?.body?.family || 'Space Grotesk',
     });
 
     // Apply to stores
@@ -336,14 +336,14 @@ export default function BrandIdentityPage() {
         role: c.role as 'primary' | 'secondary' | 'accent' | 'background' | 'text' | 'custom',
       })),
       fonts: {
-        primary: selectedDirection.fonts.heading.family,
-        secondary: selectedDirection.fonts.body.family,
+        primary: selectedDirection.fonts?.heading?.family || 'Inter',
+        secondary: selectedDirection.fonts?.body?.family || 'Space Grotesk',
       },
-      logoStyle: selectedDirection.logoStyle.style,
+      logoStyle: selectedDirection.logoStyle?.style || 'modern',
     });
 
     // Set tone sliders based on voice
-    const voiceLevel = selectedDirection.voice.vocabularyLevel;
+    const voiceLevel = selectedDirection.voice?.vocabularyLevel || 'conversational';
     setToneValues({
       casualToFormal: voiceLevel === 'formal' ? 85 : voiceLevel === 'professional' ? 65 : voiceLevel === 'conversational' ? 35 : 15,
       playfulToSerious: selectedDirection.id === 'direction-a' ? 35 : selectedDirection.id === 'direction-b' ? 70 : 25,
@@ -683,8 +683,8 @@ export default function BrandIdentityPage() {
 
             {/* Font Pairing Preview */}
             <FontPairingPreview
-              headingFont={selectedDirection.fonts.heading.family}
-              bodyFont={selectedDirection.fonts.body.family}
+              headingFont={selectedDirection.fonts?.heading?.family || 'Inter'}
+              bodyFont={selectedDirection.fonts?.body?.family || 'Space Grotesk'}
               brandName={brand.name}
               primaryColor={selectedDirection.colorPalette.find((c) => c.role === 'primary')?.hex}
               accentColor={selectedDirection.colorPalette.find((c) => c.role === 'accent')?.hex}

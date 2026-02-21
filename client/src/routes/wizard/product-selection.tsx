@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ArrowRight,
@@ -73,8 +73,34 @@ export default function ProductSelectionPage() {
   const generateRecs = useGenerateRecommendations();
   const saveSelections = useSaveProductSelections();
 
-  const hasRecommendations = !!recommendations?.recommendations?.length;
-  const isLoading = view === 'recommendations' ? recsLoading : catalogLoading;
+  const hasRecommendations = !!recommendations?.products?.length;
+  const isLoading = view === 'recommendations'
+    ? (recsLoading || generateRecs.isPending)
+    : catalogLoading;
+
+  // Auto-generate recommendations when none exist and brand has a dossier
+  const hasTriggeredGeneration = useRef(false);
+  useEffect(() => {
+    if (
+      brandId &&
+      !recsLoading &&
+      !hasRecommendations &&
+      !recsError &&
+      !generateRecs.isPending &&
+      !generateRecs.isSuccess &&
+      !hasTriggeredGeneration.current
+    ) {
+      hasTriggeredGeneration.current = true;
+      generateRecs.mutate(
+        { brandId },
+        {
+          onError: () => {
+            addToast({ type: 'error', title: 'Failed to generate product recommendations' });
+          },
+        },
+      );
+    }
+  }, [brandId, recsLoading, hasRecommendations, recsError, generateRecs, addToast]);
 
   // Toggle product selection
   const toggleProduct = useCallback((sku: string) => {
@@ -92,57 +118,108 @@ export default function ProductSelectionPage() {
   // View product detail
   const handleViewDetail = useCallback(
     (sku: string) => {
-      const product = recommendations?.recommendations.find((r) => r.sku === sku);
+      const product = recommendations?.products.find((r) => r.sku === sku);
       if (product) setDetailProduct(product);
     },
     [recommendations],
   );
 
-  // Revenue summary from selected products
+  // Revenue summary from selected products.
+  // Handles two data shapes:
+  //   1. Per-product revenue tiers (product.revenue.tiers[])
+  //   2. Top-level estimatedMonthlyRevenue from recommendations.summary (server returns flat revenueProjection)
   const revenueSummary = useMemo(() => {
-    if (!recommendations?.recommendations) return null;
+    if (!recommendations?.products) return null;
+    if (selectedSkus.size === 0) return null;
 
-    const selected = recommendations.recommendations.filter((r) =>
+    const selected = recommendations.products.filter((r) =>
       selectedSkus.has(r.sku),
     );
     if (selected.length === 0) return null;
 
-    const totals = { conservative: 0, moderate: 0, aggressive: 0 };
-    for (const product of selected) {
-      for (const tier of product.revenue.tiers) {
-        const key = tier.label as keyof typeof totals;
-        if (totals[key] !== undefined) {
-          totals[key] += tier.monthlyRevenue;
+    // Check if per-product revenue tiers are available
+    const hasPerProductRevenue = selected[0]?.revenue?.tiers?.length > 0;
+
+    if (hasPerProductRevenue) {
+      // Original logic: sum per-product revenue tiers
+      const totals = { conservative: 0, moderate: 0, aggressive: 0 };
+      for (const product of selected) {
+        for (const tier of product.revenue?.tiers || []) {
+          const key = tier.label as keyof typeof totals;
+          if (totals[key] !== undefined) {
+            totals[key] += tier.monthlyRevenue;
+          }
         }
       }
+
+      return [
+        {
+          label: 'conservative' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(totals.conservative * 100) / 100,
+          monthlyProfit: Math.round(totals.conservative * 0.6 * 100) / 100,
+          annualRevenue: Math.round(totals.conservative * 12 * 100) / 100,
+          annualProfit: Math.round(totals.conservative * 0.6 * 12 * 100) / 100,
+        },
+        {
+          label: 'moderate' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(totals.moderate * 100) / 100,
+          monthlyProfit: Math.round(totals.moderate * 0.6 * 100) / 100,
+          annualRevenue: Math.round(totals.moderate * 12 * 100) / 100,
+          annualProfit: Math.round(totals.moderate * 0.6 * 12 * 100) / 100,
+        },
+        {
+          label: 'aggressive' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(totals.aggressive * 100) / 100,
+          monthlyProfit: Math.round(totals.aggressive * 0.6 * 100) / 100,
+          annualRevenue: Math.round(totals.aggressive * 12 * 100) / 100,
+          annualProfit: Math.round(totals.aggressive * 0.6 * 12 * 100) / 100,
+        },
+      ];
     }
 
-    return [
-      {
-        label: 'conservative' as const,
-        unitsPerMonth: 0,
-        monthlyRevenue: Math.round(totals.conservative * 100) / 100,
-        monthlyProfit: Math.round(totals.conservative * 0.6 * 100) / 100,
-        annualRevenue: Math.round(totals.conservative * 12 * 100) / 100,
-        annualProfit: Math.round(totals.conservative * 0.6 * 12 * 100) / 100,
-      },
-      {
-        label: 'moderate' as const,
-        unitsPerMonth: 0,
-        monthlyRevenue: Math.round(totals.moderate * 100) / 100,
-        monthlyProfit: Math.round(totals.moderate * 0.6 * 100) / 100,
-        annualRevenue: Math.round(totals.moderate * 12 * 100) / 100,
-        annualProfit: Math.round(totals.moderate * 0.6 * 12 * 100) / 100,
-      },
-      {
-        label: 'aggressive' as const,
-        unitsPerMonth: 0,
-        monthlyRevenue: Math.round(totals.aggressive * 100) / 100,
-        monthlyProfit: Math.round(totals.aggressive * 0.6 * 100) / 100,
-        annualRevenue: Math.round(totals.aggressive * 12 * 100) / 100,
-        annualProfit: Math.round(totals.aggressive * 0.6 * 12 * 100) / 100,
-      },
-    ];
+    // Fallback: use top-level revenue estimates, scaled by the ratio of selected products.
+    // The server returns revenueProjection.estimatedMonthlyRevenue with low/mid/high keys.
+    const est = recommendations.revenueProjection?.estimatedMonthlyRevenue;
+    if (est) {
+      const totalProducts = recommendations.products.length;
+      const selectedRatio = selected.length / totalProducts;
+      // Normalise key names: server may use low/mid/high or conservative/moderate/aggressive
+      const low = (est as Record<string, number>).conservative ?? (est as Record<string, number>).low ?? 0;
+      const mid = (est as Record<string, number>).moderate ?? (est as Record<string, number>).mid ?? 0;
+      const high = (est as Record<string, number>).aggressive ?? (est as Record<string, number>).high ?? 0;
+
+      return [
+        {
+          label: 'conservative' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(low * selectedRatio * 100) / 100,
+          monthlyProfit: Math.round(low * selectedRatio * 0.6 * 100) / 100,
+          annualRevenue: Math.round(low * selectedRatio * 12 * 100) / 100,
+          annualProfit: Math.round(low * selectedRatio * 0.6 * 12 * 100) / 100,
+        },
+        {
+          label: 'moderate' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(mid * selectedRatio * 100) / 100,
+          monthlyProfit: Math.round(mid * selectedRatio * 0.6 * 100) / 100,
+          annualRevenue: Math.round(mid * selectedRatio * 12 * 100) / 100,
+          annualProfit: Math.round(mid * selectedRatio * 0.6 * 12 * 100) / 100,
+        },
+        {
+          label: 'aggressive' as const,
+          unitsPerMonth: 0,
+          monthlyRevenue: Math.round(high * selectedRatio * 100) / 100,
+          monthlyProfit: Math.round(high * selectedRatio * 0.6 * 100) / 100,
+          annualRevenue: Math.round(high * selectedRatio * 12 * 100) / 100,
+          annualProfit: Math.round(high * selectedRatio * 0.6 * 12 * 100) / 100,
+        },
+      ];
+    }
+
+    return null;
   }, [recommendations, selectedSkus]);
 
   const handleContinue = async () => {
@@ -222,7 +299,7 @@ export default function ProductSelectionPage() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const prods = recommendations.recommendations.filter((r) =>
+                const prods = recommendations.products.filter((r) =>
                   selectedSkus.has(r.sku),
                 );
                 setCompareProducts(prods);
@@ -278,7 +355,7 @@ export default function ProductSelectionPage() {
         </div>
       ) : view === 'recommendations' && hasRecommendations ? (
         <RecommendedProductGrid
-          recommendations={recommendations!.recommendations}
+          recommendations={recommendations!.products}
           selectedSkus={selectedSkus}
           onToggleProduct={toggleProduct}
           onViewDetail={handleViewDetail}
