@@ -17,12 +17,15 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "test:server": "npm run test --workspace=server"
+    "test:server": "npm run test --workspace=server",
+    "test:client": "npm run test --workspace=client",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/dom": "^10.4.1"
   }
 }
