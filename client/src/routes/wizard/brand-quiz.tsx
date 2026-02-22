@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { useWizardStore } from '@/stores/wizard-store';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { apiClient } from '@/lib/api';
 
 // ── Quiz Data ───────────────────────────────────────────────────
 
@@ -172,9 +173,12 @@ export default function BrandQuizPage() {
   const setDossier = useWizardStore((s) => s.setDossier);
   const setBrand = useWizardStore((s) => s.setBrand);
   const setStep = useWizardStore((s) => s.setStep);
+  const brandId = useWizardStore((s) => s.meta.brandId);
+  const setMeta = useWizardStore((s) => s.setMeta);
 
   const [step, setQuizStep] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [answers, setAnswers] = useState<QuizAnswers>({
     vibe: null,
     audience: null,
@@ -196,24 +200,74 @@ export default function BrandQuizPage() {
     }
   }, [step, answers]);
 
-  const handleNext = useCallback(() => {
+  const handleNext = useCallback(async () => {
     if (!canAdvance()) return;
 
     if (step === TOTAL_QUESTIONS - 1) {
-      // Quiz complete -- map answers to store data
-      const dossierData = mapQuizToDossier(answers);
-      const brandData = mapQuizToBrand(answers);
+      setIsSubmitting(true);
 
-      setDossier(dossierData);
-      setBrand(brandData);
-      setStep('brand-name');
-      navigate(ROUTES.WIZARD_BRAND_NAME);
+
+      try {
+        // Ensure we have a brandId -- create wizard session if needed
+        let id = brandId;
+        if (!id) {
+          const result = await apiClient.post<{ brandId: string }>(
+            '/api/v1/wizard/start',
+            {},
+          );
+          id = result.brandId;
+          setMeta({ brandId: id });
+        }
+
+        // Map quiz answers to the server's expected format
+        const vibe = VIBE_OPTIONS.find((v) => v.id === answers.vibe);
+        const audience = AUDIENCE_OPTIONS.find((a) => a.id === answers.audience);
+        const product = PRODUCT_OPTIONS.find((p) => p.id === answers.product);
+        const selectedWords = answers.words
+          .map((wId) => WORD_OPTIONS.find((w) => w.id === wId)?.label)
+          .filter(Boolean) as string[];
+        const selectedColors = answers.colors.flatMap((cId) => {
+          const palette = COLOR_PALETTE_OPTIONS.find((c) => c.id === cId);
+          return palette ? [...palette.colors] : [];
+        });
+
+        // POST to server -- Claude AI generates a full dossier from quiz answers
+        const result = await apiClient.post<{
+          dossier: Record<string, unknown>;
+          source: string;
+        }>(`/api/v1/wizard/${id}/personality-quiz`, {
+          vibe: vibe?.label || answers.vibe,
+          brandWords: selectedWords,
+          dreamCustomer: audience?.value || 'General audience',
+          colorPalette: selectedColors,
+          contentStyle: product?.niche || 'General',
+        });
+
+        // Store the AI-generated dossier and brand data locally
+        setDossier(result.dossier);
+        const brandData = mapQuizToBrand(answers);
+        setBrand(brandData);
+        setStep('brand-name');
+        navigate(ROUTES.WIZARD_BRAND_NAME);
+      } catch (err) {
+        // Fallback: use local mapping if server call fails
+        console.error('Quiz API call failed, using local mapping:', err);
+
+        const dossierData = mapQuizToDossier(answers);
+        const brandData = mapQuizToBrand(answers);
+        setDossier(dossierData);
+        setBrand(brandData);
+        setStep('brand-name');
+        navigate(ROUTES.WIZARD_BRAND_NAME);
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
 
     setDirection(1);
     setQuizStep((s) => s + 1);
-  }, [step, canAdvance, answers, setDossier, setBrand, setStep, navigate]);
+  }, [step, canAdvance, answers, brandId, setMeta, setDossier, setBrand, setStep, navigate]);
 
   const handleBack = useCallback(() => {
     if (step === 0) {
@@ -388,8 +442,10 @@ export default function BrandQuizPage() {
           type="button"
           size="lg"
           onClick={handleNext}
-          disabled={!canAdvance()}
+          disabled={!canAdvance() || isSubmitting}
+          loading={isSubmitting}
           rightIcon={
+            isSubmitting ? undefined :
             step === TOTAL_QUESTIONS - 1 ? (
               <Sparkles className="h-5 w-5" />
             ) : (
@@ -398,7 +454,7 @@ export default function BrandQuizPage() {
           }
           className="flex-1"
         >
-          {step === TOTAL_QUESTIONS - 1 ? 'Build My Brand' : 'Next'}
+          {isSubmitting ? 'Analyzing your brand...' : step === TOTAL_QUESTIONS - 1 ? 'Build My Brand' : 'Next'}
         </Button>
       </div>
     </motion.div>

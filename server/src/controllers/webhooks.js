@@ -580,19 +580,97 @@ export async function handleStripeWebhook(req, res) {
   res.json({ received: true });
 }
 
+// ─── GHL Webhook ─────────────────────────────────────────────────────────────
+
+/**
+ * Map GHL webhook event types to our internal CRM sync event types.
+ * Unmapped events are logged and dispatched as 'user.created' (generic sync).
+ * @type {Record<string, string>}
+ */
+const GHL_EVENT_MAP = {
+  'ContactCreate': 'user.created',
+  'ContactUpdate': 'user.created',
+  'ContactDelete': 'user.created',
+  'ContactDndUpdate': 'user.created',
+  'ContactTagUpdate': 'user.created',
+  'NoteCreate': 'user.created',
+  'TaskCreate': 'user.created',
+  'OpportunityCreate': 'wizard.started',
+  'OpportunityUpdate': 'wizard.step-completed',
+  'OpportunityDelete': 'wizard.abandoned',
+  'OpportunityStatusUpdate': 'wizard.step-completed',
+};
+
 /**
  * POST /api/v1/webhooks/ghl
+ *
  * Handle GoHighLevel CRM webhook events.
+ *
+ * Flow:
+ * 1. Validate GHL webhook signature (if GHL_WEBHOOK_SECRET is set)
+ * 2. Parse event type from request body
+ * 3. Map GHL event type to internal CRM sync event type
+ * 4. Dispatch to crm-sync BullMQ queue
+ * 5. Emit Socket.io event if user is identifiable
+ * 6. Return 200 immediately
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
 export async function handleGHLWebhook(req, res) {
-  // TODO: Implement -- validate GHL webhook, dispatch to BullMQ
-  logger.info({
-    msg: 'GHL webhook received',
-    requestId: req.id,
-  });
+  // 1. Validate signature
+  const secret = process.env.GHL_WEBHOOK_SECRET;
+  if (secret) {
+    const signature = req.headers['x-ghl-signature'];
+    if (!signature) {
+      logger.warn('GHL webhook missing signature header');
+      return res.status(401).json({ success: false, error: 'Missing webhook signature' });
+    }
 
+    const { createHmac } = await import('node:crypto');
+    const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    if (signature !== expected) {
+      logger.warn('GHL webhook signature mismatch');
+      return res.status(401).json({ success: false, error: 'Invalid webhook signature' });
+    }
+  }
+
+  // 2. Parse event
+  const { type, contactId, locationId, ...payload } = req.body || {};
+
+  logger.info({ eventType: type, contactId, locationId, requestId: req.id }, 'GHL webhook received');
+
+  if (!type) {
+    return res.status(400).json({ success: false, error: 'Missing event type' });
+  }
+
+  // 3. Map GHL event type to internal event type
+  const internalEventType = GHL_EVENT_MAP[type] || 'user.created';
+
+  // 4. Dispatch to BullMQ crm-sync queue
+  try {
+    await dispatchJob('crm-sync', {
+      userId: payload.customFields?.supabase_user_id || payload.userId || '00000000-0000-0000-0000-000000000000',
+      eventType: internalEventType,
+      data: { ghlEventType: type, contactId, locationId, ...payload },
+    });
+
+    logger.info({ eventType: type, internalEventType, contactId }, 'GHL webhook dispatched to crm-sync queue');
+  } catch (err) {
+    logger.error({ error: err.message, eventType: type, contactId }, 'Failed to dispatch GHL webhook to queue');
+    return res.status(500).json({ success: false, error: 'Failed to process webhook' });
+  }
+
+  // 5. Emit Socket.io event if we can identify the user
+  /** @type {import('socket.io').Server | undefined} */
+  const io = req.app.locals.io;
+  const userId = payload.customFields?.supabase_user_id;
+  if (io && userId) {
+    io.to(`user:${userId}`).emit('crm:webhook', { type: internalEventType, ghlType: type, contactId });
+  }
+
+  // 6. Return 200
   res.json({ received: true });
 }

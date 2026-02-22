@@ -23,8 +23,9 @@ import { QUERY_KEYS } from '@/lib/constants';
 import { useUIStore } from '@/stores/ui-store';
 import { formatCurrency, cn } from '@/lib/utils';
 import { useAdminProductTiers, type ProductTier } from '@/hooks/use-admin-product-tiers';
+import { usePackagingTemplates } from '@/hooks/use-admin-templates';
 
-// ------ Schema ------
+// ------ Schema (admin product form) ------
 
 const productSchema = z.object({
   sku: z.string().min(1, 'SKU is required').max(50),
@@ -34,6 +35,7 @@ const productSchema = z.object({
   basePrice: z.coerce.number().min(0.01, 'Price must be positive'),
   imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   tier_id: z.string().uuid().nullable().optional(),
+  template_id: z.string().uuid().nullable().optional(),
 });
 
 type ProductForm = z.infer<typeof productSchema>;
@@ -50,6 +52,7 @@ interface AdminProduct {
   imageUrl: string;
   available: boolean;
   tier_id: string | null;
+  template_id: string | null;
   tier?: {
     id: string;
     slug: string;
@@ -73,6 +76,9 @@ export default function AdminProductsPage() {
   // Fetch tiers for filter + form dropdown
   const { data: tiersData } = useAdminProductTiers();
   const tiers = tiersData?.items || [];
+
+  // Fetch packaging templates for template assignment dropdown
+  const { data: templatesData } = usePackagingTemplates();
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.products(),
@@ -136,6 +142,7 @@ export default function AdminProductsPage() {
           basePrice: editingProduct.basePrice,
           imageUrl: editingProduct.imageUrl,
           tier_id: editingProduct.tier_id,
+          template_id: editingProduct.template_id,
         }
       : undefined,
   });
@@ -324,6 +331,30 @@ export default function AdminProductsPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {/* Packaging Template Assignment */}
+                {templatesData?.items && templatesData.items.length > 0 && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-text">
+                      Packaging Template
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      value={watch('template_id') || ''}
+                      onChange={(e) => setValue('template_id', e.target.value || null)}
+                    >
+                      <option value="">No template assigned</option>
+                      {templatesData.items.map((tmpl) => (
+                        <option key={tmpl.id} value={tmpl.id}>
+                          {tmpl.name} ({tmpl.category})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1 text-xs text-text-muted">
+                      Links this product to a packaging template for AI mockup generation.
+                    </p>
                   </div>
                 )}
 

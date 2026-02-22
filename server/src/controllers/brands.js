@@ -209,6 +209,20 @@ export async function createBrand(req, res, next) {
     }
 
     logger.info({ brandId: data.id, userId }, 'Brand created');
+
+    // Dispatch CRM sync if GHL is configured
+    if (process.env.GHL_CLIENT_ID || process.env.GHL_ACCESS_TOKEN) {
+      try {
+        await dispatchJob('crm-sync', {
+          userId,
+          eventType: 'wizard.started',
+          data: { brandId: data.id, brandName: name },
+        });
+      } catch (err) {
+        logger.warn({ userId, brandId: data.id, error: err.message }, 'Failed to queue CRM sync for brand creation');
+      }
+    }
+
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -341,6 +355,20 @@ export async function deleteBrand(req, res, next) {
     }
 
     logger.info({ brandId, userId }, 'Brand archived (soft-deleted)');
+
+    // Dispatch CRM sync if GHL is configured
+    if (process.env.GHL_CLIENT_ID || process.env.GHL_ACCESS_TOKEN) {
+      try {
+        await dispatchJob('crm-sync', {
+          userId,
+          eventType: 'wizard.abandoned',
+          data: { brandId },
+        });
+      } catch (err) {
+        logger.warn({ userId, brandId, error: err.message }, 'Failed to queue CRM sync for brand deletion');
+      }
+    }
+
     res.status(204).end();
   } catch (err) {
     next(err);
@@ -439,6 +467,11 @@ export async function generateLogos(req, res, next) {
       .map((c) => (typeof c === 'string' ? c : c.hex))
       .filter(Boolean);
 
+    // Extract industry/niche from social analysis or identity data
+    const socialAnalysis = ws['social-analysis'] || {};
+    const industry = socialAnalysis.niche || socialAnalysis.industry
+      || selectedDir?.industry || identity.industry || '';
+
     const result = await dispatchJob('logo-generation', {
       userId,
       brandId,
@@ -447,10 +480,24 @@ export async function generateLogos(req, res, next) {
       colorPalette: colorPalette.length > 0 ? colorPalette : ['#6366F1', '#EC4899', '#F59E0B'],
       brandVision: selectedDir?.vision || identity.vision || '',
       archetype: selectedDir?.archetype?.name || identity.archetype || '',
+      industry,
       count: req.body.count || 4,
     });
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');
+
+    // Dispatch CRM sync if GHL is configured
+    if (process.env.GHL_CLIENT_ID || process.env.GHL_ACCESS_TOKEN) {
+      try {
+        await dispatchJob('crm-sync', {
+          userId,
+          eventType: 'logo.generated',
+          data: { brandId, brandName: brand.name },
+        });
+      } catch (err) {
+        logger.warn({ userId, brandId, error: err.message }, 'Failed to queue CRM sync for logo generation');
+      }
+    }
 
     res.status(202).json({
       success: true,
@@ -493,18 +540,41 @@ export async function uploadLogo(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
+    // Determine if the uploaded logo is raster (needs vectorization)
+    const isRaster = /\.(png|jpe?g|webp)$/i.test(fileName || '') ||
+      /image\/(png|jpeg|webp)/.test(url);
+    const isSvg = /\.svg$/i.test(fileName || '') || url.includes('.svg');
+
+    // Attempt to vectorize raster logos to SVG
+    let svgUrl = null;
+    if (isRaster && !isSvg) {
+      try {
+        const { recraftClient } = await import('../services/providers.js');
+        const result = await recraftClient.vectorize({ imageUrl: url });
+        svgUrl = result.svgUrl;
+        logger.info({ brandId, svgUrl }, 'Uploaded logo vectorized to SVG');
+      } catch (vecErr) {
+        logger.warn({ err: vecErr, brandId }, 'Failed to vectorize uploaded logo, keeping raster');
+      }
+    }
+
     // Create brand_asset record for the uploaded logo
     const { data: asset, error: insertErr } = await supabaseAdmin
       .from('brand_assets')
       .insert({
         brand_id: brandId,
         asset_type: 'logo',
-        url,
+        url: svgUrl || url,
         is_selected: false,
         metadata: {
           source: 'user_upload',
           file_name: fileName || 'uploaded-logo',
           uploaded_at: new Date().toISOString(),
+          original_url: url,
+          svg_url: svgUrl,
+          png_url: isRaster ? url : null,
+          has_vector: !!svgUrl || isSvg,
+          was_vectorized: !!svgUrl,
         },
       })
       .select()
@@ -515,7 +585,7 @@ export async function uploadLogo(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to save logo' });
     }
 
-    logger.info({ assetId: asset.id, brandId, userId }, 'User logo uploaded');
+    logger.info({ assetId: asset.id, brandId, userId, vectorized: !!svgUrl }, 'User logo uploaded');
 
     res.json({
       success: true,
@@ -562,6 +632,19 @@ export async function generateMockups(req, res, next) {
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Mockup generation job dispatched');
 
+    // Dispatch CRM sync if GHL is configured
+    if (process.env.GHL_CLIENT_ID || process.env.GHL_ACCESS_TOKEN) {
+      try {
+        await dispatchJob('crm-sync', {
+          userId,
+          eventType: 'mockup.generated',
+          data: { brandId },
+        });
+      } catch (err) {
+        logger.warn({ userId, brandId, error: err.message }, 'Failed to queue CRM sync for mockup generation');
+      }
+    }
+
     res.status(202).json({
       success: true,
       data: { jobId: result.jobId, queueName: result.queueName },
@@ -597,14 +680,102 @@ export async function downloadBrandAssets(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // TODO: Implement ZIP generation from Supabase Storage
-    // For now, return a 501 indicating the feature is not yet available.
-    logger.info({ brandId, userId }, 'Brand asset download requested (not yet implemented)');
+    // Fetch all assets for this brand
+    const { data: assets, error: assetsErr } = await supabaseAdmin
+      .from('brand_assets')
+      .select('id, asset_type, url, metadata')
+      .eq('brand_id', brandId)
+      .order('asset_type', { ascending: true })
+      .order('created_at', { ascending: true });
 
-    res.status(501).json({
-      success: false,
-      error: 'Brand asset download is coming soon. Your assets are available individually from the brand detail page.',
+    if (assetsErr) {
+      logger.error({ error: assetsErr, brandId }, 'Failed to fetch brand assets for download');
+      throw assetsErr;
+    }
+
+    if (!assets || assets.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No assets found for this brand. Generate logos or mockups first.',
+      });
+    }
+
+    // Set response headers for ZIP download
+    const safeName = (brand.name || 'brand').replace(/[^a-zA-Z0-9_-]/g, '_');
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}-assets.zip"`);
+
+    // Use archiver to stream ZIP to client
+    const archiver = (await import('archiver')).default;
+    const archive = archiver('zip', { zlib: { level: 5 } });
+
+    archive.on('error', (archiveErr) => {
+      logger.error({ error: archiveErr, brandId }, 'Archive stream error');
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, error: 'Failed to generate ZIP archive' });
+      }
     });
+
+    archive.pipe(res);
+
+    // Track folder counters for unique file names
+    const folderCounts = {};
+
+    // Download each asset and append to the archive
+    for (const asset of assets) {
+      if (!asset.url) continue;
+
+      const folder = asset.asset_type || 'other';
+      folderCounts[folder] = (folderCounts[folder] || 0) + 1;
+
+      // Determine file extension from URL or metadata
+      const urlPath = asset.url.split('?')[0];
+      const ext = urlPath.split('.').pop()?.toLowerCase() || 'png';
+      const fileName = `${folder}/${folderCounts[folder]}-${asset.id.slice(0, 8)}.${ext}`;
+
+      try {
+        // Check if the URL is a Supabase Storage path or external URL
+        const isSupabasePath = asset.url.includes('/storage/v1/object/');
+        let assetBuffer;
+
+        if (isSupabasePath) {
+          // Extract the storage path from the full URL
+          const storagePath = asset.url.split('/brand-assets/').pop()?.split('?')[0];
+          if (storagePath) {
+            const { data: fileData, error: dlErr } = await supabaseAdmin.storage
+              .from('brand-assets')
+              .download(storagePath);
+
+            if (dlErr || !fileData) {
+              logger.warn({ assetId: asset.id, error: dlErr }, 'Failed to download asset from Supabase Storage');
+              continue;
+            }
+            assetBuffer = Buffer.from(await fileData.arrayBuffer());
+          }
+        }
+
+        if (!assetBuffer) {
+          // Fetch from external URL (e.g. FAL.ai, Recraft CDN)
+          const response = await fetch(asset.url, {
+            signal: AbortSignal.timeout(30_000),
+          });
+
+          if (!response.ok) {
+            logger.warn({ assetId: asset.id, status: response.status }, 'Failed to fetch asset URL');
+            continue;
+          }
+
+          assetBuffer = Buffer.from(await response.arrayBuffer());
+        }
+
+        archive.append(assetBuffer, { name: fileName });
+      } catch (dlError) {
+        logger.warn({ assetId: asset.id, error: dlError.message }, 'Skipping asset in ZIP download');
+      }
+    }
+
+    await archive.finalize();
+    logger.info({ brandId, userId, assetCount: assets.length }, 'Brand asset ZIP downloaded');
   } catch (err) {
     next(err);
   }

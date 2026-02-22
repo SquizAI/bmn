@@ -21,9 +21,11 @@ You receive a Creator Dossier containing niche, audience demographics, content t
    - Three tiers: Conservative, Moderate, Aggressive
    - Adjusted by niche match score (0.0-1.0)
 
-4. RECOMMEND BUNDLES: Use the suggestBundles tool to propose 2-4 smart bundles based on product synergies and the creator's niche.
+4. GENERATE REASONING: Use the generateProductReasoning tool to create AI-powered "Why this product fits" explanations for the top products. Pass the creator's niche, brand archetype, and audience description.
 
-5. SYNTHESIZE: Use the synthesizeRecommendations tool to produce the final ranked recommendation list.
+5. RECOMMEND BUNDLES: Use the suggestBundles tool to propose 2-4 smart bundles based on product synergies and the creator's niche.
+
+6. SYNTHESIZE: Use the synthesizeRecommendations tool to produce the final ranked recommendation list. Include the AI-generated reasoning from step 4 for each product.
 
 IMPORTANT RULES:
 - Rank products by a composite score: (nicheMatchScore * 0.4) + (revenueEstimate * 0.3) + (marginPercent * 0.2) + (audienceFit * 0.1)

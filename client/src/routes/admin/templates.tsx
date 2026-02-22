@@ -58,6 +58,8 @@ const DEFAULT_FORM_STATE: TemplateFormState = {
 // ------ Helpers ------
 
 const CATEGORY_OPTIONS = [
+  'supplements',
+  'skincare',
   'apparel',
   'drinkware',
   'accessories',

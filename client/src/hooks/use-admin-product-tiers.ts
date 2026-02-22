@@ -3,6 +3,12 @@ import { apiClient } from '@/lib/api';
 
 // ------ Types ------
 
+/**
+ * ProductTier as returned by the API.
+ * Shape mirrors shared/schemas/product-tiers.js ProductTierSchema with API-specific
+ * additions (product_count). The shared schema is the source of truth for field names
+ * and validation constraints.
+ */
 export interface ProductTier {
   id: string;
   slug: string;

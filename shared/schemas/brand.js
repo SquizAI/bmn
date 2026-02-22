@@ -66,6 +66,9 @@ export const BrandListItemSchema = z.object({
   tagline: z.string().nullable(),
   status: BrandStatusEnum,
   wizardStep: WizardStepEnum,
+  thumbnailUrl: z.string().nullable().optional(),
+  archetype: z.string().nullable().optional(),
+  primaryColor: z.string().nullable().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

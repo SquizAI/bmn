@@ -1,48 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import type { z } from 'zod';
+import type {
+  BrandingZonePositionSchema,
+  BrandingZoneSchema,
+  PrintSpecsSchema,
+  PackagingTemplateSchema,
+} from '@shared/schemas/packaging-template';
 
-// ------ Types ------
+// ------ Types (inferred from shared Zod schemas) ------
 
-export interface BrandingZonePosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export type BrandingZonePosition = z.infer<typeof BrandingZonePositionSchema>;
+export type BrandingZone = z.infer<typeof BrandingZoneSchema>;
+export type PrintSpecs = z.infer<typeof PrintSpecsSchema>;
 
-export interface BrandingZone {
+/**
+ * PackagingTemplate as returned by the API (includes server-generated fields).
+ * Extends the shared schema shape with fields the API adds.
+ */
+export interface PackagingTemplate extends z.infer<typeof PackagingTemplateSchema> {
   id: string;
-  label: string;
-  type: 'logo' | 'text' | 'color_fill' | 'pattern';
-  position: BrandingZonePosition;
-  constraints: Record<string, unknown>;
-  style: Record<string, unknown>;
-}
-
-export interface PrintSpecs {
-  dpi: number;
-  bleed_mm: number;
-  safe_area_mm: number;
-  color_space: 'RGB' | 'CMYK';
-  print_width_mm?: number;
-  print_height_mm?: number;
-}
-
-export interface PackagingTemplate {
-  id: string;
-  slug: string;
-  name: string;
-  category: string;
-  description: string;
-  template_image_url: string;
-  template_width_px: number;
-  template_height_px: number;
-  branding_zones: BrandingZone[];
-  print_specs: PrintSpecs;
-  ai_prompt_template: string;
-  reference_images: string[];
-  is_active: boolean;
-  sort_order: number;
   created_at: string;
   updated_at: string;
 }

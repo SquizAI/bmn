@@ -1,37 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import type { z } from 'zod';
+import type {
+  customerDemographicsSchema,
+  purchasePatternsSchema,
+  customerAnalyticsResponseSchema,
+  salesAnalyticsResponseSchema,
+} from '@shared/schemas/analytics';
 
-// ------ Types ------
+// ------ Types (inferred from shared Zod schemas) ------
 
-export interface CustomerDemographics {
-  ageGroups: Array<{ range: string; percentage: number }>;
-  genderSplit: Array<{ gender: string; percentage: number }>;
-  topLocations: Array<{ location: string; count: number; percentage: number }>;
-}
-
-export interface PurchasePatterns {
-  byDayOfWeek: Array<{ day: string; orders: number }>;
-  byTimeOfDay: Array<{ hour: number; orders: number }>;
-  repeatPurchaseRate: number;
-  avgOrderValue: number;
-  avgOrderValueTrend: Array<{ date: string; value: number }>;
-  customerLifetimeValue: number;
-}
-
-export interface CustomerAnalytics {
-  demographics: CustomerDemographics;
-  patterns: PurchasePatterns;
-  topReferralSources: Array<{ source: string; count: number; percentage: number }>;
-}
-
-export interface SalesAnalytics {
-  totalRevenue: number;
-  totalOrders: number;
-  totalCustomers: number;
-  revenueTrend: Array<{ date: string; revenue: number }>;
-  ordersTrend: Array<{ date: string; orders: number }>;
-  conversionRate: number;
-}
+export type CustomerDemographics = z.infer<typeof customerDemographicsSchema>;
+export type PurchasePatterns = z.infer<typeof purchasePatternsSchema>;
+export type CustomerAnalytics = z.infer<typeof customerAnalyticsResponseSchema>;
+export type SalesAnalytics = z.infer<typeof salesAnalyticsResponseSchema>;
 
 // ------ Query Keys ------
 

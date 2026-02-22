@@ -49,7 +49,9 @@ export const BrandWizardJobSchema = z.object({
 });
 
 /**
- * Logo Generation job -- generates logos via FLUX.2 Pro.
+ * Logo Generation job -- template-driven generation via Recraft V4.
+ * Uses JSON logo templates (archetype × style) for consistent output.
+ * All results are vectorized to SVG (PNG fallback auto-vectorized).
  */
 export const LogoGenerationJobSchema = z.object({
   userId: z.string().uuid(),
@@ -59,6 +61,7 @@ export const LogoGenerationJobSchema = z.object({
   colorPalette: z.array(z.string()).min(1).max(8),
   brandVision: z.string().max(2000),
   archetype: z.string().max(200).optional(),
+  industry: z.string().max(200).optional(),
   count: z.number().int().min(1).max(8).default(4),
   isRefinement: z.boolean().default(false),
   previousLogoUrl: z.string().url().optional(),
@@ -146,6 +149,7 @@ export const EmailSendJobSchema = z.object({
     'payment-confirmed',
     'subscription-renewal',
     'credit-low-warning',
+    'org-invite',
   ]),
   data: z.record(z.unknown()),
   userId: z.string().uuid().optional(),

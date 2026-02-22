@@ -85,10 +85,15 @@ export async function getAccessToken() {
     return tokens.accessToken;
   }
 
-  // Need to refresh
-  if (tokens.refreshToken) {
+  // Need to refresh (only if OAuth credentials are configured)
+  if (tokens.refreshToken && process.env.GHL_CLIENT_ID && process.env.GHL_CLIENT_SECRET) {
     await refreshToken();
     return tokens.accessToken;
+  }
+
+  // Static token mode: if we have an expired/missing token but no OAuth credentials, we cannot refresh
+  if (tokens.refreshToken && !process.env.GHL_CLIENT_ID) {
+    logger.warn('GHL: Token expired but OAuth credentials (GHL_CLIENT_ID) not configured -- cannot refresh');
   }
 
   throw new Error('GHL: No access token available. Complete OAuth flow or set GHL_ACCESS_TOKEN.');

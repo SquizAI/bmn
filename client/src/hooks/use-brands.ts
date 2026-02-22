@@ -1,18 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/constants';
+import type { z } from 'zod';
+import type { BrandListItemSchema, BrandStatusEnum } from '@shared/schemas/brand';
 
 // ------ Types ------
 
-export interface Brand {
-  id: string;
-  name: string;
-  status: 'draft' | 'active' | 'archived';
-  wizardStep: string;
-  thumbnailUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+/** Infer the Brand list-item type from the shared Zod schema. */
+export type Brand = z.infer<typeof BrandListItemSchema>;
+
+export type BrandStatus = z.infer<typeof BrandStatusEnum>;
 
 interface BrandsResponse {
   items: Brand[];

@@ -1,7 +1,9 @@
 import { Link } from 'react-router';
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { BrandCard } from '@/components/brand/BrandCard';
+import { useBrands } from '@/hooks/use-brands';
 import { ROUTES } from '@/lib/constants';
 
 /**
@@ -9,9 +11,8 @@ import { ROUTES } from '@/lib/constants';
  * Displays the user's brands in a grid. Start empty with a CTA to create.
  */
 export default function DashboardPage() {
-  // TODO: Wire up useBrands() TanStack Query hook when API is ready
-  const brands: unknown[] = [];
-  const isLoading = false;
+  const { data, isLoading, isError, error } = useBrands();
+  const brands = data?.items ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,8 +29,19 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Brand grid or empty state */}
-      {isLoading ? (
+      {/* Error state */}
+      {isError ? (
+        <Card variant="outlined" padding="lg">
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="mb-3 h-10 w-10 text-error" />
+            <CardTitle>Failed to load brands</CardTitle>
+            <CardDescription className="mt-2 max-w-md">
+              {error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.'}
+            </CardDescription>
+          </div>
+        </Card>
+      ) : isLoading ? (
+        /* Loading skeleton */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="animate-pulse-soft">
@@ -42,6 +54,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : brands.length === 0 ? (
+        /* Empty state */
         <Card variant="outlined" padding="lg">
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-light">
@@ -60,9 +73,11 @@ export default function DashboardPage() {
           </div>
         </Card>
       ) : (
+        /* Brand grid */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {/* TODO: Render BrandCard components here */}
-          <p className="text-text-secondary">Brand cards will render here.</p>
+          {brands.map((brand) => (
+            <BrandCard key={brand.id} brand={brand} />
+          ))}
         </div>
       )}
     </div>

@@ -6,17 +6,10 @@ import { ContentGenerator } from '@/components/dashboard/content-generator';
 import { ContentCalendar } from '@/components/dashboard/content-calendar';
 import { useBrands } from '@/hooks/use-brands';
 import { apiClient } from '@/lib/api';
+import type { z } from 'zod';
+import type { generatedContentSchema } from '@shared/schemas/dashboard';
 
-interface GeneratedContent {
-  id: string;
-  platform: string;
-  contentType: string;
-  caption: string;
-  hashtags: string[];
-  imagePrompt?: string;
-  scheduledFor: string | null;
-  createdAt: string;
-}
+type GeneratedContent = z.infer<typeof generatedContentSchema>;
 
 /**
  * AI Content Generation page.

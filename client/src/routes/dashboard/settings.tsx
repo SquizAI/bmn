@@ -20,24 +20,21 @@ import { SUBSCRIPTION_TIERS } from '@/lib/constants';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/lib/constants';
 import { formatCurrency, cn } from '@/lib/utils';
+import type { UserProfileSchema } from '@shared/schemas/user';
 
 // ------ Schema ------
 
+/** Profile edit form -- extends shared schema with email (read-only display). */
 const profileSchema = z.object({
-  fullName: z.string().min(1, 'Name is required').max(100),
+  fullName: z.string().min(1, 'Name is required').max(200),
   email: z.string().email('Invalid email'),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
 
-// ------ Types ------
+// ------ Types (inferred from shared schemas where possible) ------
 
-interface UserProfile {
-  fullName: string;
-  email: string;
-  phone?: string;
-  avatarUrl?: string;
-}
+type UserProfile = z.infer<typeof UserProfileSchema>;
 
 interface UserSubscription {
   tier: string;

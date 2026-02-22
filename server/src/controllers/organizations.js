@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { dispatchJob } from '../queues/dispatch.js';
 
 /**
  * GET /api/v1/organizations
@@ -150,8 +151,24 @@ export async function inviteMember(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to create invite' });
     }
 
-    // TODO: Queue email via BullMQ (Resend) with invite link
-    logger.info({ orgId, email, role, token }, 'Org invite created');
+    // Queue invite email via BullMQ (Resend)
+    try {
+      const inviteUrl = `${process.env.APP_URL || 'http://localhost:4848'}/invite/accept?token=${token}`;
+      await dispatchJob('email-send', {
+        to: email,
+        template: 'org-invite',
+        data: {
+          orgId,
+          role,
+          inviteUrl,
+          invitedByEmail: req.user.email,
+        },
+      });
+    } catch (err) {
+      logger.warn({ orgId, email, error: err.message }, 'Failed to queue org invite email');
+    }
+
+    logger.info({ orgId, email, role }, 'Org invite created');
 
     res.status(201).json({ success: true, data: invite });
   } catch (err) {

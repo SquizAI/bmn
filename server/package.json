@@ -21,6 +21,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@supabase/supabase-js": "^2.49.4",
     "apify-client": "^2.22.2",
+    "archiver": "^7.0.1",
     "bullmq": "^5.46.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

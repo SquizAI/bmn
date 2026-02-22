@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../../../../lib/supabase.js';
 import { logger } from '../../../../lib/logger.js';
 import { validate } from '../../../../middleware/validate.js';
+import { dispatchJob } from '../../../../queues/dispatch.js';
 
 export const mockupGenerationRouter = Router();
 
@@ -57,31 +58,21 @@ mockupGenerationRouter.post(
         });
       }
 
-      // TODO: Queue via BullMQ in production
-      // For now, create a generation job record and return the jobId
-      const { data: job, error: jobError } = await supabaseAdmin
-        .from('generation_jobs')
-        .insert({
-          brand_id: brandId,
-          user_id: userId,
-          type: 'mockup-generation',
-          status: 'pending',
-          input: {
-            brandId,
-            productSkus: selections.map((s) => s.product_sku),
-          },
-        })
-        .select('id')
-        .single();
+      // Dispatch mockup generation via BullMQ (brand-wizard queue, mockup-review step)
+      const productSkus = selections.map((s) => s.product_sku);
+      const result = await dispatchJob('brand-wizard', {
+        userId,
+        brandId,
+        step: 'mockup-review',
+        input: { brandId, productSkus },
+        creditCost: productSkus.length,
+      });
 
-      if (jobError) {
-        logger.error({ msg: 'Failed to create mockup generation job', error: jobError.message });
-        return res.status(500).json({ success: false, error: 'Failed to start mockup generation' });
-      }
+      logger.info({ jobId: result.jobId, brandId, userId, productCount: productSkus.length }, 'Mockup generation job dispatched via BullMQ');
 
       res.json({
         success: true,
-        data: { jobId: job.id },
+        data: { jobId: result.jobId, queueName: result.queueName },
       });
     } catch (err) {
       logger.error({ msg: 'Mockup generation dispatch failed', error: err.message });

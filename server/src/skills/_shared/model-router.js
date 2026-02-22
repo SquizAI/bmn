@@ -1,8 +1,9 @@
 // server/src/skills/_shared/model-router.js
 
-// TODO: Create providers module when API keys are configured.
-// Provider clients are lazily initialized from config.
-import { config } from '../../config/index.js';
+// Provider clients are singleton instances from providers.js,
+// lazily initialized on first use. Each provider getter throws
+// a descriptive error if the corresponding SDK is not installed.
+import { getAnthropicClient, getOpenAIClient, getGoogleAIClient } from '../../services/providers.js';
 import { logger } from '../../lib/logger.js';
 
 /**
@@ -178,9 +179,7 @@ async function callProvider(provider, model, options) {
 
   switch (provider) {
     case 'anthropic': {
-      // Lazy import -- Anthropic SDK will be installed with the Agent SDK
-      const { default: Anthropic } = await import('@anthropic-ai/sdk');
-      const client = new Anthropic({ apiKey: config.ANTHROPIC_API_KEY });
+      const client = getAnthropicClient();
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
@@ -198,9 +197,7 @@ async function callProvider(provider, model, options) {
     }
 
     case 'google': {
-      // Lazy import -- Google AI SDK installed separately
-      const { GoogleGenerativeAI } = await import('@google/generativeai');
-      const client = new GoogleGenerativeAI(config.GOOGLE_API_KEY);
+      const client = getGoogleAIClient();
       const genModel = client.getGenerativeModel({ model });
       const result = await genModel.generateContent({
         contents: [
@@ -231,9 +228,7 @@ async function callProvider(provider, model, options) {
     }
 
     case 'openai': {
-      // Lazy import -- OpenAI SDK installed separately
-      const { default: OpenAI } = await import('openai');
-      const client = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+      const client = getOpenAIClient();
       const response = await client.chat.completions.create({
         model,
         max_tokens: maxTokens,

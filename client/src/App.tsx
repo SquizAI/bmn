@@ -6,6 +6,7 @@ import { queryClient } from '@/lib/query-client';
 import { LoadingSpinner } from '@/components/ui/spinner';
 import { SkipLink } from '@/components/ui/skip-link';
 import { OfflineIndicator } from '@/components/ui/offline-indicator';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { requireAuth, requireAdmin, redirectIfAuthed } from '@/lib/route-guards';
 
 /**
@@ -74,6 +75,9 @@ const AdminProductsPage = lazyRetry(() => import('@/routes/admin/products'));
 const AdminJobsPage = lazyRetry(() => import('@/routes/admin/jobs'));
 const AdminTemplatesPage = lazyRetry(() => import('@/routes/admin/templates'));
 const AdminProductTiersPage = lazyRetry(() => import('@/routes/admin/product-tiers'));
+
+// Misc
+const NotFoundPage = lazyRetry(() => import('@/routes/not-found'));
 
 // --- Suspense wrapper helper ---
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
@@ -398,10 +402,14 @@ const router = createBrowserRouter([
         element: <Navigate to="/dashboard" replace />,
       },
 
-      // --- Catch-all: redirect to dashboard ---
+      // --- Catch-all: 404 page ---
       {
         path: '*',
-        element: <Navigate to="/dashboard" replace />,
+        element: (
+          <SuspenseRoute>
+            <NotFoundPage />
+          </SuspenseRoute>
+        ),
       },
     ],
   },
@@ -409,13 +417,15 @@ const router = createBrowserRouter([
 
 export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <OfflineIndicator />
-      <SkipLink />
-      <Suspense fallback={<LoadingSpinner fullPage />}>
-        <RouterProvider router={router} />
-      </Suspense>
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <OfflineIndicator />
+        <SkipLink />
+        <Suspense fallback={<LoadingSpinner fullPage />}>
+          <RouterProvider router={router} />
+        </Suspense>
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

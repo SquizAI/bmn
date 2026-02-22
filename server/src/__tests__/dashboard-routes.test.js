@@ -215,7 +215,10 @@ describe('handleStripeWebhook', () => {
 
 describe('handleGHLWebhook', () => {
   it('should return { received: true }', async () => {
-    const req = mockReq({ id: 'ghl-req-1' });
+    const req = mockReq({
+      id: 'ghl-req-1',
+      body: { type: 'contact.updated', contactId: 'c1', locationId: 'loc1' },
+    });
     const res = mockRes();
 
     await handleGHLWebhook(req, res);

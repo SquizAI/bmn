@@ -223,6 +223,44 @@ export const recraftClient = {
       fileSize: image.file_size || 0,
     };
   },
+
+  /**
+   * Convert a raster image (PNG/JPG/WebP) to SVG vector using Recraft vectorize.
+   * Image must be: PNG/JPG/WEBP, < 5 MB, < 16 MP, max dim < 4096px, min dim > 256px.
+   * @param {Object} params
+   * @param {string} params.imageUrl - URL of the raster image to vectorize
+   * @returns {Promise<{ svgUrl: string, contentType: string, fileSize: number }>}
+   */
+  async vectorize({ imageUrl }) {
+    const response = await fetch('https://fal.run/fal-ai/recraft/vectorize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Key ${config.FAL_API_KEY}`,
+      },
+      body: JSON.stringify({ image_url: imageUrl }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Recraft vectorize failed: ${response.status} — ${errorText}`
+      );
+    }
+
+    const data = await response.json();
+    const image = data.images?.[0];
+
+    if (!image?.url) {
+      throw new Error('Recraft vectorize returned no image in response');
+    }
+
+    return {
+      svgUrl: image.url,
+      contentType: image.content_type || 'image/svg+xml',
+      fileSize: image.file_size || 0,
+    };
+  },
 };
 
 /**

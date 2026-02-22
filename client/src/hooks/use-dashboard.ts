@@ -1,73 +1,25 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import type { z } from 'zod';
+import type {
+  dashboardOverviewResponseSchema,
+  topProductSchema,
+  brandHealthScoreSchema,
+  referralStatsSchema,
+  referralLeaderboardEntrySchema,
+  integrationStatusSchema,
+} from '@shared/schemas/dashboard';
 
-// ------ Types ------
+// ------ Types (inferred from shared Zod schemas) ------
 
-export interface DashboardOverview {
-  todayRevenue: number;
-  todayOrders: number;
-  monthRevenue: number;
-  monthOrders: number;
-  monthCustomers: number;
-  revenueChange: number;
-  ordersChange: number;
-  sparkline: Array<{ date: string; revenue: number }>;
-}
+export type DashboardOverview = z.infer<typeof dashboardOverviewResponseSchema>;
+export type TopProduct = z.infer<typeof topProductSchema>;
+export type BrandHealthScore = z.infer<typeof brandHealthScoreSchema>;
+export type ReferralStats = z.infer<typeof referralStatsSchema>;
+export type ReferralLeaderboardEntry = z.infer<typeof referralLeaderboardEntrySchema>;
+export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
 
-export interface TopProduct {
-  id: string;
-  name: string;
-  sku: string;
-  thumbnailUrl: string | null;
-  totalRevenue: number;
-  totalOrders: number;
-  avgOrderValue: number;
-}
-
-export interface BrandHealthScore {
-  overall: number;
-  breakdown: {
-    salesVelocity: number;
-    customerSatisfaction: number;
-    socialMentions: number;
-    repeatPurchaseRate: number;
-    catalogBreadth: number;
-    revenueGrowth: number;
-  };
-  tips: Array<{
-    category: string;
-    message: string;
-    priority: 'high' | 'medium' | 'low';
-  }>;
-  calculatedAt: string;
-}
-
-export interface ReferralStats {
-  referralCode: string;
-  referralUrl: string;
-  totalClicks: number;
-  totalSignups: number;
-  totalConversions: number;
-  totalEarnings: number;
-  pendingEarnings: number;
-}
-
-export interface ReferralLeaderboardEntry {
-  rank: number;
-  name: string;
-  conversions: number;
-  earnings: number;
-}
-
-export interface IntegrationStatus {
-  provider: 'shopify' | 'tiktok_shop' | 'woocommerce';
-  connected: boolean;
-  lastSync: string | null;
-  productsSynced: number;
-  ordersSynced: number;
-  status: 'active' | 'disconnected' | 'error' | 'syncing';
-  errorMessage: string | null;
-}
+// ------ Types (no shared schema yet -- dashboard-specific) ------
 
 export interface RestockAlert {
   type: 'top-seller' | 'complement' | 'trending';

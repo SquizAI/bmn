@@ -3,6 +3,15 @@
 import { z } from 'zod';
 import { logger } from '../../lib/logger.js';
 import { routeModel } from '../_shared/model-router.js';
+import {
+  CONTEXT_ANALYSIS_SYSTEM,
+  buildContextAnalysisPrompt,
+  DIRECTION_GENERATION_SYSTEM,
+  buildDirectionPrompt,
+  buildDirectionsBCPrompt,
+  VALIDATION_SYSTEM,
+  buildValidationPrompt,
+} from './prompts.js';
 
 // ── Archetype Definitions (used as grounding context for the AI) ────
 
@@ -432,7 +441,207 @@ Return ONLY a valid JSON object with this exact shape:
       };
     },
   },
+  /**
+   * generateDirections
+   *
+   * Executes the full multi-step brand direction pipeline:
+   * Step 1: Analyze social context and suggest 3 archetypes (Haiku -- fast)
+   * Step 2: Generate Direction A (Sonnet -- creative)
+   * Step 3: Generate Directions B + C in one call (Sonnet -- creative)
+   * Step 4: Validate and harmonize all 3 directions (Haiku -- fast)
+   *
+   * This is the main tool the parent agent should call to get the complete
+   * 3-direction brand identity output.
+   *
+   * Cost estimate: ~$0.04-0.08 total (1x Haiku + 2x Sonnet + 1x Haiku)
+   */
+  generateDirections: {
+    name: 'generateDirections',
+    description: 'Execute the full brand identity pipeline: analyze social context, generate 3 distinct brand directions (Bold & Energetic, Clean & Premium, Warm & Approachable), and validate/harmonize. Returns the complete 3-direction brand identity.',
+    inputSchema: z.object({
+      socialAnalysis: z
+        .record(z.unknown())
+        .describe('Full social analysis dossier object'),
+      brandName: z
+        .string()
+        .optional()
+        .describe('Brand name if already chosen'),
+      userPreferences: z
+        .record(z.unknown())
+        .optional()
+        .describe('Optional user preferences from wizard state'),
+    }),
+
+    /**
+     * @param {{ socialAnalysis: Object, brandName?: string, userPreferences?: Object }} input
+     * @returns {Promise<{ success: boolean, data?: Object, error?: string }>}
+     */
+    async execute({ socialAnalysis, brandName, userPreferences }) {
+      logger.info({ msg: 'Starting brand direction pipeline', hasBrandName: !!brandName });
+
+      // ── Step 1: Context analysis + archetype suggestion (fast model) ──
+      let contextResult;
+      try {
+        const contextPrompt = buildContextAnalysisPrompt({
+          socialAnalysis,
+          brandName,
+          userPreferences,
+        });
+
+        const step1 = await routeModel('context-analysis', {
+          prompt: contextPrompt,
+          systemPrompt: CONTEXT_ANALYSIS_SYSTEM,
+          maxTokens: 2048,
+          temperature: 0.7,
+          jsonMode: true,
+        });
+
+        contextResult = parseJsonResponse(step1.text, 'context-analysis');
+        logger.info({
+          msg: 'Step 1 complete: context analysis',
+          model: step1.model,
+          archetypeCount: contextResult.archetypes?.length,
+        });
+      } catch (err) {
+        logger.error({ msg: 'Step 1 failed: context analysis', error: err.message });
+        return { success: false, error: `Brand context analysis failed: ${err.message}` };
+      }
+
+      if (!contextResult.archetypes || contextResult.archetypes.length < 3) {
+        return { success: false, error: 'Context analysis returned fewer than 3 archetypes.' };
+      }
+
+      // ── Step 2: Generate Direction A (creative model) ──
+      let directionA;
+      try {
+        const dirAPrompt = buildDirectionPrompt({
+          socialContext: contextResult.socialContext,
+          archetype: contextResult.archetypes[0],
+          brandName,
+        });
+
+        const step2 = await routeModel('brand-vision', {
+          prompt: dirAPrompt,
+          systemPrompt: DIRECTION_GENERATION_SYSTEM,
+          maxTokens: 4096,
+          temperature: 0.8,
+          jsonMode: true,
+        });
+
+        directionA = parseJsonResponse(step2.text, 'direction-a');
+        logger.info({
+          msg: 'Step 2 complete: Direction A',
+          model: step2.model,
+          label: directionA.label,
+        });
+      } catch (err) {
+        logger.error({ msg: 'Step 2 failed: Direction A', error: err.message });
+        return { success: false, error: `Direction A generation failed: ${err.message}` };
+      }
+
+      // ── Step 3: Generate Directions B + C (creative model, uses A for contrast) ──
+      let directionB;
+      let directionC;
+      try {
+        const dirBCPrompt = buildDirectionsBCPrompt({
+          socialContext: contextResult.socialContext,
+          archetypes: [contextResult.archetypes[1], contextResult.archetypes[2]],
+          brandName,
+          directionA,
+        });
+
+        const step3 = await routeModel('brand-vision', {
+          prompt: dirBCPrompt,
+          systemPrompt: DIRECTION_GENERATION_SYSTEM,
+          maxTokens: 8192,
+          temperature: 0.8,
+          jsonMode: true,
+        });
+
+        const bcResult = parseJsonResponse(step3.text, 'directions-bc');
+        const bcDirections = bcResult.directions || [];
+
+        if (bcDirections.length < 2) {
+          return { success: false, error: 'Directions B+C generation returned fewer than 2 directions.' };
+        }
+
+        directionB = bcDirections[0];
+        directionC = bcDirections[1];
+
+        logger.info({
+          msg: 'Step 3 complete: Directions B + C',
+          model: step3.model,
+          labelB: directionB.label,
+          labelC: directionC.label,
+        });
+      } catch (err) {
+        logger.error({ msg: 'Step 3 failed: Directions B+C', error: err.message });
+        return { success: false, error: `Directions B+C generation failed: ${err.message}` };
+      }
+
+      // ── Step 4: Validate and harmonize all 3 directions (fast model) ──
+      let finalDirections = [directionA, directionB, directionC];
+      try {
+        const validationPrompt = buildValidationPrompt(finalDirections);
+
+        const step4 = await routeModel('brand-validation', {
+          prompt: validationPrompt,
+          systemPrompt: VALIDATION_SYSTEM,
+          maxTokens: 8192,
+          temperature: 0.3,
+          jsonMode: true,
+        });
+
+        const validationResult = parseJsonResponse(step4.text, 'validation');
+        if (validationResult.directions && validationResult.directions.length === 3) {
+          finalDirections = validationResult.directions;
+        }
+
+        logger.info({
+          msg: 'Step 4 complete: validation',
+          model: step4.model,
+          fixes: (validationResult.fixes || []).length,
+        });
+      } catch (err) {
+        // Validation is non-fatal -- use unvalidated directions
+        logger.warn({ msg: 'Step 4 failed: validation (using unvalidated)', error: err.message });
+      }
+
+      return {
+        success: true,
+        data: {
+          directions: finalDirections,
+          socialContext: contextResult.socialContext,
+        },
+      };
+    },
+  },
 };
+
+/**
+ * Parse a JSON response from an AI model, handling markdown code fences and extraction.
+ * @param {string} text - Raw response text
+ * @param {string} step - Step name for logging
+ * @returns {Object}
+ */
+function parseJsonResponse(text, step) {
+  // Strip markdown code fences if present
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+  }
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Try extracting the first JSON object
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error(`Failed to parse JSON from ${step} response`);
+    }
+    return JSON.parse(match[0]);
+  }
+}
 
 // ── Fallback Local Archetype Scoring ─────────────────────────────────
 
