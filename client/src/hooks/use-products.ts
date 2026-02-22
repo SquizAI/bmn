@@ -125,7 +125,10 @@ export function useBrowseProducts(filters: ProductFilters = {}) {
 export function useProductCategories() {
   return useQuery({
     queryKey: ['product-categories'],
-    queryFn: () => apiClient.get<string[]>('/api/v1/products/categories'),
+    queryFn: async () => {
+      const result = await apiClient.get<{ categories: string[] }>('/api/v1/products/categories');
+      return result.categories;
+    },
     staleTime: 1000 * 60 * 30, // 30 minutes -- categories rarely change
   });
 }
