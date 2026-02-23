@@ -117,6 +117,7 @@ interface DesignSlice {
   colorPalette: ColorEntry[];
   fonts: FontConfig | null;
   logoStyle: string | null;
+  selectedVariations: string[];
 }
 
 interface AssetsSlice {
@@ -124,6 +125,8 @@ interface AssetsSlice {
   selectedLogoId: string | null;
   mockups: MockupAsset[];
   selectedMockups: Record<string, boolean>;
+  logoHistory: LogoAsset[][];
+  pinnedLogoIds: string[];
 }
 
 interface ProductsSlice {
@@ -161,6 +164,13 @@ interface WizardState {
   // Logo actions
   addLogo: (logo: LogoAsset) => void;
   selectLogo: (id: string) => void;
+
+  // Logo Studio actions
+  pinLogo: (id: string) => void;
+  unpinLogo: (id: string) => void;
+  clearPins: () => void;
+  setSelectedVariations: (variations: string[]) => void;
+  pushLogoHistory: (logos: LogoAsset[]) => void;
 
   // Mockup actions
   addMockup: (mockup: MockupAsset) => void;
@@ -211,6 +221,7 @@ const initialDesign: DesignSlice = {
   colorPalette: [],
   fonts: null,
   logoStyle: null,
+  selectedVariations: [],
 };
 
 const initialAssets: AssetsSlice = {
@@ -218,6 +229,8 @@ const initialAssets: AssetsSlice = {
   selectedLogoId: null,
   mockups: [],
   selectedMockups: {},
+  logoHistory: [],
+  pinnedLogoIds: [],
 };
 
 const initialProducts: ProductsSlice = {
@@ -286,6 +299,63 @@ export const useWizardStore = create<WizardState>()(
             (state) => ({ assets: { ...state.assets, selectedLogoId: id } }),
             false,
             'selectLogo',
+          ),
+
+        // === Logo Studio Actions ===
+        pinLogo: (id) =>
+          set(
+            (state) => ({
+              assets: {
+                ...state.assets,
+                pinnedLogoIds: state.assets.pinnedLogoIds.includes(id)
+                  ? state.assets.pinnedLogoIds
+                  : [...state.assets.pinnedLogoIds, id],
+              },
+            }),
+            false,
+            'pinLogo',
+          ),
+
+        unpinLogo: (id) =>
+          set(
+            (state) => ({
+              assets: {
+                ...state.assets,
+                pinnedLogoIds: state.assets.pinnedLogoIds.filter((pid) => pid !== id),
+              },
+            }),
+            false,
+            'unpinLogo',
+          ),
+
+        clearPins: () =>
+          set(
+            (state) => ({
+              assets: { ...state.assets, pinnedLogoIds: [] },
+            }),
+            false,
+            'clearPins',
+          ),
+
+        setSelectedVariations: (variations) =>
+          set(
+            (state) => ({
+              design: { ...state.design, selectedVariations: variations },
+            }),
+            false,
+            'setSelectedVariations',
+          ),
+
+        pushLogoHistory: (logos) =>
+          set(
+            (state) => ({
+              assets: {
+                ...state.assets,
+                logoHistory: [...state.assets.logoHistory, logos],
+              },
+            }),
+            false,
+            'pushLogoHistory',
           ),
 
         // === Mockup Actions ===

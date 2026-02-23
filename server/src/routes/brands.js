@@ -19,6 +19,9 @@ brandRoutes.get('/', brandController.listBrands);
 // POST /api/v1/brands -- Create a new brand
 brandRoutes.post('/', validate({ body: brandCreateSchema }), brandController.createBrand);
 
+// GET /api/v1/brands/logo-options -- Available logo styles, variations, and archetypes
+brandRoutes.get('/logo-options', brandController.getLogoOptions);
+
 // GET /api/v1/brands/:brandId -- Get brand details
 brandRoutes.get(
   '/:brandId',

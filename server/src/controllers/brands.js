@@ -463,9 +463,15 @@ export async function generateLogos(req, res, next) {
     const directions = identity.directions || [];
     const selectedDir = directions.find((d) => d.id === identity.selectedDirectionId) || directions[0];
 
-    const colorPalette = (selectedDir?.colorPalette || identity.colorPalette || [])
+    const wizardColors = (selectedDir?.colorPalette || identity.colorPalette || [])
       .map((c) => (typeof c === 'string' ? c : c.hex))
       .filter(Boolean);
+
+    // Allow req.body.colorPalette to override wizard_state colors
+    const requestColors = req.body.colorPalette;
+    const colorPalette = (Array.isArray(requestColors) && requestColors.length > 0)
+      ? requestColors
+      : wizardColors;
 
     // Extract industry/niche from social analysis or identity data
     const socialAnalysis = ws['social-analysis'] || {};
@@ -502,7 +508,10 @@ export async function generateLogos(req, res, next) {
       brandVision,
       archetype,
       industry: industry.slice(0, 200),
-      count: req.body.count || 4,
+      count: req.body.variations?.length || req.body.count || 4,
+      variations: req.body.variations || undefined,
+      isRefinement: !!req.body.refinementNotes,
+      refinementNotes: req.body.refinementNotes || undefined,
     });
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');
@@ -527,6 +536,34 @@ export async function generateLogos(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+/**
+ * GET /api/v1/brands/logo-options
+ * Returns available logo styles, variations, and archetypes for the Logo Studio UI.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+export async function getLogoOptions(req, res) {
+  const { getStyleKeys, getArchetypeKeys, LOGO_VARIATIONS, STYLE_PARAMS } = await import('../data/logo-templates.js');
+
+  res.json({
+    success: true,
+    data: {
+      styles: getStyleKeys().map((key) => ({
+        id: key,
+        label: key.charAt(0).toUpperCase() + key.slice(1),
+        description: STYLE_PARAMS[key].promptFragment.split('.')[0],
+      })),
+      variations: LOGO_VARIATIONS.map((v) => ({
+        id: v.id,
+        label: v.label,
+        description: v.promptSuffix.split('.')[0],
+      })),
+      archetypes: getArchetypeKeys(),
+    },
+  });
 }
 
 /**

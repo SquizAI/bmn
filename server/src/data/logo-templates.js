@@ -215,6 +215,8 @@ export function resolveLogoTemplate({
   industry,
   colorPalette = [],
   count = 4,
+  variations,
+  refinementNotes,
 }) {
   const style = STYLE_PARAMS[logoStyle] || STYLE_PARAMS.modern;
   const archetypeKey = archetype?.toLowerCase().replace(/\s+/g, '-');
@@ -240,13 +242,30 @@ export function resolveLogoTemplate({
   }
 
   baseParts.push(style.promptFragment);
+
+  if (refinementNotes) {
+    baseParts.push(`Refinement instructions: ${refinementNotes}`);
+  }
+
   baseParts.push('Clean vector design, scalable, suitable for business use. White or transparent background.');
 
   const basePrompt = baseParts.join(' ');
 
-  // Select which variations to generate (prioritized)
-  const sortedVariations = [...LOGO_VARIATIONS].sort((a, b) => a.priority - b.priority);
-  const selectedVariations = sortedVariations.slice(0, count);
+  // Select which variations to generate
+  let selectedVariations;
+  if (variations && variations.length > 0) {
+    // User-selected variations: filter LOGO_VARIATIONS to only include requested types
+    selectedVariations = LOGO_VARIATIONS.filter((v) => variations.includes(v.id));
+    // If none matched, fall back to priority-based selection
+    if (selectedVariations.length === 0) {
+      const sortedVariations = [...LOGO_VARIATIONS].sort((a, b) => a.priority - b.priority);
+      selectedVariations = sortedVariations.slice(0, count);
+    }
+  } else {
+    // Default: priority-based selection
+    const sortedVariations = [...LOGO_VARIATIONS].sort((a, b) => a.priority - b.priority);
+    selectedVariations = sortedVariations.slice(0, count);
+  }
 
   // Build per-variation prompts
   const prompts = selectedVariations.map((variation) => {

@@ -46,7 +46,7 @@ export function initLogoGenerationWorker(io) {
       const {
         userId, brandId, brandName, logoStyle, colorPalette,
         brandVision, archetype, count, isRefinement, previousLogoUrl,
-        refinementNotes, industry,
+        refinementNotes, industry, variations,
       } = job.data;
 
       const jobLog = createJobLogger(job, 'logo-generation');
@@ -72,6 +72,8 @@ export function initLogoGenerationWorker(io) {
           industry,
           colorPalette,
           count,
+          variations,
+          refinementNotes,
         });
 
         jobLog.info(

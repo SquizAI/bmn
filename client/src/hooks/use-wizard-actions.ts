@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { QUERY_KEYS } from '@/lib/constants';
@@ -33,6 +33,10 @@ interface SaveBrandIdentityPayload {
 interface GenerateLogosPayload {
   brandId: string;
   style: string;
+  variations?: string[];
+  colorPalette?: string[];
+  refinementNotes?: string;
+  count?: number;
 }
 
 interface RegenerateLogoPayload {
@@ -126,14 +130,26 @@ export function useSaveBrandIdentity() {
  */
 export function useDispatchLogoGeneration() {
   const setActiveJob = useWizardStore((s) => s.setActiveJob);
+  const pushLogoHistory = useWizardStore((s) => s.pushLogoHistory);
+  const logos = useWizardStore((s) => s.assets.logos);
 
   return useMutation({
     mutationFn: (payload: GenerateLogosPayload) =>
       apiClient.post<DispatchJobResponse>(
         `/api/v1/brands/${payload.brandId}/generate/logos`,
-        { style: payload.style },
+        {
+          style: payload.style,
+          variations: payload.variations,
+          colorPalette: payload.colorPalette,
+          refinementNotes: payload.refinementNotes,
+          count: payload.count,
+        },
       ),
     onSuccess: (data) => {
+      // Save current logos to history before generating new ones
+      if (logos.length > 0) {
+        pushLogoHistory(logos);
+      }
       setActiveJob(data.jobId);
     },
   });
@@ -286,5 +302,20 @@ export function useSaveProjections() {
         queryKey: QUERY_KEYS.brand(variables.brandId),
       });
     },
+  });
+}
+
+/**
+ * Fetch available logo styles, variations, and archetypes.
+ */
+export function useLogoOptions() {
+  return useQuery({
+    queryKey: ['logo-options'],
+    queryFn: () => apiClient.get<{
+      styles: Array<{ id: string; label: string; description: string }>;
+      variations: Array<{ id: string; label: string; description: string }>;
+      archetypes: string[];
+    }>('/api/v1/brands/logo-options'),
+    staleTime: Infinity,
   });
 }

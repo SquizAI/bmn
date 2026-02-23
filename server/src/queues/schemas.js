@@ -63,6 +63,7 @@ export const LogoGenerationJobSchema = z.object({
   archetype: z.string().max(200).optional(),
   industry: z.string().max(200).optional(),
   count: z.number().int().min(1).max(8).default(4),
+  variations: z.array(z.enum(['icon', 'wordmark', 'combination', 'emblem', 'lettermark', 'abstract'])).min(1).max(6).optional(),
   isRefinement: z.boolean().default(false),
   previousLogoUrl: z.string().url().optional(),
   refinementNotes: z.string().max(1000).optional(),
