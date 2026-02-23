@@ -164,13 +164,91 @@ export const falClient = {
 };
 
 /**
- * Recraft V4 client via FAL.ai (no SDK -- direct fetch).
+ * Recraft V4 client via FAL.ai Queue API (no SDK -- direct fetch).
  * #1 rated model for logo/design generation. Outputs native SVG vectors.
- * Uses the same FAL_API_KEY for authentication.
+ * Uses the FAL Queue API (queue.fal.run) instead of the synchronous fal.run
+ * endpoint, which can hang for 60+ seconds on cold starts.
+ *
+ * Flow: POST to queue → poll status → GET result.
  */
+const FAL_QUEUE_BASE = 'https://queue.fal.run';
+const FAL_POLL_INTERVAL_MS = 2000;
+const FAL_MAX_WAIT_MS = 120_000; // 2 minutes max
+
+/**
+ * Submit a job to FAL.ai Queue API and poll until complete.
+ * @param {string} modelId - e.g. 'fal-ai/recraft/v4/text-to-vector'
+ * @param {Object} body - Request payload
+ * @returns {Promise<Object>} - The model's response data
+ */
+async function falQueueRequest(modelId, body) {
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Key ${config.FAL_API_KEY}`,
+  };
+
+  // Step 1: Submit to queue
+  const submitRes = await fetch(`${FAL_QUEUE_BASE}/${modelId}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!submitRes.ok) {
+    const errorText = await submitRes.text();
+    throw new Error(`FAL queue submit failed: ${submitRes.status} — ${errorText}`);
+  }
+
+  const { request_id } = await submitRes.json();
+  if (!request_id) {
+    throw new Error('FAL queue submit returned no request_id');
+  }
+
+  // Step 2: Poll status until COMPLETED
+  const deadline = Date.now() + FAL_MAX_WAIT_MS;
+
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, FAL_POLL_INTERVAL_MS));
+
+    const statusRes = await fetch(
+      `${FAL_QUEUE_BASE}/${modelId}/requests/${request_id}/status`,
+      { headers },
+    );
+
+    if (!statusRes.ok) {
+      throw new Error(`FAL status check failed: ${statusRes.status}`);
+    }
+
+    const status = await statusRes.json();
+
+    if (status.status === 'COMPLETED') {
+      // Step 3: Fetch result
+      const resultRes = await fetch(
+        `${FAL_QUEUE_BASE}/${modelId}/requests/${request_id}`,
+        { headers },
+      );
+
+      if (!resultRes.ok) {
+        const errText = await resultRes.text();
+        throw new Error(`FAL result fetch failed: ${resultRes.status} — ${errText}`);
+      }
+
+      return await resultRes.json();
+    }
+
+    if (status.status === 'FAILED') {
+      throw new Error(`FAL job failed: ${status.error || 'Unknown error'}`);
+    }
+
+    // IN_QUEUE or IN_PROGRESS — keep polling
+  }
+
+  throw new Error(`FAL job timed out after ${FAL_MAX_WAIT_MS / 1000}s (request_id: ${request_id})`);
+}
+
 export const recraftClient = {
   /**
-   * Generate a vector logo using Recraft V4 text-to-vector via FAL.ai.
+   * Generate a vector logo using Recraft V4 text-to-vector via FAL.ai Queue API.
    * @param {Object} params
    * @param {string} params.prompt - Logo description (1-10000 chars)
    * @param {string} [params.image_size='square_hd'] - Output size preset
@@ -179,38 +257,16 @@ export const recraftClient = {
    * @returns {Promise<{ imageUrl: string, contentType: string, fileSize: number }>}
    */
   async generateVector({ prompt, image_size = 'square_hd', colors, background_color }) {
-    const body = {
-      prompt,
-      image_size,
-    };
+    const body = { prompt, image_size };
 
-    // Pass brand colors as RGB objects
     if (colors && colors.length > 0) {
       body.colors = colors.map(hexToRgb);
     }
-
-    // Background color (default white)
     if (background_color) {
       body.background_color = hexToRgb(background_color);
     }
 
-    const response = await fetch('https://fal.run/fal-ai/recraft/v4/text-to-vector', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Key ${config.FAL_API_KEY}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Recraft V4 request failed: ${response.status} — ${errorText}`
-      );
-    }
-
-    const data = await response.json();
+    const data = await falQueueRequest('fal-ai/recraft/v4/text-to-vector', body);
     const image = data.images?.[0];
 
     if (!image?.url) {
@@ -226,29 +282,12 @@ export const recraftClient = {
 
   /**
    * Convert a raster image (PNG/JPG/WebP) to SVG vector using Recraft vectorize.
-   * Image must be: PNG/JPG/WEBP, < 5 MB, < 16 MP, max dim < 4096px, min dim > 256px.
    * @param {Object} params
    * @param {string} params.imageUrl - URL of the raster image to vectorize
    * @returns {Promise<{ svgUrl: string, contentType: string, fileSize: number }>}
    */
   async vectorize({ imageUrl }) {
-    const response = await fetch('https://fal.run/fal-ai/recraft/vectorize', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Key ${config.FAL_API_KEY}`,
-      },
-      body: JSON.stringify({ image_url: imageUrl }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Recraft vectorize failed: ${response.status} — ${errorText}`
-      );
-    }
-
-    const data = await response.json();
+    const data = await falQueueRequest('fal-ai/recraft/vectorize', { image_url: imageUrl });
     const image = data.images?.[0];
 
     if (!image?.url) {
