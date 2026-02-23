@@ -2042,6 +2042,101 @@ export async function getDossierPdf(req, res, next) {
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
+/**
+ * POST /api/v1/wizard/:brandId/generate-voice-samples
+ * Generate AI voice samples (instagram caption, product description, email subject, taglines)
+ * for a brand direction. Used by the BrandVoiceSamples component.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function generateVoiceSamples(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId } = req.params;
+    const { voice, archetype, values, vision, narrative } = req.body;
+
+    // Verify ownership
+    const { data: brand, error } = await supabaseAdmin
+      .from('brands')
+      .select('id, name, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const brandName = brand.name && brand.name !== 'Untitled Brand' ? brand.name : 'Your Brand';
+
+    const prompt = `You are a brand voice copywriter. Generate sample content in the brand's voice.
+
+<brand_context>
+Brand Name: ${brandName}
+Voice Tone: ${voice?.tone || 'professional'}
+Vocabulary Level: ${voice?.vocabularyLevel || 'conversational'}
+Humor: ${voice?.humor || 'none'}
+Archetype: ${archetype?.name || 'The Creator'}
+Values: ${(values || []).join(', ') || 'quality, authenticity'}
+Vision: ${vision || 'A modern creator brand'}
+${narrative ? `Narrative: ${narrative}` : ''}
+</brand_context>
+
+Generate 4 pieces of brand voice content. Return as JSON:
+{
+  "instagram": "A compelling Instagram caption (2-3 sentences) in the brand voice",
+  "product": "A product description (2-3 sentences) in the brand voice",
+  "email": "A catchy email subject line (under 10 words) in the brand voice",
+  "taglines": ["4 unique taglines (3-8 words each)"]
+}
+
+The content must reflect the tone and vocabulary level exactly. ${voice?.vocabularyLevel === 'casual' ? 'Use casual, conversational language with slang and energy.' : 'Use polished, professional language.'}`;
+
+    const aiResult = await routeModel('brand-vision', {
+      prompt,
+      maxTokens: 1024,
+      temperature: 0.9,
+      jsonMode: true,
+    });
+
+    let parsed;
+    try {
+      let jsonText = aiResult.text.trim();
+      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) jsonText = jsonMatch[1].trim();
+      parsed = JSON.parse(jsonText);
+    } catch (parseErr) {
+      logger.warn({ brandId, error: parseErr.message }, 'Failed to parse voice samples AI response');
+      return res.status(500).json({ success: false, error: 'Failed to generate voice samples' });
+    }
+
+    logger.info({ brandId, userId }, 'Voice samples generated');
+
+    res.json({
+      success: true,
+      data: {
+        instagram: parsed.instagram || parsed.instagramCaption || null,
+        product: parsed.product || parsed.productDescription || null,
+        email: parsed.email || parsed.emailSubjectLine || null,
+        taglines: Array.isArray(parsed.taglines) ? parsed.taglines : [],
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/wizard/:brandId/personality-quiz
+ * Alternative path for users without social media.
+ * Takes quiz answers and generates equivalent dossier data using Claude.
+ *
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 export async function personalityQuiz(req, res, next) {
   try {
     const userId = req.user.id;

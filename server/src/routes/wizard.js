@@ -101,6 +101,13 @@ wizardRoutes.post(
   wizardController.personalityQuiz
 );
 
+// POST /api/v1/wizard/:brandId/generate-voice-samples -- Generate AI voice samples
+wizardRoutes.post(
+  '/:brandId/generate-voice-samples',
+  generationLimiter,
+  wizardController.generateVoiceSamples
+);
+
 // POST /api/v1/wizard/:brandId/generate-taglines -- Generate AI taglines
 wizardRoutes.post(
   '/:brandId/generate-taglines',

@@ -469,18 +469,36 @@ export async function generateLogos(req, res, next) {
 
     // Extract industry/niche from social analysis or identity data
     const socialAnalysis = ws['social-analysis'] || {};
-    const industry = socialAnalysis.niche || socialAnalysis.industry
+    const rawIndustry = socialAnalysis.niche || socialAnalysis.industry
       || selectedDir?.industry || identity.industry || '';
+    // Coerce to string -- AI sometimes stores niche/industry as an object
+    const industry = typeof rawIndustry === 'string'
+      ? rawIndustry
+      : (rawIndustry?.name || rawIndustry?.primaryNiche?.name || rawIndustry?.label || '');
+
+    // Coerce logoStyle to a valid enum value
+    const VALID_LOGO_STYLES = ['minimal', 'bold', 'vintage', 'modern', 'playful'];
+    const rawStyle = req.body.style || selectedDir?.logoStyle?.style || selectedDir?.logoStyle || identity.logoStyle || 'modern';
+    const styleStr = typeof rawStyle === 'string' ? rawStyle.toLowerCase().trim() : 'modern';
+    const logoStyle = VALID_LOGO_STYLES.includes(styleStr) ? styleStr : 'modern';
+
+    // Truncate brandVision to fit schema max (2000 chars)
+    const rawVision = selectedDir?.vision || identity.vision || '';
+    const brandVision = typeof rawVision === 'string' ? rawVision.slice(0, 2000) : '';
+
+    // Coerce archetype to string
+    const rawArchetype = selectedDir?.archetype?.name || selectedDir?.archetype || identity.archetype || '';
+    const archetype = typeof rawArchetype === 'string' ? rawArchetype.slice(0, 200) : '';
 
     const result = await dispatchJob('logo-generation', {
       userId,
       brandId,
       brandName: brand.name || 'Brand',
-      logoStyle: req.body.style || selectedDir?.logoStyle?.style || identity.logoStyle || 'modern',
+      logoStyle,
       colorPalette: colorPalette.length > 0 ? colorPalette : ['#6366F1', '#EC4899', '#F59E0B'],
-      brandVision: selectedDir?.vision || identity.vision || '',
-      archetype: selectedDir?.archetype?.name || identity.archetype || '',
-      industry,
+      brandVision,
+      archetype,
+      industry: industry.slice(0, 200),
       count: req.body.count || 4,
     });
 
