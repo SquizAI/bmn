@@ -493,7 +493,10 @@ export async function generateLogos(req, res, next) {
     const result = await dispatchJob('logo-generation', {
       userId,
       brandId,
-      brandName: brand.name || 'Brand',
+      brandName: (brand.name && brand.name !== 'Untitled Brand' ? brand.name : null)
+        || ws['brand-name']?.name
+        || brand.name
+        || 'Brand',
       logoStyle,
       colorPalette: colorPalette.length > 0 ? colorPalette : ['#6366F1', '#EC4899', '#F59E0B'],
       brandVision,

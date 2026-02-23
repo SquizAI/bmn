@@ -251,6 +251,21 @@ export async function saveStepData(req, res, next) {
       }
     }
 
+    // When the user names their brand, persist it to the brands.name column
+    // so logo generation and other downstream features see the real name.
+    if (step === 'brand-name' && data?.name) {
+      const { error: nameErr } = await supabaseAdmin
+        .from('brands')
+        .update({ name: data.name, updated_at: new Date().toISOString() })
+        .eq('id', brandId);
+
+      if (nameErr) {
+        logger.warn({ brandId, error: nameErr.message }, 'Failed to update brand name (non-blocking)');
+      } else {
+        logger.info({ brandId, name: data.name }, 'Brand name updated from wizard');
+      }
+    }
+
     // Social proof: increment selected_count for each chosen product
     if (step === 'product-selection' && data?.selectedProducts?.length) {
       for (const productId of data.selectedProducts) {
