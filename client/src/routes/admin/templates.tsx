@@ -1,6 +1,18 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, Plus, ArrowLeft, Save, Trash2, Image, Layers } from 'lucide-react';
+import {
+  Package,
+  Plus,
+  ArrowLeft,
+  Save,
+  Trash2,
+  Image,
+  Layers,
+  Search,
+  ToggleLeft,
+  ToggleRight,
+  Eye,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +27,9 @@ import type { PackagingTemplate, BrandingZone, PrintSpecs } from '@/hooks/use-ad
 import ZoneEditor from '@/components/admin/ZoneEditor';
 import ZonePropertyPanel from '@/components/admin/ZonePropertyPanel';
 import { useUIStore } from '@/stores/ui-store';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 // ------ Types ------
 
@@ -39,6 +54,9 @@ const DEFAULT_PRINT_SPECS: PrintSpecs = {
   bleed_mm: 3,
   safe_area_mm: 5,
   color_space: 'CMYK',
+  label_shape: 'rectangle',
+  dieline_url: null,
+  file_formats: ['pdf', 'png'],
 };
 
 const DEFAULT_FORM_STATE: TemplateFormState = {
@@ -78,15 +96,32 @@ export default function AdminTemplatesPage() {
   const [form, setForm] = useState<TemplateFormState>(DEFAULT_FORM_STATE);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const addToast = useUIStore((s) => s.addToast);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useAdminTemplates({
     category: categoryFilter,
+    search: searchQuery || undefined,
   });
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
   const deleteTemplate = useDeleteTemplate();
+
+  const toggleActive = useMutation({
+    mutationFn: ({ templateId, is_active }: { templateId: string; is_active: boolean }) =>
+      apiClient.patch(`/api/v1/admin/templates/${templateId}`, { is_active }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['packaging-templates'] });
+      addToast({
+        type: 'success',
+        title: variables.is_active ? 'Template activated' : 'Template deactivated',
+      });
+    },
+    onError: () => addToast({ type: 'error', title: 'Failed to toggle template status' }),
+  });
 
   const templates = data?.items || [];
 
@@ -104,7 +139,7 @@ export default function AdminTemplatesPage() {
       slug: template.slug,
       name: template.name,
       category: template.category,
-      description: template.description,
+      description: template.description || '',
       template_image_url: template.template_image_url,
       template_width_px: template.template_width_px,
       template_height_px: template.template_height_px,
@@ -206,6 +241,7 @@ export default function AdminTemplatesPage() {
           <div className="flex items-center gap-2">
             <Layers className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold text-text">Packaging Templates</h1>
+            <span className="ml-1 text-sm text-text-muted">({templates.length})</span>
           </div>
           <Button
             leftIcon={<Plus className="h-4 w-4" />}
@@ -215,16 +251,25 @@ export default function AdminTemplatesPage() {
           </Button>
         </div>
 
+        {/* Search */}
+        <Input
+          placeholder="Search templates by name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          leftAddon={<Search className="h-4 w-4" />}
+        />
+
         {/* Category filter */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setCategoryFilter(undefined)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={cn(
+              'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
               !categoryFilter
                 ? 'bg-primary text-white'
-                : 'bg-surface-hover text-text-secondary hover:text-text'
-            }`}
+                : 'bg-surface-hover text-text-secondary hover:text-text',
+            )}
           >
             All
           </button>
@@ -233,11 +278,12 @@ export default function AdminTemplatesPage() {
               key={cat}
               type="button"
               onClick={() => setCategoryFilter(cat)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors',
                 categoryFilter === cat
                   ? 'bg-primary text-white'
-                  : 'bg-surface-hover text-text-secondary hover:text-text'
-              }`}
+                  : 'bg-surface-hover text-text-secondary hover:text-text',
+              )}
             >
               {cat}
             </button>
@@ -253,77 +299,118 @@ export default function AdminTemplatesPage() {
           <Card variant="outlined" padding="lg" className="text-center">
             <Layers className="mx-auto h-10 w-10 text-text-muted" />
             <p className="mt-2 text-text-secondary">
-              No templates yet. Create your first packaging template above.
+              {searchQuery || categoryFilter
+                ? 'No templates match your filters.'
+                : 'No templates yet. Create your first packaging template above.'}
             </p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {templates.map((template) => (
-              <Card
-                key={template.id}
-                variant="outlined"
-                padding="none"
-                className="overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => handleEdit(template)}
-              >
-                {template.template_image_url ? (
-                  <img
-                    src={template.template_image_url}
-                    alt={template.name}
-                    className="aspect-square w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex aspect-square items-center justify-center bg-surface-hover">
-                    <Image className="h-10 w-10 text-text-muted" />
-                  </div>
-                )}
-
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-text">{template.name}</h3>
-                      <p className="text-xs text-text-muted capitalize">{template.category}</p>
+            {templates.map((template) => {
+              const isActive = (template as PackagingTemplate & { is_active?: boolean }).is_active !== false;
+              return (
+                <Card
+                  key={template.id}
+                  variant="outlined"
+                  padding="none"
+                  className={cn(
+                    'overflow-hidden cursor-pointer hover:border-primary/50 transition-colors',
+                    !isActive && 'opacity-60',
+                  )}
+                  onClick={() => handleEdit(template)}
+                >
+                  {template.template_image_url ? (
+                    <div className="relative">
+                      <img
+                        src={template.template_image_url}
+                        alt={template.name}
+                        className="aspect-square w-full object-cover"
+                        loading="lazy"
+                      />
+                      {!isActive && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <span className="rounded-full bg-error px-3 py-1 text-xs font-medium text-white">
+                            Inactive
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <span className="flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary">
-                      <Package className="h-3 w-3" />
-                      {template.branding_zones?.length || 0} zones
-                    </span>
-                  </div>
-
-                  {template.description && (
-                    <p className="mt-1.5 text-xs text-text-muted line-clamp-2">
-                      {template.description}
-                    </p>
+                  ) : (
+                    <div className="flex aspect-square items-center justify-center bg-surface-hover">
+                      <Image className="h-10 w-10 text-text-muted" />
+                    </div>
                   )}
 
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(template);
-                      }}
-                      className="flex-1"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(template);
-                      }}
-                      className="text-error hover:bg-error-bg"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-text">{template.name}</h3>
+                        <p className="text-xs text-text-muted capitalize">{template.category}</p>
+                      </div>
+                      <span className="flex items-center gap-1 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-text-secondary">
+                        <Package className="h-3 w-3" />
+                        {template.branding_zones?.length || 0} zones
+                      </span>
+                    </div>
+
+                    {template.description && (
+                      <p className="mt-1.5 text-xs text-text-muted line-clamp-2">
+                        {template.description}
+                      </p>
+                    )}
+
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(template);
+                        }}
+                        leftIcon={<Eye className="h-3 w-3" />}
+                        className="flex-1"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleActive.mutate({
+                            templateId: template.id,
+                            is_active: !isActive,
+                          });
+                        }}
+                        title={isActive ? 'Deactivate' : 'Activate'}
+                        className={cn(
+                          isActive
+                            ? 'text-success hover:bg-success-bg'
+                            : 'text-error hover:bg-error-bg',
+                        )}
+                      >
+                        {isActive ? (
+                          <ToggleRight className="h-4 w-4" />
+                        ) : (
+                          <ToggleLeft className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(template);
+                        }}
+                        className="text-error hover:bg-error-bg"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </motion.div>

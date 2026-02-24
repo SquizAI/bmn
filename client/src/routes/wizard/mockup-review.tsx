@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router';
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   ArrowRight,
   ArrowLeft,
@@ -16,9 +16,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
-// Retained for potential error-state display in future iterations
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { GenerationProgress } from '@/components/generation-progress';
 import { MockupEditor } from '@/components/products/MockupEditor';
 import { MockupComparison } from '@/components/products/MockupComparison';
 import PrintExportDialog from '@/components/products/PrintExportDialog';

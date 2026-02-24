@@ -14,9 +14,6 @@ import { ColorPaletteEditor } from '@/components/logo-studio/ColorPaletteEditor'
 import { RefinementInput } from '@/components/logo-studio/RefinementInput';
 import { LogoCompare } from '@/components/logo-studio/LogoCompare';
 import { LogoHistory } from '@/components/logo-studio/LogoHistory';
-// Retained for potential error-state display in future iterations
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { GenerationProgress } from '@/components/generation-progress';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import {

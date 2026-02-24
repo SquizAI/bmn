@@ -2,7 +2,6 @@ import { motion } from 'motion/react';
 import { Sparkles, Check, Info, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
-import { RevenueEstimate } from './RevenueEstimate';
 import { SeasonalBadge } from './SeasonalBadge';
 import { SocialProofBadge } from './SocialProofBadge';
 

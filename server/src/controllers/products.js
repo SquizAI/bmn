@@ -74,12 +74,12 @@ export async function listProducts(req, res, next) {
       };
     });
 
-    res.json({
+    return res.json({
       success: true,
       data: { items, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -120,9 +120,9 @@ export async function getProduct(req, res, next) {
       product_tiers: undefined,
     };
 
-    res.json({ success: true, data: product });
+    return res.json({ success: true, data: product });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -149,9 +149,9 @@ export async function listCategories(req, res, next) {
     // Extract unique categories
     const categories = [...new Set(data.map((row) => row.category))].sort();
 
-    res.json({ success: true, data: { categories } });
+    return res.json({ success: true, data: { categories } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -176,8 +176,8 @@ export async function listProductTiers(req, res, next) {
       throw error;
     }
 
-    res.json({ success: true, data: { tiers: data } });
+    return res.json({ success: true, data: { tiers: data } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

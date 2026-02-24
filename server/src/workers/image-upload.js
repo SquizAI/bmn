@@ -74,7 +74,7 @@ export function initImageUploadWorker(_io) {
 
         // Step 2: Upload to Supabase Storage
         jobLog.debug({ storagePath }, 'Uploading to Supabase Storage');
-        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        const { data: _uploadData, error: uploadError } = await supabaseAdmin.storage
           .from('brand-assets')
           .upload(storagePath, imageBuffer, {
             contentType: mimeType,

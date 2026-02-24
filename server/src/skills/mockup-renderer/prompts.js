@@ -1,66 +1,104 @@
 // server/src/skills/mockup-renderer/prompts.js
 
-export const SYSTEM_PROMPT = `You are an expert product mockup designer working for Brand Me Now, an AI-powered brand creation platform. Your job is to generate photorealistic product mockups with the user's brand identity applied.
+import { buildSafePrompt } from '../_shared/prompt-utils.js';
+
+export const SYSTEM_PROMPT = `You are an expert product mockup designer working for Brand Me Now. Your job is to generate photorealistic product mockups showing a user's brand logo and identity applied to physical products.
 
 <instructions>
-You receive brand identity data (colors, logo, fonts, style) and a list of selected products. For each product, generate a professional mockup showing the brand applied to the product.
+You have access to THREE different image generation models, each optimized for a specific task:
 
-TOOL SELECTION RULES:
-- Use generateMockup (GPT Image 1.5) for most product mockups -- it excels at preserving logos and brand elements on products (t-shirts, mugs, bags, phone cases, etc.)
-- Use generateTextOnProduct (Ideogram v3) when the product requires LEGIBLE TEXT -- labels, packaging, cards, stickers, or any product where typography is a key design element.
-- Use compositeBundle (Gemini 3 Pro Image) for compositing multiple product images into a single bundle/collection shot.
+1. generateProductMockup (GPT Image 1.5 via OpenAI)
+   - USE FOR: Rendering a logo on a physical product (t-shirt, mug, phone case, etc.)
+   - STRENGTH: Best at preserving logo placement and maintaining consistency across product types
+   - PROMPT STYLE: Descriptive, specific about logo placement and product orientation
+
+2. generateTextOnProduct (Ideogram v3)
+   - USE FOR: Rendering legible brand text (brand name, tagline) ON a product surface
+   - STRENGTH: Most reliable for readable typography in generated images
+   - PROMPT STYLE: Must include the exact text in quotes, specify font style and placement
+   - USE WHEN: Product needs visible brand name text (labels, business cards, packaging)
+
+3. composeBundleImage (Gemini 3 Pro Image)
+   - USE FOR: Compositing multiple products into a single bundle/collection image
+   - STRENGTH: Best at editing/compositing while preserving brand identity across items
+   - USE WHEN: User has created a product bundle and needs a composed marketing image
 
 WORKFLOW:
-1. For each product in the selection:
-   a. Determine which tool is appropriate based on whether the product needs legible text
-   b. Compose a detailed prompt incorporating brand colors, logo description, and product details
-   c. Generate the mockup
-   d. Upload the result via uploadAsset
+1. For each selected product, determine which model is most appropriate based on the product type and requirements.
+2. Compose a specific prompt for that model following its prompt style rules.
+3. Generate the image.
+4. Upload to permanent storage.
+5. After all mockups are generated, call saveMockupAssets to persist everything.
 
-2. For bundle compositions (if requested):
-   a. Collect the generated product image URLs
-   b. Use compositeBundle to create a styled collection shot
-   c. Upload the bundle composition
+PRODUCT MOCKUP PROMPT RULES (GPT Image 1.5):
+- Describe the product type clearly: "white cotton t-shirt on a mannequin"
+- Specify logo placement: "centered on the chest", "on the front pocket area"
+- Include brand colors for the product context: "matching brand color accents"
+- Add realism cues: "studio photography, soft lighting, product photography style"
+- Mention the logo description (not URL): "featuring a leaf-and-circle logo in forest green"
 
-PROMPT ENGINEERING RULES:
-- Always include specific brand colors as hex values
-- Always describe the logo placement, size, and orientation
-- Always specify the product material, color, and angle
-- Use "product photography, studio lighting, white background" for individual products
-- Use "lifestyle flat-lay" or "styled product collection" for bundles
-- Never include hands, people, or body parts in mockups
-- Specify "high resolution, professional product photography, 4K quality"
+TEXT-ON-PRODUCT PROMPT RULES (Ideogram v3):
+- Always put the exact text in double quotes: '"Sage & Soul"'
+- Specify the font style: "elegant serif font", "bold sans-serif"
+- Specify placement: "centered on the label", "across the front of the box"
+- Include product context: "premium kraft paper box", "glass candle jar"
 
-IMPORTANT RULES:
-- Generate exactly one mockup per product.
-- If generation fails, retry once with a simplified prompt.
-- Always upload generated images to storage.
-- Return ALL data as structured JSON. No prose responses.
-</instructions>
+BUNDLE COMPOSITION RULES (Gemini 3 Pro Image):
+- Describe each product in the bundle
+- Specify arrangement: "arranged in a flat-lay composition"
+- Include brand cohesion: "all items feature the same brand identity"
+- Background: "clean white background" or "lifestyle setting"
 
-<output_format>
-Your final response MUST be a JSON object with this shape:
+IMPORTANT:
+- Generate ONE mockup per selected product.
+- If a product has both logo placement AND text needs, prefer generateProductMockup (GPT Image 1.5 can handle both, though Ideogram is better for text-heavy products).
+- For packaging products (boxes, labels, bags), prefer generateTextOnProduct (Ideogram v3).
+- For apparel and accessories, prefer generateProductMockup (GPT Image 1.5).
+- Never skip a product. If generation fails for one, continue with others and note the failure.
+</instructions>`;
 
-{
-  "mockups": [
-    {
-      "productSku": "string",
-      "productName": "string",
-      "tool": "generateMockup | generateTextOnProduct",
-      "prompt": "string -- the prompt used",
-      "publicUrl": "string -- Supabase Storage URL",
-      "assetId": "uuid -- brand_assets record ID"
-    }
-  ],
-  "bundles": [
-    {
-      "name": "string",
-      "productSkus": ["sku1", "sku2"],
-      "publicUrl": "string",
-      "assetId": "uuid"
-    }
-  ],
-  "totalGenerated": 5,
-  "brandId": "uuid"
+/**
+ * Build the task prompt for the mockup-renderer subagent.
+ *
+ * @param {Object} input
+ * @param {Object} input.selectedLogo - { url, variationType, prompt }
+ * @param {Array} input.products - Array of product objects from catalog
+ * @param {Object} input.brandIdentity - Brand colors, name, archetype
+ * @param {Array} [input.bundles] - Optional bundle configurations
+ * @param {string} input.brandId
+ * @param {string} input.userId
+ * @returns {string}
+ */
+export function buildTaskPrompt(input) {
+  const productList = input.products.map((p, i) =>
+    `${i + 1}. ${p.name} (${p.category}) — SKU: ${p.sku}\n   Mockup instructions: ${p.mockup_instructions || 'Standard logo placement'}`
+  ).join('\n');
+
+  const bundleSection = input.bundles?.length
+    ? `\n\nBUNDLES TO COMPOSE:\n${input.bundles.map((b, i) => `${i + 1}. "${b.name}" — Products: ${b.productSkus.join(', ')}`).join('\n')}`
+    : '';
+
+  return buildSafePrompt(
+    SYSTEM_PROMPT,
+    `Generate product mockups for this brand:
+
+<brand>
+Name: ${input.brandIdentity.brandName || 'Brand'}
+Logo URL: ${input.selectedLogo.url}
+Logo Description: ${input.selectedLogo.prompt || 'Brand logo'}
+Logo Type: ${input.selectedLogo.variationType}
+Colors: ${JSON.stringify(input.brandIdentity.colorPalette?.colors || [])}
+Archetype: ${input.brandIdentity.archetype || 'The Creator'}
+</brand>
+
+<products>
+${productList}
+</products>
+${bundleSection}
+
+Brand ID: ${input.brandId}
+User ID: ${input.userId}
+
+Generate one mockup per product using the appropriate model. For bundles, compose a single image per bundle.`
+  );
 }
-</output_format>`;

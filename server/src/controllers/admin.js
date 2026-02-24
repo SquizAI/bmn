@@ -34,12 +34,12 @@ export async function listUsers(req, res, next) {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: data, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -72,7 +72,7 @@ export async function getUser(req, res, next) {
       .eq('user_id', userId)
       .neq('status', 'deleted');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         ...profile,
@@ -80,7 +80,7 @@ export async function getUser(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -119,12 +119,12 @@ export async function listAllBrands(req, res, next) {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: data, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -161,9 +161,9 @@ export async function createProduct(req, res, next) {
     }
 
     logger.info({ productId: data.id }, 'Product created by admin');
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -202,9 +202,9 @@ export async function updateProduct(req, res, next) {
       throw error;
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -231,9 +231,9 @@ export async function disableProduct(req, res, next) {
     }
 
     logger.info({ productId }, 'Product disabled by admin');
-    res.status(204).end();
+    return res.status(204).end();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -272,12 +272,12 @@ export async function getJobStatus(req, res, next) {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: data, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -326,7 +326,7 @@ export async function getMetrics(req, res, next) {
       .filter((t) => t.amount > 0)
       .reduce((sum, t) => sum + t.amount, 0);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         total_users: usersResult.count || 0,
@@ -340,7 +340,7 @@ export async function getMetrics(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -372,9 +372,9 @@ export async function listTemplatesAdmin(req, res, next) {
     const { data, error, count } = await query.range(offset, offset + limit - 1);
     if (error) throw error;
 
-    res.json({ success: true, data: { items: data, total: count, page, limit } });
+    return res.json({ success: true, data: { items: data, total: count, page, limit } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -398,9 +398,9 @@ export async function getTemplateAdmin(req, res, next) {
     if (error || !data) {
       return res.status(404).json({ success: false, error: 'Template not found' });
     }
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -447,9 +447,9 @@ export async function createTemplate(req, res, next) {
     }
 
     logger.info({ templateId: data.id, slug }, 'Packaging template created');
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -482,9 +482,9 @@ export async function updateTemplate(req, res, next) {
       .single();
 
     if (error) throw error;
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -506,9 +506,9 @@ export async function deleteTemplate(req, res, next) {
 
     if (error) throw error;
     logger.info({ templateId }, 'Template disabled by admin');
-    res.status(204).end();
+    return res.status(204).end();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -557,9 +557,9 @@ export async function listProductTiers(req, res, next) {
       product_count: countMap[tier.id] || 0,
     }));
 
-    res.json({ success: true, data: { items } });
+    return res.json({ success: true, data: { items } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -594,9 +594,9 @@ export async function getProductTier(req, res, next) {
 
     if (prodErr) throw prodErr;
 
-    res.json({ success: true, data: { ...tier, products: products || [] } });
+    return res.json({ success: true, data: { ...tier, products: products || [] } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -642,9 +642,9 @@ export async function createProductTier(req, res, next) {
     }
 
     logger.info({ tierId: data.id, slug }, 'Product tier created');
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -685,9 +685,9 @@ export async function updateProductTier(req, res, next) {
       throw error;
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -715,9 +715,9 @@ export async function deleteProductTier(req, res, next) {
     }
 
     logger.info({ tierId }, 'Product tier disabled by admin');
-    res.status(204).end();
+    return res.status(204).end();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -758,11 +758,11 @@ export async function assignProductsToTier(req, res, next) {
     }
 
     logger.info({ tierId, slug: tier.slug, count: data.length }, 'Products assigned to tier');
-    res.json({
+    return res.json({
       success: true,
       data: { assigned: data.length, products: data },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

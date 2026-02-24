@@ -19,7 +19,7 @@ import { QUEUE_CONFIGS } from '../queues/index.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
-import { config } from '../config/index.js';
+import { config as _config } from '../config/index.js';
 import { sendEmail, escapeHtml } from '../services/email.js';
 import { getTemplate } from '../emails/index.js';
 

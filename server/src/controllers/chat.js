@@ -107,13 +107,13 @@ export async function sendMessage(req, res, next) {
       'Chat message processed',
     );
 
-    res.json({
+    return res.json({
       success: true,
       data: { role: 'assistant', content: assistantContent },
     });
   } catch (err) {
     logger.error({ error: err.message, stack: err.stack }, 'Chat sendMessage failed');
-    next(err);
+    return next(err);
   }
 }
 
@@ -136,10 +136,10 @@ export async function listSessions(req, res, next) {
 
     if (error) throw error;
 
-    res.json({ success: true, data: { items: data } });
+    return res.json({ success: true, data: { items: data } });
   } catch (err) {
     logger.error({ error: err.message }, 'Chat listSessions failed');
-    next(err);
+    return next(err);
   }
 }
 
@@ -173,10 +173,10 @@ export async function getSessionMessages(req, res, next) {
 
     if (error) throw error;
 
-    res.json({ success: true, data: { messages: data } });
+    return res.json({ success: true, data: { messages: data } });
   } catch (err) {
     logger.error({ error: err.message }, 'Chat getSessionMessages failed');
-    next(err);
+    return next(err);
   }
 }
 
@@ -202,10 +202,10 @@ export async function renameSession(req, res, next) {
 
     if (error) throw error;
 
-    res.json({ success: true, data: { message: 'Session renamed' } });
+    return res.json({ success: true, data: { message: 'Session renamed' } });
   } catch (err) {
     logger.error({ error: err.message }, 'Chat renameSession failed');
-    next(err);
+    return next(err);
   }
 }
 
@@ -233,9 +233,9 @@ export async function deleteSession(req, res, next) {
 
     if (error) throw error;
 
-    res.json({ success: true, data: { message: 'Session deleted' } });
+    return res.json({ success: true, data: { message: 'Session deleted' } });
   } catch (err) {
     logger.error({ error: err.message }, 'Chat deleteSession failed');
-    next(err);
+    return next(err);
   }
 }

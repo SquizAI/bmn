@@ -22,7 +22,7 @@ referralStatsRoutes.get('/', async (req, res, next) => {
     const userId = req.user.id;
 
     // Get or create referral code
-    let { data: referral } = await supabaseAdmin
+    const { data: referral } = await supabaseAdmin
       .from('referrals')
       .select('*')
       .eq('user_id', userId)

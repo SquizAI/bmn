@@ -108,8 +108,8 @@ brandRoutes.post('/:brandId/products/:productId/export-print', async (req, res, 
       format: format || 'pdf',
     });
 
-    res.json({ success: true, data: { jobId: result.jobId } });
+    return res.json({ success: true, data: { jobId: result.jobId } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });

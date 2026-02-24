@@ -63,7 +63,7 @@ export async function signup(req, res) {
   }
   logger.info({ msg: 'User created', userId: data.user.id, email });
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     data: {
       user: {
@@ -137,7 +137,7 @@ export async function login(req, res) {
     // RPC may not exist yet -- not critical
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       user: {
@@ -172,7 +172,7 @@ export async function refresh(req, res) {
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       access_token: data.session.access_token,
@@ -199,7 +199,7 @@ export async function logout(req, res) {
     }
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: { message: 'Logged out successfully' },
   });
@@ -232,7 +232,7 @@ export async function oauthCallback(req, res) {
     refresh_token: data.session.refresh_token,
   });
 
-  res.redirect(`${config.APP_URL}/auth/callback?${params.toString()}`);
+  return res.redirect(`${config.APP_URL}/auth/callback?${params.toString()}`);
 }
 
 /**
@@ -289,7 +289,7 @@ export async function completeOnboarding(req, res) {
   }
   logger.info({ msg: 'Onboarding completed', userId });
 
-  res.json({
+  return res.json({
     success: true,
     data: { profile },
   });
@@ -330,7 +330,7 @@ export async function getProfile(req, res) {
     // RPC may not exist yet
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       profile,
@@ -371,7 +371,7 @@ export async function updateProfile(req, res) {
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: { profile },
   });
@@ -398,7 +398,7 @@ export async function passwordReset(req, res) {
   }
 
   // Always return 200 to prevent email enumeration
-  res.json({
+  return res.json({
     success: true,
     data: { message: 'If an account exists with this email, a reset link has been sent' },
   });

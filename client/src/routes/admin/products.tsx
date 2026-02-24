@@ -12,10 +12,15 @@ import {
   Upload,
   Save,
   Filter,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
@@ -63,13 +68,23 @@ interface AdminProduct {
   createdAt: string;
 }
 
+interface ProductsResponse {
+  items: AdminProduct[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const ITEMS_PER_PAGE = 20;
+
 // ------ Component ------
 
 export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>('all');
-  const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const queryClient = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
 
@@ -81,14 +96,21 @@ export default function AdminProductsPage() {
   const { data: templatesData } = usePackagingTemplates();
 
   const { data, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.products(),
+    queryKey: [...QUERY_KEYS.products(), { search, tierFilter, page }],
     queryFn: () =>
-      apiClient.get<{ items: AdminProduct[] }>('/api/v1/admin/products'),
+      apiClient.get<ProductsResponse>('/api/v1/admin/products', {
+        params: {
+          search: search || undefined,
+          tier_id: tierFilter === 'all' ? undefined : tierFilter === 'unassigned' ? 'none' : tierFilter,
+          page,
+          limit: ITEMS_PER_PAGE,
+        },
+      }),
   });
 
   const createProduct = useMutation({
-    mutationFn: (data: ProductForm) =>
-      apiClient.post('/api/v1/admin/products', data),
+    mutationFn: (formData: ProductForm) =>
+      apiClient.post('/api/v1/admin/products', formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
@@ -100,8 +122,8 @@ export default function AdminProductsPage() {
   });
 
   const updateProduct = useMutation({
-    mutationFn: ({ sku, data }: { sku: string; data: ProductForm }) =>
-      apiClient.patch(`/api/v1/admin/products/${sku}`, data),
+    mutationFn: ({ sku, data: formData }: { sku: string; data: ProductForm }) =>
+      apiClient.patch(`/api/v1/admin/products/${sku}`, formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
@@ -122,6 +144,19 @@ export default function AdminProductsPage() {
       addToast({ type: 'success', title: 'Product deleted' });
     },
     onError: () => addToast({ type: 'error', title: 'Failed to delete product' }),
+  });
+
+  const toggleAvailability = useMutation({
+    mutationFn: ({ sku, available }: { sku: string; available: boolean }) =>
+      apiClient.patch(`/api/v1/admin/products/${sku}`, { available }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      addToast({
+        type: 'success',
+        title: variables.available ? 'Product activated' : 'Product deactivated',
+      });
+    },
+    onError: () => addToast({ type: 'error', title: 'Failed to toggle product status' }),
   });
 
   const {
@@ -149,11 +184,11 @@ export default function AdminProductsPage() {
 
   const watchedTierId = watch('tier_id');
 
-  const onSubmit = (data: ProductForm) => {
+  const onSubmit = (formData: ProductForm) => {
     if (editingProduct) {
-      updateProduct.mutate({ sku: editingProduct.sku, data });
+      updateProduct.mutate({ sku: editingProduct.sku, data: formData });
     } else {
-      createProduct.mutate(data);
+      createProduct.mutate(formData);
     }
   };
 
@@ -173,14 +208,9 @@ export default function AdminProductsPage() {
     resetForm();
   };
 
-  const allProducts = data?.items || [];
-
-  // Apply tier filter
-  const products = tierFilter === 'all'
-    ? allProducts
-    : tierFilter === 'unassigned'
-      ? allProducts.filter((p) => !p.tier_id)
-      : allProducts.filter((p) => p.tier_id === tierFilter);
+  const products = data?.items || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   // Helper: get tier info for a product
   const getTierForProduct = (product: AdminProduct): ProductTier | null => {
@@ -200,6 +230,7 @@ export default function AdminProductsPage() {
         <div className="flex items-center gap-2">
           <Package className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-text">Product Catalog</h1>
+          <span className="ml-2 text-sm text-text-muted">({total} products)</span>
         </div>
         <Button
           leftIcon={<Plus className="h-4 w-4" />}
@@ -213,12 +244,26 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
-      {/* Tier Filter Bar */}
+      {/* Search + Tier Filter Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <Input
+            placeholder="Search by name, SKU, or category..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            leftAddon={<Search className="h-4 w-4" />}
+          />
+        </div>
+      </div>
+
       {tiers.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto">
           <Filter className="h-4 w-4 shrink-0 text-text-muted" />
           <button
-            onClick={() => setTierFilter('all')}
+            onClick={() => { setTierFilter('all'); setPage(1); }}
             className={cn(
               'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
               tierFilter === 'all'
@@ -226,32 +271,29 @@ export default function AdminProductsPage() {
                 : 'bg-surface-hover text-text-secondary hover:bg-surface-hover/80',
             )}
           >
-            All ({allProducts.length})
+            All
           </button>
-          {tiers.map((tier) => {
-            const count = allProducts.filter((p) => p.tier_id === tier.id).length;
-            return (
-              <button
-                key={tier.id}
-                onClick={() => setTierFilter(tier.id)}
-                className={cn(
-                  'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                  tierFilter === tier.id
-                    ? 'text-white'
-                    : 'text-text-secondary hover:opacity-80',
-                )}
-                style={{
-                  backgroundColor: tierFilter === tier.id ? tier.badge_color : undefined,
-                  border: tierFilter !== tier.id ? `1px solid ${tier.badge_color}` : undefined,
-                  color: tierFilter !== tier.id ? tier.badge_color : undefined,
-                }}
-              >
-                {tier.name} ({count})
-              </button>
-            );
-          })}
+          {tiers.map((tier) => (
+            <button
+              key={tier.id}
+              onClick={() => { setTierFilter(tier.id); setPage(1); }}
+              className={cn(
+                'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                tierFilter === tier.id
+                  ? 'text-white'
+                  : 'text-text-secondary hover:opacity-80',
+              )}
+              style={{
+                backgroundColor: tierFilter === tier.id ? tier.badge_color : undefined,
+                border: tierFilter !== tier.id ? `1px solid ${tier.badge_color}` : undefined,
+                color: tierFilter !== tier.id ? tier.badge_color : undefined,
+              }}
+            >
+              {tier.name}
+            </button>
+          ))}
           <button
-            onClick={() => setTierFilter('unassigned')}
+            onClick={() => { setTierFilter('unassigned'); setPage(1); }}
             className={cn(
               'shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors',
               tierFilter === 'unassigned'
@@ -259,7 +301,7 @@ export default function AdminProductsPage() {
                 : 'border border-border bg-transparent text-text-muted hover:bg-surface-hover',
             )}
           >
-            Unassigned ({allProducts.filter((p) => !p.tier_id).length})
+            Unassigned
           </button>
         </div>
       )}
@@ -395,91 +437,177 @@ export default function AdminProductsPage() {
         )}
       </AnimatePresence>
 
-      {/* Products Grid */}
-      {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
-        </div>
-      ) : products.length === 0 ? (
-        <Card variant="outlined" padding="lg" className="text-center">
-          <Package className="mx-auto h-10 w-10 text-text-muted" />
-          <p className="mt-2 text-text-secondary">
-            {tierFilter !== 'all'
-              ? 'No products match this filter.'
-              : 'No products yet. Add your first product above.'}
-          </p>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((product) => {
-            const tier = getTierForProduct(product);
+      {/* Products Table */}
+      <Card variant="outlined" padding="none" className="overflow-hidden">
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center py-12">
+            <Package className="h-10 w-10 text-text-muted" />
+            <p className="mt-2 text-text-secondary">
+              {search || tierFilter !== 'all'
+                ? 'No products match your filters.'
+                : 'No products yet. Add your first product above.'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface-hover">
+                  <th className="px-4 py-3 font-semibold text-text-muted">Product</th>
+                  <th className="hidden sm:table-cell px-4 py-3 font-semibold text-text-muted">SKU</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-semibold text-text-muted">Category</th>
+                  <th className="px-4 py-3 font-semibold text-text-muted">Price</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-semibold text-text-muted">Tier</th>
+                  <th className="px-4 py-3 font-semibold text-text-muted">Status</th>
+                  <th className="px-4 py-3 font-semibold text-text-muted">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const tier = getTierForProduct(product);
 
-            return (
-              <Card key={product.sku} variant="outlined" padding="none" className="overflow-hidden">
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="aspect-square w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex aspect-square items-center justify-center bg-surface-hover">
-                    <Package className="h-10 w-10 text-text-muted" />
-                  </div>
-                )}
-
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-text">{product.name}</h3>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        <p className="text-xs text-text-muted capitalize">{product.category}</p>
+                  return (
+                    <tr
+                      key={product.sku}
+                      className={cn(
+                        'border-b border-border/50 transition-colors hover:bg-surface-hover',
+                        !product.available && 'opacity-60',
+                      )}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-10 w-10 rounded-lg object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-hover">
+                              <Package className="h-5 w-5 text-text-muted" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-text truncate">{product.name}</p>
+                            {product.description && (
+                              <p className="text-xs text-text-muted truncate max-w-48">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell px-4 py-3">
+                        <span className="rounded-md bg-surface-hover px-2 py-0.5 font-mono text-xs text-text-secondary">
+                          {product.sku}
+                        </span>
+                      </td>
+                      <td className="hidden md:table-cell px-4 py-3">
+                        <span className="capitalize text-text-secondary text-sm">{product.category}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-primary">{formatCurrency(product.basePrice)}</span>
+                      </td>
+                      <td className="hidden md:table-cell px-4 py-3">
                         {tier ? (
                           <span
-                            className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
                             style={{ backgroundColor: tier.badge_color }}
                           >
                             {tier.badge_label || tier.name}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
-                            No tier
-                          </span>
+                          <span className="text-xs text-text-muted">--</span>
                         )}
-                      </div>
-                      <p className="mt-1 text-xs text-text-muted">SKU: {product.sku}</p>
-                    </div>
-                    <span className="text-sm font-bold text-primary">
-                      {formatCurrency(product.basePrice)}
-                    </span>
-                  </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleAvailability.mutate({
+                              sku: product.sku,
+                              available: !product.available,
+                            })
+                          }
+                          className={cn(
+                            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors',
+                            product.available
+                              ? 'bg-success-bg text-success hover:bg-success-bg/80'
+                              : 'bg-error-bg text-error hover:bg-error-bg/80',
+                          )}
+                          title={product.available ? 'Click to deactivate' : 'Click to activate'}
+                        >
+                          {product.available ? (
+                            <ToggleRight className="h-3.5 w-3.5" />
+                          ) : (
+                            <ToggleLeft className="h-3.5 w-3.5" />
+                          )}
+                          {product.available ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(product)}
+                            title="Edit product"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(product.sku, product.name)}
+                            className="text-error hover:bg-error-bg"
+                            title="Delete product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(product)}
-                      leftIcon={<Pencil className="h-3 w-3" />}
-                      className="flex-1"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(product.sku, product.name)}
-                      className="text-error hover:bg-error-bg"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <span className="text-xs text-text-muted">
+              Page {page} of {totalPages} ({total} total)
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+                leftIcon={<ChevronLeft className="h-4 w-4" />}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+                rightIcon={<ChevronRight className="h-4 w-4" />}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
     </motion.div>
   );
 }

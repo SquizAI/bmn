@@ -1,19 +1,21 @@
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   Crown,
   Plus,
   Pencil,
   Trash2,
-  X,
   Save,
   Package,
   ChevronRight,
   ArrowLeft,
+  ToggleLeft,
+  ToggleRight,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { useUIStore } from '@/stores/ui-store';
 import { cn } from '@/lib/utils';
@@ -25,6 +27,8 @@ import {
   useDeleteProductTier,
   type ProductTier,
 } from '@/hooks/use-admin-product-tiers';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api';
 
 // ------ Constants ------
 
@@ -55,7 +59,7 @@ interface TierFormState {
   display_name: string;
   description: string;
   sort_order: number;
-  min_subscription_tier: string;
+  min_subscription_tier: 'free' | 'starter' | 'pro' | 'agency';
   margin_multiplier: number;
   badge_color: string;
   badge_label: string;
@@ -80,6 +84,7 @@ export default function AdminProductTiersPage() {
   const [detailTierId, setDetailTierId] = useState<string | null>(null);
   const [form, setForm] = useState<TierFormState>(DEFAULT_FORM);
   const addToast = useUIStore((s) => s.addToast);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useAdminProductTiers();
   const { data: tierDetail, isLoading: isDetailLoading } = useAdminProductTier(detailTierId);
@@ -87,7 +92,25 @@ export default function AdminProductTiersPage() {
   const updateTier = useUpdateProductTier();
   const deleteTier = useDeleteProductTier();
 
+  const toggleTierActive = useMutation({
+    mutationFn: ({ tierId, is_active }: { tierId: string; is_active: boolean }) =>
+      apiClient.patch(`/api/v1/admin/product-tiers/${tierId}`, { is_active }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-product-tiers'] });
+      queryClient.invalidateQueries({ queryKey: ['product-tiers'] });
+      addToast({
+        type: 'success',
+        title: variables.is_active ? 'Tier activated' : 'Tier deactivated',
+      });
+    },
+    onError: () => addToast({ type: 'error', title: 'Failed to toggle tier status' }),
+  });
+
   const tiers = data?.items || [];
+
+  // Summary stats
+  const totalProducts = tiers.reduce((sum, t) => sum + (t.product_count ?? 0), 0);
+  const activeTiers = tiers.filter((t) => t.is_active).length;
 
   const updateField = useCallback(
     <K extends keyof TierFormState>(key: K, value: TierFormState[K]) => {
@@ -256,6 +279,16 @@ export default function AdminProductTiersPage() {
                             {product.sku} &middot; {product.category}
                           </p>
                         </div>
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                            product.is_active
+                              ? 'bg-success-bg text-success'
+                              : 'bg-error-bg text-error',
+                          )}
+                        >
+                          {product.is_active ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
                     </Card>
                   ))}
@@ -338,7 +371,7 @@ export default function AdminProductTiersPage() {
                 <select
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                   value={form.min_subscription_tier}
-                  onChange={(e) => updateField('min_subscription_tier', e.target.value)}
+                  onChange={(e) => updateField('min_subscription_tier', e.target.value as TierFormState['min_subscription_tier'])}
                 >
                   {SUBSCRIPTION_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -446,6 +479,45 @@ export default function AdminProductTiersPage() {
         </Button>
       </div>
 
+      {/* Summary cards */}
+      {tiers.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Card variant="outlined" padding="sm">
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <span className="text-xs text-text-muted">Total Tiers</span>
+            </div>
+            <p className="mt-1 text-xl font-bold text-text">{tiers.length}</p>
+          </Card>
+          <Card variant="outlined" padding="sm">
+            <div className="flex items-center gap-2">
+              <ToggleRight className="h-4 w-4 text-success" />
+              <span className="text-xs text-text-muted">Active</span>
+            </div>
+            <p className="mt-1 text-xl font-bold text-text">{activeTiers}</p>
+          </Card>
+          <Card variant="outlined" padding="sm">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-text-muted" />
+              <span className="text-xs text-text-muted">Total Products</span>
+            </div>
+            <p className="mt-1 text-xl font-bold text-text">{totalProducts}</p>
+          </Card>
+          <Card variant="outlined" padding="sm">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-warning" />
+              <span className="text-xs text-text-muted">Avg Margin</span>
+            </div>
+            <p className="mt-1 text-xl font-bold text-text">
+              {tiers.length > 0
+                ? (tiers.reduce((sum, t) => sum + t.margin_multiplier, 0) / tiers.length).toFixed(2)
+                : '0'}
+              x
+            </p>
+          </Card>
+        </div>
+      )}
+
       {/* Tier Cards */}
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -487,6 +559,30 @@ export default function AdminProductTiersPage() {
                     </div>
                     <p className="mt-0.5 text-sm text-text-secondary">{tier.display_name}</p>
                   </div>
+                  {/* Active/Inactive toggle */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleTierActive.mutate({
+                        tierId: tier.id,
+                        is_active: !tier.is_active,
+                      })
+                    }
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors',
+                      tier.is_active
+                        ? 'bg-success-bg text-success hover:bg-success-bg/80'
+                        : 'bg-error-bg text-error hover:bg-error-bg/80',
+                    )}
+                    title={tier.is_active ? 'Click to deactivate' : 'Click to activate'}
+                  >
+                    {tier.is_active ? (
+                      <ToggleRight className="h-3 w-3" />
+                    ) : (
+                      <ToggleLeft className="h-3 w-3" />
+                    )}
+                    {tier.is_active ? 'Active' : 'Inactive'}
+                  </button>
                 </div>
 
                 {tier.description && (

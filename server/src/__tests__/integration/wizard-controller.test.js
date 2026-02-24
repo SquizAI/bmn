@@ -26,7 +26,7 @@ const supabaseChain = {
 };
 
 // Each method returns the chain for fluent calls
-for (const [key, fn] of Object.entries(supabaseChain)) {
+for (const [_key, fn] of Object.entries(supabaseChain)) {
   if (typeof fn === 'function') fn.mockReturnValue(supabaseChain);
 }
 
@@ -121,7 +121,7 @@ vi.mock('../../queues/index.js', () => ({
 }));
 
 function resetChain() {
-  for (const [key, fn] of Object.entries(supabaseChain)) {
+  for (const [_key, fn] of Object.entries(supabaseChain)) {
     if (typeof fn === 'function') fn.mockReturnValue(supabaseChain);
   }
 }

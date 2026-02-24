@@ -116,7 +116,7 @@ const { buildAgentHooks, sanitizeResultForClient, isRecoverableError } = await i
   '../agents/agent-config.js'
 );
 
-const { getAgentDefinitions, initializeSkillRegistry } = await import(
+const { getAgentDefinitions, initializeSkillRegistry: _initializeSkillRegistry } = await import(
   '../skills/_shared/tool-registry.js'
 );
 
@@ -303,7 +303,7 @@ describe('buildAgentHooks', () => {
     const ctx = mockContext();
     const hooks = buildAgentHooks(ctx);
 
-    for (const [eventName, matchers] of Object.entries(hooks)) {
+    for (const [_eventName, matchers] of Object.entries(hooks)) {
       expect(Array.isArray(matchers)).toBe(true);
       expect(matchers.length).toBeGreaterThanOrEqual(1);
 

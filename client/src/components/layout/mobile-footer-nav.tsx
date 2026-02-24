@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from 'react-router';
-import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 import { dashboardNav, adminNav } from './nav-items';
@@ -10,7 +9,6 @@ import { dashboardNav, adminNav } from './nav-items';
  * Hidden on desktop and wizard pages (controlled by parent rendering).
  */
 function MobileFooterNav() {
-  const isAdmin = useAuthStore((s) => s.isAdmin);
   const location = useLocation();
   const isAdminSection = location.pathname.startsWith('/admin');
 

@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import { supabaseAdmin } from '../../lib/supabase.js';
 import { dispatchJob } from '../../queues/dispatch.js';
-import { logger } from '../../lib/logger.js';
+import { logger as _logger } from '../../lib/logger.js';
 
 /** @type {typeof import('@anthropic-ai/claude-agent-sdk').tool} */
 let sdkTool;

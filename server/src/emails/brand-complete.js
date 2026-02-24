@@ -7,7 +7,7 @@
  */
 
 import { escapeHtml } from '../services/email.js';
-import { wrapInLayout, primaryButton, heading, paragraph, COLORS, hr } from './layout.js';
+import { wrapInLayout, primaryButton, heading, paragraph, COLORS as _COLORS, hr } from './layout.js';
 
 /**
  * Build the brand completion email.

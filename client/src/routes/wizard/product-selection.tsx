@@ -30,7 +30,7 @@ import { useSaveProductSelections } from '@/hooks/use-wizard-actions';
 import { useWizardStore } from '@/stores/wizard-store';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { SeasonalBadge } from '@/components/products/SeasonalBadge';
 import { SocialProofBadge } from '@/components/products/SocialProofBadge';

@@ -8,7 +8,7 @@
  */
 
 import { escapeHtml } from '../services/email.js';
-import { wrapInLayout, heading, paragraph, COLORS, hr } from './layout.js';
+import { wrapInLayout, heading as _heading, paragraph, COLORS, hr } from './layout.js';
 
 /**
  * Build the support request email.

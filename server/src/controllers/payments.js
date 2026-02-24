@@ -2,7 +2,7 @@
 
 import * as stripeService from '../services/stripe.js';
 import * as creditService from '../services/credits.js';
-import { getTierConfig, getTierByPriceId } from '../config/tiers.js';
+import { getTierConfig, getTierByPriceId as _getTierByPriceId } from '../config/tiers.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 
@@ -33,7 +33,7 @@ export async function createCheckoutSession(req, res, next) {
 
     logger.info({ userId, tier, sessionId: result.sessionId }, 'Checkout session created');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         url: result.url,
@@ -41,7 +41,7 @@ export async function createCheckoutSession(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -69,14 +69,14 @@ export async function createPortalSession(req, res, next) {
 
     const result = await stripeService.createPortalSession(stripeCustomerId, returnUrl);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         url: result.url,
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -94,7 +94,7 @@ export async function getSubscription(req, res, next) {
   try {
     const userId = req.user.id;
     const subscriptionTier = req.profile?.subscription_tier || 'free';
-    const stripeCustomerId = req.profile?.stripe_customer_id;
+    const _stripeCustomerId = req.profile?.stripe_customer_id;
 
     // Get local subscription record
     const { data: subscription } = await supabaseAdmin
@@ -112,7 +112,7 @@ export async function getSubscription(req, res, next) {
     // Build response
     const tierConfig = getTierConfig(subscriptionTier);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         tier: subscriptionTier,
@@ -132,7 +132,7 @@ export async function getSubscription(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -150,7 +150,7 @@ export async function getCredits(req, res, next) {
     const userId = req.user.id;
     const credits = await creditService.getCreditBalance(userId);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         logo: credits.logo,
@@ -160,6 +160,6 @@ export async function getCredits(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

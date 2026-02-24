@@ -1,5 +1,4 @@
-import { useState, useRef, useCallback, useEffect, type PointerEvent } from 'react';
-import { motion } from 'motion/react';
+import { useState, useRef, useCallback, type PointerEvent } from 'react';
 import { Move, ZoomIn, ZoomOut, RotateCcw, Eye, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -92,12 +91,6 @@ export function MockupEditor({
     }));
   };
 
-  const adjustOpacity = (delta: number) => {
-    setPosition((prev) => ({
-      ...prev,
-      opacity: Math.max(0.1, Math.min(1.0, prev.opacity + delta)),
-    }));
-  };
 
   const handleReset = () => {
     setPosition(DEFAULT_POSITION);

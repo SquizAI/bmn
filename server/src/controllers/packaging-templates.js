@@ -1,7 +1,7 @@
 // server/src/controllers/packaging-templates.js
 
 import { supabaseAdmin } from '../lib/supabase.js';
-import { logger } from '../lib/logger.js';
+import { logger as _logger } from '../lib/logger.js';
 
 /**
  * GET /api/v1/packaging-templates
@@ -27,9 +27,9 @@ export async function listTemplates(req, res, next) {
     const { data, error } = await query;
     if (error) throw error;
 
-    res.json({ success: true, data: { items: data } });
+    return res.json({ success: true, data: { items: data } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -55,9 +55,9 @@ export async function getTemplate(req, res, next) {
       return res.status(404).json({ success: false, error: 'Template not found' });
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -82,8 +82,8 @@ export async function getTemplatesByCategory(req, res, next) {
 
     if (error) throw error;
 
-    res.json({ success: true, data: { items: data } });
+    return res.json({ success: true, data: { items: data } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

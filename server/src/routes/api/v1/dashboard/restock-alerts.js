@@ -192,12 +192,12 @@ restockAlertRoutes.get('/', async (req, res, next) => {
       .sort((a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2))
       .slice(0, 5);
 
-    res.json({
+    return res.json({
       success: true,
       data: { alerts: sortedAlerts },
     });
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'Restock alerts failed');
-    next(err);
+    return next(err);
   }
 });

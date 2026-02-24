@@ -48,12 +48,12 @@ apiKeyRoutes.get('/', async (req, res, next) => {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: keys || [] },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
@@ -104,7 +104,7 @@ apiKeyRoutes.post(
       logger.info({ userId, apiKeyId: apiKey.id, name }, 'API key created');
 
       // Return the full key ONCE -- it will never be shown again
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: {
           ...apiKey,
@@ -112,7 +112,7 @@ apiKeyRoutes.post(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -147,12 +147,12 @@ apiKeyRoutes.delete(
 
       logger.info({ userId, apiKeyId: id }, 'API key revoked');
 
-      res.json({
+      return res.json({
         success: true,
         data: { message: 'API key revoked successfully' },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );

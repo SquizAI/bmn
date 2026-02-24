@@ -24,15 +24,14 @@ import { QuickActions } from '@/components/dashboard/quick-actions';
 import { RestockAlerts } from '@/components/dashboard/restock-alerts';
 import { ABTestCard } from '@/components/dashboard/ab-test-card';
 import { BrandEvolution } from '@/components/dashboard/brand-evolution';
-import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Dashboard Overview -- main dashboard page with KPIs, charts, and quick actions.
  */
 export default function DashboardOverview() {
   const [period, setPeriod] = useState('30d');
-  const { data: overview, isLoading: overviewLoading } = useDashboardOverview(period);
-  const { data: topProducts, isLoading: productsLoading } = useTopProducts(5);
+  const { data: overview, isLoading: _overviewLoading } = useDashboardOverview(period);
+  const { data: topProducts, isLoading: _productsLoading } = useTopProducts(5);
   const { data: brands } = useBrands();
   const firstBrandId = brands?.items?.[0]?.id;
   const { data: healthScore, isLoading: healthLoading } = useBrandHealthScore(firstBrandId);

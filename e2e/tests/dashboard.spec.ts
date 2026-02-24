@@ -1,208 +1,341 @@
-// E2E tests for the dashboard.
-// Uses Playwright route interception to mock API responses.
-// Prerequisite: npm install -D @playwright/test && npx playwright install
+/**
+ * E2E smoke tests for the Dashboard.
+ *
+ * Tests verify that:
+ * - Unauthenticated users are redirected to /login
+ * - Authenticated users see the dashboard overview with expected structure
+ * - Dashboard navigation elements and key widgets are present
+ *
+ * Auth is simulated by intercepting Supabase auth endpoints.
+ * API responses are mocked so no real backend is needed.
+ */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+// ---------------------------------------------------------------------------
+// Mock Data
+// ---------------------------------------------------------------------------
 
 const MOCK_BRANDS = [
-  { id: 'b1', name: 'Fitness Creator Brand', status: 'complete', created_at: '2026-01-15' },
-  { id: 'b2', name: 'Tech Reviewer Brand', status: 'draft', created_at: '2026-02-01' },
+  {
+    id: 'b-e2e-001',
+    name: 'Fitness Creator Brand',
+    status: 'complete',
+    created_at: '2026-01-15T00:00:00Z',
+  },
+  {
+    id: 'b-e2e-002',
+    name: 'Tech Reviewer Brand',
+    status: 'draft',
+    created_at: '2026-02-01T00:00:00Z',
+  },
 ];
 
 const MOCK_USER_PROFILE = {
-  id: 'user-test-123',
-  email: 'test@example.com',
+  id: 'user-e2e-dash-001',
+  email: 'dashboard-test@example.com',
   full_name: 'Test Creator',
   subscription_tier: 'starter',
 };
 
-test.describe('Dashboard', () => {
-  test.beforeEach(async ({ page }) => {
-    // Mock Supabase auth -- simulate authenticated user
-    await page.route('**/auth/v1/**', (route) => {
-      const url = route.request().url();
-      if (url.includes('token') || url.includes('session') || url.includes('user')) {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user: { id: 'user-test-123', email: 'test@example.com' },
-            session: {
-              access_token: 'mock-jwt-token',
-              refresh_token: 'mock-refresh',
-              expires_in: 3600,
-            },
-          }),
-        });
-      } else {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({}),
-        });
-      }
-    });
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-    // Mock brands API
-    await page.route('**/api/v1/brands**', (route) => {
-      if (route.request().url().includes('/brands/')) {
-        // Single brand detail
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            data: MOCK_BRANDS[0],
-          }),
-        });
-      } else {
-        // Brand list
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            success: true,
-            data: { items: MOCK_BRANDS, total: 2, page: 1, limit: 20 },
-          }),
-        });
-      }
-    });
-
-    // Mock user profile API
-    await page.route('**/api/v1/me**', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: MOCK_USER_PROFILE }),
-      });
-    });
-
-    // Mock billing/subscription API
-    await page.route('**/api/v1/billing/subscription**', (route) => {
+async function mockAuthenticated(page: Page) {
+  // Supabase auth -- return a valid session
+  await page.route('**/auth/v1/**', (route) => {
+    const url = route.request().url();
+    if (url.includes('token') || url.includes('session') || url.includes('user')) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          success: true,
-          data: {
-            tier: 'starter',
-            tierDisplayName: 'Starter',
-            status: 'active',
-            credits: { logo: { remaining: 18, used: 2, total: 20 }, mockup: { remaining: 28, used: 2, total: 30 } },
-            brandLimit: 3,
+          user: {
+            id: MOCK_USER_PROFILE.id,
+            email: MOCK_USER_PROFILE.email,
+            role: 'authenticated',
+          },
+          session: {
+            access_token: 'mock-jwt-for-e2e',
+            refresh_token: 'mock-refresh-for-e2e',
+            expires_in: 3600,
+            token_type: 'bearer',
           },
         }),
       });
-    });
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: {
+            id: MOCK_USER_PROFILE.id,
+            email: MOCK_USER_PROFILE.email,
+          },
+        }),
+      });
+    }
+  });
 
-    // Mock billing/credits API
-    await page.route('**/api/v1/billing/credits**', (route) => {
+  // Brands API
+  await page.route('**/api/v1/brands**', (route) => {
+    if (route.request().url().includes('/brands/')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: MOCK_BRANDS[0] }),
+      });
+    } else {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: {
+          data: { items: MOCK_BRANDS, total: 2, page: 1, limit: 20 },
+        }),
+      });
+    }
+  });
+
+  // User profile API
+  await page.route('**/api/v1/me**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: MOCK_USER_PROFILE }),
+    });
+  });
+
+  // Billing / subscription
+  await page.route('**/api/v1/billing/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          tier: 'starter',
+          tierDisplayName: 'Starter',
+          status: 'active',
+          credits: {
             logo: { remaining: 18, used: 2, total: 20 },
             mockup: { remaining: 28, used: 2, total: 30 },
-            video: { remaining: 0, used: 0, total: 0 },
-            periodEnd: '2026-03-15',
           },
-        }),
-      });
-    });
-
-    // Mock dashboard overview
-    await page.route('**/api/v1/dashboard/**', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { brands: MOCK_BRANDS.length, creditsRemaining: 18 },
-        }),
-      });
+          brandLimit: 3,
+        },
+      }),
     });
   });
 
-  test('dashboard page loads without JS errors', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (err) => errors.push(err.message));
+  // Dashboard overview data
+  await page.route('**/api/v1/dashboard/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          monthRevenue: 1250,
+          todayRevenue: 85,
+          monthOrders: 42,
+          monthCustomers: 28,
+          revenueChange: 12.5,
+          ordersChange: 8.3,
+          sparkline: [100, 120, 95, 140, 130, 160, 155],
+          brands: MOCK_BRANDS.length,
+          creditsRemaining: 18,
+        },
+      }),
+    });
+  });
 
+  // Products
+  await page.route('**/api/v1/products**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          items: [
+            { id: 'p1', name: 'Premium Hoodie', category: 'apparel' },
+          ],
+          total: 1,
+          page: 1,
+          limit: 20,
+        },
+      }),
+    });
+  });
+
+  // Analytics
+  await page.route('**/api/v1/analytics/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: {} }),
+    });
+  });
+
+  // Catch-all for any other API endpoints
+  await page.route('**/api/v1/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: {} }),
+    });
+  });
+}
+
+async function mockUnauthenticated(page: Page) {
+  await page.route('**/auth/v1/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: null, session: null }),
+    });
+  });
+
+  await page.route('**/api/v1/**', (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: {} }),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tests -- Unauthenticated Redirect
+// ---------------------------------------------------------------------------
+
+test.describe('Dashboard -- Unauthenticated Access', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockUnauthenticated(page);
+  });
+
+  test('redirects to /login when visiting /dashboard without auth', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('body')).toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
   });
 
-  test('brands page loads', async ({ page }) => {
+  test('redirects to /login when visiting /dashboard/brands without auth', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/brands');
-    await expect(page.locator('body')).toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
   });
 
-  test('settings page loads', async ({ page }) => {
+  test('redirects to /login when visiting /dashboard/settings without auth', async ({
+    page,
+  }) => {
     await page.goto('/dashboard/settings');
-    await expect(page.locator('body')).toBeVisible();
+    await expect(page).toHaveURL(/\/login/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests -- Authenticated Dashboard
+// ---------------------------------------------------------------------------
+
+test.describe('Dashboard -- Overview (Authenticated)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAuthenticated(page);
   });
 
-  test('dashboard is responsive on mobile', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+  test('the dashboard overview page loads with the Dashboard heading', async ({
+    page,
+  }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('body')).toBeVisible();
+
+    await expect(
+      page.getByRole('heading', { name: /dashboard/i }),
+    ).toBeVisible();
   });
 
-  test('dashboard is responsive on tablet', async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 1024 });
+  test('shows the performance subtitle text', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('body')).toBeVisible();
+
+    await expect(
+      page.getByText(/your brand performance at a glance/i),
+    ).toBeVisible();
   });
 
-  test('navigating to non-existent dashboard route shows fallback', async ({ page }) => {
-    await page.goto('/dashboard/nonexistent-page');
-    await expect(page.locator('body')).toBeVisible();
+  test('renders the period selector buttons', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // The overview page has period buttons: Today, 7 Days, 30 Days, 90 Days
+    await expect(page.getByRole('button', { name: /today/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /7 days/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /30 days/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /90 days/i })).toBeVisible();
   });
 
-  test('brand detail page loads for a given brand ID', async ({ page }) => {
-    await page.goto('/dashboard/brands/b1');
-    await expect(page.locator('body')).toBeVisible();
+  test('the main content area is rendered', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // The AppShell renders a <main> element
+    const mainContent = page.locator('main');
+    await expect(mainContent).toBeVisible();
   });
 
-  test('products page loads', async ({ page }) => {
-    await page.route('**/api/v1/products**', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            items: [
-              { id: 'p1', name: 'Hoodie', category: 'apparel' },
-            ],
-            total: 1,
-            page: 1,
-            limit: 20,
-          },
-        }),
-      });
+  test('the page loads without unrecoverable JavaScript errors', async ({ page }) => {
+    const criticalErrors: string[] = [];
+    page.on('pageerror', (err) => {
+      // Filter out expected issues in test environment (network errors, Supabase connection)
+      const msg = err.message;
+      const isExpected =
+        msg.includes('supabase') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('NetworkError') ||
+        msg.includes('net::') ||
+        msg.includes('AbortError');
+
+      if (!isExpected) {
+        criticalErrors.push(msg);
+      }
     });
 
-    await page.goto('/dashboard/products');
-    await expect(page.locator('body')).toBeVisible();
+    await page.goto('/dashboard');
+    await page.waitForLoadState('domcontentloaded');
+
+    // Give time for lazy-loaded components to initialize
+    await page.waitForTimeout(1000);
+
+    expect(criticalErrors).toEqual([]);
+  });
+});
+
+test.describe('Dashboard -- Brands Page (Authenticated)', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAuthenticated(page);
   });
 
-  test('organization page loads', async ({ page }) => {
-    await page.goto('/dashboard/organization');
-    await expect(page.locator('body')).toBeVisible();
+  test('the brands page loads at /dashboard/brands', async ({ page }) => {
+    await page.goto('/dashboard/brands');
+
+    // The brands page has "My Brands" heading
+    await expect(
+      page.getByRole('heading', { name: /my brands/i }),
+    ).toBeVisible();
   });
 
-  test('analytics page loads', async ({ page }) => {
-    await page.route('**/api/v1/analytics/**', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: {} }),
-      });
-    });
+  test('the brands page shows a Create Brand button', async ({ page }) => {
+    await page.goto('/dashboard/brands');
 
-    await page.goto('/dashboard/analytics');
-    await expect(page.locator('body')).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /create brand/i }).or(
+        page.getByRole('button', { name: /create brand/i }),
+      ),
+    ).toBeVisible();
+  });
+
+  test('the brands page shows the management description', async ({ page }) => {
+    await page.goto('/dashboard/brands');
+
+    await expect(
+      page.getByText(/manage your ai-generated brands/i),
+    ).toBeVisible();
   });
 });

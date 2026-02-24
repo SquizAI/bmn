@@ -88,7 +88,7 @@ abTestingRoutes.get('/', async (req, res, next) => {
     const active = tests.filter((t) => t.status === 'active').length;
     const completed = tests.filter((t) => t.status === 'completed').length;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         tests,
@@ -101,7 +101,7 @@ abTestingRoutes.get('/', async (req, res, next) => {
     });
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'AB tests GET failed');
-    next(err);
+    return next(err);
   }
 });
 
@@ -241,13 +241,13 @@ abTestingRoutes.post(
         'A/B test created'
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: createdTest,
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'AB test creation failed');
-      next(err);
+      return next(err);
     }
   }
 );
@@ -318,13 +318,13 @@ abTestingRoutes.post(
         'A/B test impression recorded'
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: { testId, variant, productId, event: 'impression' },
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'AB test impression recording failed');
-      next(err);
+      return next(err);
     }
   }
 );
@@ -398,13 +398,13 @@ abTestingRoutes.post(
         'A/B test conversion recorded'
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: { testId, variant, productId, event: 'conversion' },
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'AB test conversion recording failed');
-      next(err);
+      return next(err);
     }
   }
 );

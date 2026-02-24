@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const mockQueueAdd = vi.fn();
-const mockQueue = { add: mockQueueAdd };
+const _mockQueue = { add: mockQueueAdd };
 
 vi.mock('../queues/index.js', () => ({
   getQueue: vi.fn().mockReturnValue({ add: mockQueueAdd }),

@@ -111,7 +111,7 @@ export async function requireAuth(req, res, next) {
 
   try {
     await authenticateRequest(token, req);
-    next();
+    return next();
   } catch (err) {
     if (err instanceof AuthError) {
       return res.status(err.statusCode).json({
@@ -124,7 +124,7 @@ export async function requireAuth(req, res, next) {
       requestId: req.id,
       error: err.message,
     });
-    res.status(401).json({
+    return res.status(401).json({
       success: false,
       error: 'Authentication failed',
     });
@@ -157,7 +157,7 @@ export async function requireAdmin(req, res, next) {
     });
   }
 
-  next();
+  return next();
 }
 
 /**
@@ -184,7 +184,7 @@ export async function requireSuperAdmin(req, res, next) {
     });
   }
 
-  next();
+  return next();
 }
 
 /**
@@ -221,7 +221,7 @@ export async function optionalAuth(req, res, next) {
     req.supabase = null;
   }
 
-  next();
+  return next();
 }
 
 /**
@@ -267,6 +267,6 @@ export function requireOrgRole(minRole) {
       });
     }
 
-    next();
+    return next();
   };
 }

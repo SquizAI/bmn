@@ -377,7 +377,6 @@ export default function SocialAnalysisPage() {
         simTimerRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatchScrape.isPending, directComplete, activeJobId]);
 
   // Creep effect: slowly increment progress after the last simulated step

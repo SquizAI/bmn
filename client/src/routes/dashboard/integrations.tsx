@@ -10,7 +10,7 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { useIntegrations, type IntegrationStatus } from '@/hooks/use-dashboard';
 import { useUIStore } from '@/stores/ui-store';
 import { apiClient } from '@/lib/api';
@@ -204,7 +204,7 @@ function IntegrationCard({ config, status }: IntegrationCardProps) {
  * Shows connection status for Shopify, TikTok Shop, WooCommerce.
  */
 export default function IntegrationsPage() {
-  const { data: integrations, isLoading } = useIntegrations();
+  const { data: integrations } = useIntegrations();
   const integrationList = integrations?.items ?? [];
 
   // Create a map for easy lookup

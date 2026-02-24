@@ -9,7 +9,6 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
-import { cn } from '@/lib/utils';
 
 interface DataPoint {
   date: string;

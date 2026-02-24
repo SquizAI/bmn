@@ -6,8 +6,8 @@
  * @module emails/subscription-cancelled
  */
 
-import { escapeHtml } from '../services/email.js';
-import { wrapInLayout, primaryButton, heading, paragraph, secondaryButton } from './layout.js';
+import { escapeHtml as _escapeHtml } from '../services/email.js';
+import { wrapInLayout, primaryButton, heading, paragraph, secondaryButton as _secondaryButton } from './layout.js';
 
 /**
  * Build the subscription cancelled email.
@@ -16,7 +16,7 @@ import { wrapInLayout, primaryButton, heading, paragraph, secondaryButton } from
  * @param {string} [params.userId] - User ID (for internal reference)
  * @returns {{ subject: string, html: string }}
  */
-export function buildSubscriptionCancelledEmail({ userId } = {}) {
+export function buildSubscriptionCancelledEmail({ userId: _userId } = {}) {
   const body = `
     ${heading('Subscription Cancelled')}
     ${paragraph(`Your subscription has been cancelled and your account has been moved to the free plan.`)}

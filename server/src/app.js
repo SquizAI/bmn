@@ -51,7 +51,7 @@ export function createApp() {
     if (req.originalUrl.startsWith('/api/v1/webhooks/stripe')) {
       return next();
     }
-    express.json({ limit: '10mb' })(req, res, next);
+    return express.json({ limit: '10mb' })(req, res, next);
   });
 
   // 6. URL-encoded body parsing

@@ -27,9 +27,9 @@ export async function getMyOrg(req, res, next) {
       return res.status(404).json({ success: false, error: 'Organization not found' });
     }
 
-    res.json({ success: true, data: { ...org, userRole: req.orgRole } });
+    return res.json({ success: true, data: { ...org, userRole: req.orgRole } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -55,9 +55,9 @@ export async function updateOrg(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to update organization' });
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -87,9 +87,9 @@ export async function listMembers(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to list members' });
     }
 
-    res.json({ success: true, data: { items: data } });
+    return res.json({ success: true, data: { items: data } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -170,9 +170,9 @@ export async function inviteMember(req, res, next) {
 
     logger.info({ orgId, email, role }, 'Org invite created');
 
-    res.status(201).json({ success: true, data: invite });
+    return res.status(201).json({ success: true, data: invite });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -209,9 +209,9 @@ export async function updateMemberRole(req, res, next) {
       return res.status(404).json({ success: false, error: 'Member not found' });
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -258,9 +258,9 @@ export async function removeMember(req, res, next) {
           .eq('org_id', orgId)
       );
 
-    res.json({ success: true, data: { message: 'Member removed' } });
+    return res.json({ success: true, data: { message: 'Member removed' } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -326,9 +326,9 @@ export async function acceptInvite(req, res, next) {
       .update({ accepted_at: new Date().toISOString() })
       .eq('id', invite.id);
 
-    res.json({ success: true, data: { org_id: invite.org_id, role: invite.role } });
+    return res.json({ success: true, data: { org_id: invite.org_id, role: invite.role } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -357,9 +357,9 @@ export async function listOrgBrands(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to list brands' });
     }
 
-    res.json({ success: true, data: { items: data, total: count, page, limit } });
+    return res.json({ success: true, data: { items: data, total: count, page, limit } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -417,9 +417,9 @@ export async function assignBrand(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to assign brand' });
     }
 
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -455,9 +455,9 @@ export async function unassignBrand(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to unassign brand' });
     }
 
-    res.json({ success: true, data: { message: 'Brand assignment removed' } });
+    return res.json({ success: true, data: { message: 'Brand assignment removed' } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -482,9 +482,9 @@ export async function listInvites(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to list invites' });
     }
 
-    res.json({ success: true, data: { items: data } });
+    return res.json({ success: true, data: { items: data } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -508,8 +508,8 @@ export async function cancelInvite(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to cancel invite' });
     }
 
-    res.json({ success: true, data: { message: 'Invite cancelled' } });
+    return res.json({ success: true, data: { message: 'Invite cancelled' } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

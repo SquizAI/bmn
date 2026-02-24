@@ -137,7 +137,7 @@ describe('personalityQuizSchema', () => {
   });
 
   it('should reject missing vibe field', () => {
-    const { vibe, ...rest } = validQuiz;
+    const { vibe: _vibe, ...rest } = validQuiz;
     const result = personalityQuizSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -148,7 +148,7 @@ describe('personalityQuizSchema', () => {
   });
 
   it('should reject missing brandWords', () => {
-    const { brandWords, ...rest } = validQuiz;
+    const { brandWords: _brandWords, ...rest } = validQuiz;
     const result = personalityQuizSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
@@ -167,13 +167,13 @@ describe('personalityQuizSchema', () => {
   });
 
   it('should reject missing dreamCustomer', () => {
-    const { dreamCustomer, ...rest } = validQuiz;
+    const { dreamCustomer: _dreamCustomer, ...rest } = validQuiz;
     const result = personalityQuizSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it('should reject missing contentStyle', () => {
-    const { contentStyle, ...rest } = validQuiz;
+    const { contentStyle: _contentStyle, ...rest } = validQuiz;
     const result = personalityQuizSchema.safeParse(rest);
     expect(result.success).toBe(false);
   });

@@ -35,7 +35,7 @@ export function initVideoGenerationWorker(io) {
   const worker = new Worker(
     'video-generation',
     async (job) => {
-      const { userId, brandId, productName } = job.data;
+      const { userId: _userId, brandId, productName } = job.data;
       const jobLog = createJobLogger(job, 'video-generation');
       const room = `brand:${brandId}`;
       const jobRoom = `job:${job.id}`;

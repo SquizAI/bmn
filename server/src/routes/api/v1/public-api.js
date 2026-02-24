@@ -50,7 +50,7 @@ publicApiRoutes.get(
         throw error;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           items: brands || [],
@@ -60,7 +60,7 @@ publicApiRoutes.get(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -96,12 +96,12 @@ publicApiRoutes.post(
 
       logger.info({ userId, brandId: brand.id }, 'Public API: brand created');
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: brand,
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -134,12 +134,12 @@ publicApiRoutes.get(
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: brand,
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -192,7 +192,7 @@ publicApiRoutes.post(
 
       logger.info({ userId, brandId: id, jobId: job.id }, 'Public API: logo generation queued');
 
-      res.status(202).json({
+      return res.status(202).json({
         success: true,
         data: {
           jobId: job.id,
@@ -202,7 +202,7 @@ publicApiRoutes.post(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -255,7 +255,7 @@ publicApiRoutes.post(
 
       logger.info({ userId, brandId: id, jobId: job.id }, 'Public API: mockup generation queued');
 
-      res.status(202).json({
+      return res.status(202).json({
         success: true,
         data: {
           jobId: job.id,
@@ -265,7 +265,7 @@ publicApiRoutes.post(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -310,12 +310,12 @@ publicApiRoutes.get(
         throw error;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: { items: assets || [] },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -381,7 +381,7 @@ publicApiRoutes.get(
         totalAssets = assetCount || 0;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           totalBrands: brandCount || 0,
@@ -393,7 +393,7 @@ publicApiRoutes.get(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Public API: analytics overview failed');
-      next(err);
+      return next(err);
     }
   },
 );

@@ -5,7 +5,7 @@ import { config } from '../config/index.js';
 import { getTierConfig, PAID_TIERS } from '../config/tiers.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
-import { AppError, NotFoundError } from '../utils/errors.js';
+import { AppError, NotFoundError as _NotFoundError } from '../utils/errors.js';
 
 /**
  * Lazy-initialized Stripe SDK client.

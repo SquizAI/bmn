@@ -24,7 +24,7 @@ import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
 import {
   upsertContact,
-  addTag,
+  addTag as _addTag,
   updateCustomFields,
 } from '../services/ghl.js';
 
@@ -245,7 +245,7 @@ const EVENT_HANDLERS = {
  * @param {import('socket.io').Server} io
  * @returns {Worker}
  */
-export function initCRMSyncWorker(io) {
+export function initCRMSyncWorker(_io) {
   const queueConfig = QUEUE_CONFIGS['crm-sync'];
 
   const worker = new Worker(

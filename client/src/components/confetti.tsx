@@ -106,9 +106,6 @@ function Confetti({
   colors = DEFAULT_COLORS,
   className,
 }: ConfettiProps) {
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReducedMotion) return null;
-
   const [visible, setVisible] = useState(active);
   const pieces = useMemo(
     () => (active ? generatePieces(particleCount, colors) : []),
@@ -124,6 +121,9 @@ function Confetti({
       setVisible(false);
     }
   }, [active, duration]);
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReducedMotion) return null;
 
   return (
     <AnimatePresence>

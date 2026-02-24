@@ -142,7 +142,7 @@ overviewRoutes.get(
         revenue: Math.round(revenue * 100) / 100,
       }));
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           todayRevenue: Math.round(todayRevenue * 100) / 100,
@@ -157,7 +157,7 @@ overviewRoutes.get(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Dashboard overview failed');
-      next(err);
+      return next(err);
     }
   }
 );

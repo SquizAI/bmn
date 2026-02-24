@@ -220,6 +220,37 @@ export const AnalyticsJobSchema = z.object({
 });
 
 /**
+ * Dead Letter job -- permanently failed jobs forwarded from other queues.
+ * Contains the original job data plus failure metadata for inspection and manual retry.
+ */
+export const DeadLetterJobSchema = z.object({
+  /** Original queue the job came from */
+  originalQueue: z.string(),
+  /** Original BullMQ job ID */
+  originalJobId: z.string(),
+  /** Original job name */
+  originalJobName: z.string(),
+  /** Original job payload */
+  originalData: z.record(z.unknown()),
+  /** Error message from the final failed attempt */
+  errorMessage: z.string(),
+  /** Error stack trace (if available) */
+  errorStack: z.string().optional(),
+  /** Total attempts made before exhaustion */
+  attemptsMade: z.number().int(),
+  /** Max attempts configured for the original queue */
+  maxAttempts: z.number().int(),
+  /** Timestamp of the first attempt (ISO string) */
+  firstAttemptAt: z.string().optional(),
+  /** Timestamp of the final failure (ISO string) */
+  failedAt: z.string(),
+  /** User ID from original job (if present) */
+  userId: z.string().uuid().optional(),
+  /** Brand ID from original job (if present) */
+  brandId: z.string().uuid().optional(),
+});
+
+/**
  * Schema registry -- maps queue name to its Zod schema.
  * @type {Record<string, z.ZodType>}
  */
@@ -238,4 +269,5 @@ export const JOB_SCHEMAS = {
   'content-gen': ContentGenJobSchema,
   'email-campaign': EmailCampaignJobSchema,
   'analytics': AnalyticsJobSchema,
+  'dead-letter': DeadLetterJobSchema,
 };

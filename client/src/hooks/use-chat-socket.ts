@@ -18,17 +18,6 @@ export function useChatSocket() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const {
-    setConnected,
-    startStream,
-    appendStreamDelta,
-    finalizeStream,
-    setActiveTool,
-    completeTool,
-    failTool,
-    addMessage,
-  } = useChatStore.getState();
-
   // Connect to /chat namespace
   useEffect(() => {
     if (!user) return;

@@ -19,9 +19,10 @@ import { userWebhookRoutes } from './api/v1/webhooks-user.js';
 import { apiKeyRoutes } from './api/v1/api-keys.js';
 import { publicApiRoutes } from './api/v1/public-api.js';
 import { proxyRoutes } from './proxy.js';
+import { jobRoutes } from './api/v1/jobs.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { apiKeyAuth } from '../middleware/api-key-auth.js';
-import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
+import { authLimiter as _authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
 
 /**
  * Register all API routes on the Express app.
@@ -35,6 +36,7 @@ import { authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
  * - /api/v1/products  -- Authenticated (product catalog)
  * - /api/v1/billing   -- Authenticated (subscription management, credits) [canonical]
  * - /api/v1/payments  -- Authenticated (legacy alias for billing)
+ * - /api/v1/jobs      -- Authenticated (job status polling fallback)
  * - /api/v1/chat      -- Authenticated (AI brand assistant chat)
  * - /api/v1/user-webhooks -- Authenticated (user webhook management)
  * - /api/v1/api-keys  -- Authenticated (API key management, Agency tier)
@@ -59,6 +61,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/products', requireAuth, productRoutes);
   app.use('/api/v1/billing', requireAuth, billingRoutes);
   app.use('/api/v1/payments', requireAuth, paymentRoutes);
+
+  // -- Job status polling (fallback for missed Socket.io events) --
+  app.use('/api/v1/jobs', requireAuth, jobRoutes);
 
   // -- Organization routes --
   app.use('/api/v1/organizations', requireAuth, organizationRoutes);

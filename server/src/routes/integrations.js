@@ -28,7 +28,7 @@ integrationRoutes.get('/:provider/connect', (req, res) => {
 
   // For now, redirect back to the integrations page with a message
   // In production this would initiate an OAuth flow
-  res.status(501).json({
+  return res.status(501).json({
     success: false,
     error: `${provider} integration is coming soon. We're working on connecting your favorite platforms.`,
   });
@@ -40,7 +40,7 @@ integrationRoutes.get('/:provider/connect', (req, res) => {
  */
 integrationRoutes.get('/', (req, res) => {
   // Stub: return empty integrations
-  res.json({
+  return res.json({
     success: true,
     data: {
       integrations: [],
@@ -60,7 +60,7 @@ integrationRoutes.delete('/:provider', (req, res) => {
     'Integration disconnect requested (not yet implemented)',
   );
 
-  res.status(501).json({
+  return res.status(501).json({
     success: false,
     error: `${provider} disconnect is not yet implemented.`,
   });

@@ -264,7 +264,7 @@ brandEvolutionRoutes.get(
 
       const seasonalTip = getSeasonalTip(now);
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           brandAge: { months: ageMonths, label: ageLabel },
@@ -275,7 +275,7 @@ brandEvolutionRoutes.get(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Brand evolution failed');
-      next(err);
+      return next(err);
     }
   }
 );

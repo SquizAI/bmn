@@ -4,7 +4,7 @@
 // Mocks Redis and express-rate-limit internals to test the limiter factory
 // and tier-based rate limiting logic.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach as _beforeEach } from 'vitest';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

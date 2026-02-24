@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Package, DollarSign, TrendingUp, Shield, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { RevenueEstimate } from './RevenueEstimate';
 import type { RecommendedProduct } from './ProductRecommendationCard';

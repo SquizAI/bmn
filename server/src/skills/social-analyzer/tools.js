@@ -1696,7 +1696,7 @@ Display Name: ${displayName || 'Unknown'}
 Platform: ${platform || 'Unknown'}
 Followers: ${followers.toLocaleString()}
 Bio: ${bio || 'Not available'}
-Engagement Rate: ${engagementRate != null ? (engagementRate * 100).toFixed(2) + '%' : 'Unknown'}
+Engagement Rate: ${engagementRate !== null && engagementRate !== undefined ? (engagementRate * 100).toFixed(2) + '%' : 'Unknown'}
 Top Hashtags: ${sortedTags.join(', ') || 'None'}
 Sample Captions:
 ${sampleCaptions.map((c, i) => `${i + 1}. ${c}`).join('\n') || 'None available'}

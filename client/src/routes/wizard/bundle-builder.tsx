@@ -11,7 +11,7 @@ import {
   Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   BundleBuilderComponent,
   type BundleSuggestion,
@@ -21,7 +21,6 @@ import { useWizardStore } from '@/stores/wizard-store';
 import { useProductRecommendations, useProducts } from '@/hooks/use-products';
 import { useUIStore } from '@/stores/ui-store';
 import { ROUTES } from '@/lib/constants';
-import { formatCurrency } from '@/lib/utils';
 import { generateId } from '@/lib/utils';
 
 // ------ Skeleton Loader ------

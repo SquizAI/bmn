@@ -109,12 +109,13 @@ router.get('/image', async (req, res) => {
       res.end();
     };
 
-    await pump();
+    return await pump();
   } catch (err) {
     logger.warn({ err, url }, 'Image proxy fetch failed');
     if (!res.headersSent) {
-      res.status(502).json({ success: false, error: 'Failed to fetch image' });
+      return res.status(502).json({ success: false, error: 'Failed to fetch image' });
     }
+    return undefined;
   }
 });
 

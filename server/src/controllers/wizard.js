@@ -55,7 +55,7 @@ export async function startWizard(req, res, next) {
 
     logger.info({ brandId: brand.id, userId }, 'Wizard started');
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: {
         brandId: brand.id,
@@ -64,7 +64,7 @@ export async function startWizard(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -95,7 +95,7 @@ export async function getWizardState(req, res, next) {
     // Check for active session in Redis
     const activeSessionId = await sessionManager.get(brandId);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId: brand.id,
@@ -109,7 +109,7 @@ export async function getWizardState(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -205,10 +205,10 @@ export async function saveStepData(req, res, next) {
     const { brandId } = req.params;
     const { step, data } = req.body;
 
-    // Verify ownership
+    // Verify ownership — also fetch wizard_step so we can compute advancement
     const { data: brand, error: fetchError } = await supabaseAdmin
       .from('brands')
-      .select('id, wizard_state')
+      .select('id, wizard_state, wizard_step')
       .eq('id', brandId)
       .eq('user_id', userId)
       .single();
@@ -226,13 +226,31 @@ export async function saveStepData(req, res, next) {
     // Only update wizard_step if the client step maps to a valid DB step
     const dbStep = CLIENT_STEP_TO_DB[step];
 
-    // First, save wizard_state (this never triggers the step validation)
+    // Determine whether we need to advance the step and, if so, what the
+    // first intermediate step is. Combining the state save with the first
+    // step advance into a single .update() prevents partial state (state
+    // saved but step not advanced) when advanceToStep() would fail.
+    const currentStep = brand.wizard_step || 'onboarding';
+    const currentIdx = STEP_ORDER.indexOf(currentStep);
+    const targetIdx = dbStep ? STEP_ORDER.indexOf(dbStep) : -1;
+    const needsAdvance = dbStep && targetIdx > currentIdx;
+
+    // Build the atomic payload — always includes wizard_state, and may
+    // include the first wizard_step advancement.
+    /** @type {Record<string, unknown>} */
+    const payload = {
+      wizard_state: updatedState,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (needsAdvance) {
+      // Include the first step advancement in the same write as wizard_state
+      payload.wizard_step = STEP_ORDER[currentIdx + 1];
+    }
+
     const { error: stateError } = await supabaseAdmin
       .from('brands')
-      .update({
-        wizard_state: updatedState,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', brandId);
 
     if (stateError) {
@@ -240,11 +258,25 @@ export async function saveStepData(req, res, next) {
       return res.status(500).json({ success: false, error: 'Failed to save step data' });
     }
 
-    // Then advance through any intermediate steps to reach the target DB step.
-    // This walks step-by-step so the DB trigger (which only allows +1) is satisfied.
-    if (dbStep) {
+    // If the target is more than one step ahead, walk through any remaining
+    // intermediate steps. The first step was already advanced atomically
+    // with the state save above, so start from currentIdx + 2.
+    if (needsAdvance && targetIdx > currentIdx + 1) {
       try {
-        await advanceToStep(brandId, dbStep);
+        for (let i = currentIdx + 2; i <= targetIdx; i++) {
+          const { error } = await supabaseAdmin
+            .from('brands')
+            .update({ wizard_step: STEP_ORDER[i], updated_at: new Date().toISOString() })
+            .eq('id', brandId);
+
+          if (error) {
+            logger.error(
+              { brandId, step: STEP_ORDER[i], error: error.message },
+              'saveStepData: failed to advance wizard step',
+            );
+            throw new Error(`Failed to advance wizard to step: ${STEP_ORDER[i]}`);
+          }
+        }
       } catch (advanceErr) {
         logger.error({ error: advanceErr.message, brandId, dbStep }, 'Failed to advance wizard step');
         return res.status(500).json({ success: false, error: 'Failed to advance wizard step' });
@@ -286,12 +318,12 @@ export async function saveStepData(req, res, next) {
       );
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { brandId, step, saved: true },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -577,7 +609,7 @@ export async function analyzeSocial(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -950,7 +982,7 @@ export async function generateIdentity(req, res, next) {
     // Save and return final results
     return await saveAndRespond(res, brand, brandId, userId, finalDirections, socialContext, modelsUsed, startTime, io);
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1000,7 +1032,7 @@ async function saveAndRespond(res, brand, brandId, userId, directions, socialCon
 
   emitComplete(io, userId, { directions, socialContext });
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       brandId,
@@ -1185,7 +1217,7 @@ Generate names using various techniques (portmanteau, evocative, invented, metap
 
     logger.info({ brandId, userId, model: aiResult.model, nameCount: suggestions.length }, 'Brand names generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1196,7 +1228,7 @@ Generate names using various techniques (portmanteau, evocative, invented, metap
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1244,7 +1276,7 @@ export async function recommendProducts(req, res, next) {
     // Build context from wizard state
     const brandIdentity = brand.wizard_state?.['brand-identity'] || {};
     const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
-    const brandNames = brand.wizard_state?.['brand-names'] || {};
+    const _brandNames = brand.wizard_state?.['brand-names'] || {};
     const selectedDirection = brandIdentity.directions?.find(
       (d) => d.id === brandIdentity.selectedDirectionId
     ) || brandIdentity.directions?.[0] || {};
@@ -1363,7 +1395,7 @@ IMPORTANT:
 
     logger.info({ brandId, userId, model: aiResult.model, productCount: products.length }, 'Product recommendations generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1375,7 +1407,7 @@ IMPORTANT:
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1512,7 +1544,7 @@ IMPORTANT:
 
     logger.info({ brandId, userId, model: aiResult.model, mockupCount: mockups.length }, 'Mockup specifications generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1522,7 +1554,7 @@ IMPORTANT:
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1555,12 +1587,12 @@ export async function generateResumeToken(req, res, next) {
 
     logger.info({ brandId, userId }, 'Resume token generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: { token },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1604,7 +1636,7 @@ export async function resumeWizard(req, res, next) {
     // Get cached session
     const activeSessionId = await sessionManager.get(brandId);
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId: brand.id,
@@ -1616,7 +1648,7 @@ export async function resumeWizard(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1707,9 +1739,9 @@ Return a JSON object: { "taglines": ["tagline1", "tagline2", ...] }`;
 
     logger.info({ brandId, userId, count: taglines.length }, 'Taglines generated');
 
-    res.json({ success: true, data: { taglines } });
+    return res.json({ success: true, data: { taglines } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1778,9 +1810,9 @@ export async function submitCustomProductRequest(req, res, next) {
 
     logger.info({ brandId, requestId: data.id, category }, 'Custom product request submitted');
 
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1827,7 +1859,7 @@ export async function completeWizard(req, res, next) {
 
     logger.info({ brandId, userId }, 'Wizard completed');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1836,7 +1868,7 @@ export async function completeWizard(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1906,7 +1938,7 @@ export async function analyzeCompetitors(req, res, next) {
 
     logger.info({ brandId, userId, competitorCount: result.competitors.length }, 'Competitor analysis complete');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1915,7 +1947,7 @@ export async function analyzeCompetitors(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1977,7 +2009,7 @@ export async function scrapeWebsiteEndpoint(req, res, next) {
 
     logger.info({ brandId, userId, url, colorCount: result.colors.length }, 'Website scrape complete');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -1986,7 +2018,7 @@ export async function scrapeWebsiteEndpoint(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -2042,9 +2074,9 @@ export async function getDossierPdf(req, res, next) {
       'Cache-Control': 'private, max-age=300',
     });
 
-    res.send(pdfBuffer);
+    return res.send(pdfBuffer);
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -2129,7 +2161,7 @@ The content must reflect the tone and vocabulary level exactly. ${voice?.vocabul
 
     logger.info({ brandId, userId }, 'Voice samples generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         instagram: parsed.instagram || parsed.instagramCaption || null,
@@ -2139,7 +2171,7 @@ The content must reflect the tone and vocabulary level exactly. ${voice?.vocabul
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -2280,7 +2312,7 @@ Important: Fill in ALL fields with thoughtful, specific content based on the qui
 
     logger.info({ brandId, userId, model: aiResult.model }, 'Personality quiz dossier generated');
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         brandId,
@@ -2291,6 +2323,6 @@ Important: Fill in ALL fields with thoughtful, specific content based on the qui
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

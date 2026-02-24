@@ -153,6 +153,7 @@ export const QUERY_KEYS = {
   userProfile: () => ['user-profile'] as const,
   userSubscription: () => ['user-subscription'] as const,
   generationJob: (jobId: string) => ['generation-job', jobId] as const,
+  jobStatus: (jobId: string) => ['job-status', jobId] as const,
   adminUsers: () => ['admin', 'users'] as const,
   adminJobs: () => ['admin', 'jobs'] as const,
 } as const;

@@ -49,7 +49,7 @@ contentRoutes.get('/', async (req, res, next) => {
 
     const { data: items, count } = await query;
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         items: (items || []).map((item) => ({
@@ -67,7 +67,7 @@ contentRoutes.get('/', async (req, res, next) => {
     });
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'Content list fetch failed');
-    next(err);
+    return next(err);
   }
 });
 
@@ -148,6 +148,6 @@ contentRoutes.post('/generate', async (req, res, next) => {
     }
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'Content generation failed');
-    next(err);
+    return next(err);
   }
 });

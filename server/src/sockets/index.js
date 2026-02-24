@@ -34,10 +34,10 @@ async function socketAuthMiddleware(socket, next) {
     }
 
     socket.data.user = user;
-    next();
+    return next();
   } catch (err) {
     logger.error({ err: err.message, socketId: socket.id }, 'Socket.io auth error');
-    next(new Error('Authentication failed'));
+    return next(new Error('Authentication failed'));
   }
 }
 
@@ -66,9 +66,9 @@ async function adminAuthMiddleware(socket, next) {
     }
 
     socket.data.user = user;
-    next();
+    return next();
   } catch {
-    next(new Error('Authentication failed'));
+    return next(new Error('Authentication failed'));
   }
 }
 

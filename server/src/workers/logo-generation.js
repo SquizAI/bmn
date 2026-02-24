@@ -45,7 +45,7 @@ export function initLogoGenerationWorker(io) {
     async (job) => {
       const {
         userId, brandId, brandName, logoStyle, colorPalette,
-        brandVision, archetype, count, isRefinement, previousLogoUrl,
+        brandVision, archetype, count, isRefinement, previousLogoUrl: _previousLogoUrl,
         refinementNotes, industry, variations,
       } = job.data;
 

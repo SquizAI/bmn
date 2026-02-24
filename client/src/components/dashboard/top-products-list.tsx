@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { Package } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatNumber, cn } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 import type { TopProduct } from '@/hooks/use-dashboard';
 
 interface TopProductsListProps {

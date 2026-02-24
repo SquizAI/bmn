@@ -70,6 +70,6 @@ export function validate(schemas) {
       return next(new ValidationError('Request validation failed', errors));
     }
 
-    next();
+    return next();
   };
 }

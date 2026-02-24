@@ -36,7 +36,7 @@ function useGoogleFont(fontFamily: string) {
 // ── Preview Tab Button ───────────────────────────────────────────
 
 function PreviewTab({
-  context,
+  context: _context,
   label,
   icon: Icon,
   active,

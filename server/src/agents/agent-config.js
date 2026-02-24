@@ -57,7 +57,7 @@ export function buildAgentHooks({ io, room, userId, brandId, job }) {
     PreToolUse: [
       {
         hooks: [
-          async (input, toolUseID) => {
+          async (input, _toolUseID) => {
             toolCallCount++;
             logger.info(
               {

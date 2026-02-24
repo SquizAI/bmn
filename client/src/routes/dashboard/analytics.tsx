@@ -23,7 +23,7 @@ import {
 import { Card, CardTitle } from '@/components/ui/card';
 import { MetricsGrid, type MetricItem } from '@/components/dashboard/metrics-grid';
 import { useCustomerAnalytics, useSalesAnalytics } from '@/hooks/use-analytics';
-import { formatCurrency, formatNumber, cn } from '@/lib/utils';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 /**
  * Customer Analytics Dashboard.
@@ -31,8 +31,8 @@ import { formatCurrency, formatNumber, cn } from '@/lib/utils';
  */
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState('30d');
-  const { data: customers, isLoading: customersLoading } = useCustomerAnalytics(period);
-  const { data: sales, isLoading: salesLoading } = useSalesAnalytics(period);
+  const { data: customers } = useCustomerAnalytics(period);
+  const { data: sales } = useSalesAnalytics(period);
 
   const periods = [
     { value: '7d', label: '7 Days' },

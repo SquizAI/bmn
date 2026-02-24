@@ -3,7 +3,7 @@
 import crypto from 'node:crypto';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
-import { AuthError } from '../utils/errors.js';
+import { AuthError as _AuthError } from '../utils/errors.js';
 
 /**
  * Expected API key prefix.
@@ -103,7 +103,7 @@ export async function apiKeyAuth(req, res, next) {
         logger.warn({ err, apiKeyId: apiKey.id }, 'Failed to update API key last_used_at');
       });
 
-    next();
+    return next();
   } catch (err) {
     logger.error({ err, ip: req.ip }, 'API key auth middleware error');
     return res.status(401).json({
@@ -137,6 +137,6 @@ export function requireScope(scope) {
       });
     }
 
-    next();
+    return next();
   };
 }

@@ -7,7 +7,7 @@
  */
 
 import { escapeHtml } from '../services/email.js';
-import { wrapInLayout, primaryButton, heading, paragraph, COLORS, hr } from './layout.js';
+import { wrapInLayout, primaryButton, heading as _heading, paragraph, COLORS, hr } from './layout.js';
 
 /**
  * Build the credit low warning email.

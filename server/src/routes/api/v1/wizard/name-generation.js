@@ -2,9 +2,11 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { supabaseAdmin } from '../../../../lib/supabase.js';
+import { logger } from '../../../../lib/logger.js';
 import { validate } from '../../../../middleware/validate.js';
 import { generationLimiter } from '../../../../middleware/rate-limit.js';
-import { logger } from '../../../../lib/logger.js';
+import { dispatchJob } from '../../../../queues/dispatch.js';
 
 export const nameGenerationRoutes = Router();
 
@@ -26,7 +28,7 @@ const selectNameSchema = z.object({
 
 /**
  * POST /api/v1/wizard/name-generation
- * Queue a name generation job. Returns jobId for Socket.io tracking.
+ * Dispatch a name generation job via BullMQ. Returns jobId for Socket.io tracking.
  */
 nameGenerationRoutes.post(
   '/',
@@ -37,26 +39,40 @@ nameGenerationRoutes.post(
       const { brandId, archetype, traits, industry, targetAudience, style, keywords } = req.body;
       const userId = req.user?.id;
 
-      logger.info({ msg: 'Name generation requested', brandId, userId });
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'Authentication required' });
+      }
 
-      // In a full implementation, this would dispatch a BullMQ job that
-      // runs the name-generator skill. For now, return a jobId placeholder.
-      // The actual job dispatch would look like:
-      // const job = await nameGenerationQueue.add('generate-names', { brandId, userId, ... });
+      // Verify brand ownership
+      const { data: brand, error: brandError } = await supabaseAdmin
+        .from('brands')
+        .select('id, user_id')
+        .eq('id', brandId)
+        .eq('user_id', userId)
+        .single();
 
-      const jobId = crypto.randomUUID();
+      if (brandError || !brand) {
+        return res.status(404).json({ success: false, error: 'Brand not found' });
+      }
 
-      res.status(202).json({
+      // Dispatch name generation via BullMQ (brand-wizard queue, brand-identity step)
+      const result = await dispatchJob('brand-wizard', {
+        userId,
+        brandId,
+        step: 'brand-identity',
+        input: { brandId, archetype, traits, industry, targetAudience, style, keywords },
+        creditCost: 1,
+      });
+
+      logger.info({ jobId: result.jobId, brandId, userId }, 'Name generation job dispatched via BullMQ');
+
+      return res.status(202).json({
         success: true,
-        data: {
-          jobId,
-          brandId,
-          status: 'queued',
-          message: 'Name generation job has been queued.',
-        },
+        data: { jobId: result.jobId, queueName: result.queueName },
       });
     } catch (err) {
-      next(err);
+      logger.error({ msg: 'Name generation dispatch failed', error: err.message });
+      return next(err);
     }
   }
 );
@@ -78,7 +94,7 @@ nameGenerationRoutes.post(
       // In a full implementation, this would update the brand record in Supabase:
       // await supabase.from('brands').update({ name }).eq('id', brandId).eq('user_id', userId);
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           brandId,
@@ -88,7 +104,7 @@ nameGenerationRoutes.post(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   }
 );

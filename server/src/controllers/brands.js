@@ -149,7 +149,7 @@ export async function listBrands(req, res, next) {
 
     // Fetch first logo asset for each brand (for thumbnail)
     const brandIds = data.map((b) => b.id);
-    let logoMap = {};
+    const logoMap = {};
     if (brandIds.length > 0) {
       const { data: logos } = await supabaseAdmin
         .from('brand_assets')
@@ -169,12 +169,12 @@ export async function listBrands(req, res, next) {
 
     const items = data.map((row) => toBrandSummary(row, logoMap[row.id] || null));
 
-    res.json({
+    return res.json({
       success: true,
       data: { items, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -223,9 +223,9 @@ export async function createBrand(req, res, next) {
       }
     }
 
-    res.status(201).json({ success: true, data });
+    return res.status(201).json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -264,12 +264,12 @@ export async function getBrand(req, res, next) {
     const logoAssets = (assets || []).filter((a) => a.asset_type === 'logo');
     const mockupAssets = (assets || []).filter((a) => a.asset_type === 'mockup');
 
-    res.json({
+    return res.json({
       success: true,
       data: toBrandDetail(brand, logoAssets, mockupAssets),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -311,9 +311,9 @@ export async function updateBrand(req, res, next) {
       throw error;
     }
 
-    res.json({ success: true, data });
+    return res.json({ success: true, data });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -369,9 +369,9 @@ export async function deleteBrand(req, res, next) {
       }
     }
 
-    res.status(204).end();
+    return res.status(204).end();
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -422,12 +422,12 @@ export async function listBrandAssets(req, res, next) {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: data, total: count, page, limit },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -530,12 +530,12 @@ export async function generateLogos(req, res, next) {
       }
     }
 
-    res.status(202).json({
+    return res.status(202).json({
       success: true,
       data: { jobId: result.jobId, queueName: result.queueName },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -549,7 +549,7 @@ export async function generateLogos(req, res, next) {
 export async function getLogoOptions(req, res) {
   const { getStyleKeys, getArchetypeKeys, LOGO_VARIATIONS, STYLE_PARAMS } = await import('../data/logo-templates.js');
 
-  res.json({
+  return res.json({
     success: true,
     data: {
       styles: getStyleKeys().map((key) => ({
@@ -646,12 +646,12 @@ export async function uploadLogo(req, res, next) {
 
     logger.info({ assetId: asset.id, brandId, userId, vectorized: !!svgUrl }, 'User logo uploaded');
 
-    res.json({
+    return res.json({
       success: true,
       data: asset,
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -704,12 +704,12 @@ export async function generateMockups(req, res, next) {
       }
     }
 
-    res.status(202).json({
+    return res.status(202).json({
       success: true,
       data: { jobId: result.jobId, queueName: result.queueName },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -835,7 +835,8 @@ export async function downloadBrandAssets(req, res, next) {
 
     await archive.finalize();
     logger.info({ brandId, userId, assetCount: assets.length }, 'Brand asset ZIP downloaded');
+    return undefined;
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

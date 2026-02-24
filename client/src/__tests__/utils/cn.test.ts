@@ -9,7 +9,8 @@ describe('cn (class name utility)', () => {
   });
 
   it('should filter out falsy values', () => {
-    const result = cn('a', false && 'b', undefined, null, 'c');
+    const shouldInclude = false;
+    const result = cn('a', shouldInclude && 'b', undefined, null, 'c');
     expect(result).toContain('a');
     expect(result).toContain('c');
     expect(result).not.toContain('b');

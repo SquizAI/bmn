@@ -1,5 +1,7 @@
 // server/src/skills/social-analyzer/prompts.js
 
+import { buildSafePrompt } from '../_shared/prompt-utils.js';
+
 export const SYSTEM_PROMPT = `You are an expert social media analyst working for Brand Me Now, an AI-powered brand creation platform. Your job is to analyze a user's social media presence and extract the raw materials for building their brand identity.
 
 <instructions>
@@ -187,3 +189,32 @@ Your final response MUST be a JSON object with the following shape:
   }
 }
 </output_format>`;
+
+/**
+ * Build the task prompt sent by the parent agent.
+ * Wraps user-provided handles into a safe prompt using XML delimiters.
+ *
+ * @param {Object} input
+ * @param {Object} input.handles - { instagram?: string, tiktok?: string, facebook?: string, youtube?: string, twitter?: string }
+ * @param {string} input.brandId - Brand record ID
+ * @param {string} input.userId - User ID for scoping
+ * @returns {string}
+ */
+export function buildTaskPrompt(input) {
+  const handleList = Object.entries(input.handles)
+    .filter(([, v]) => v)
+    .map(([platform, handle]) => `- ${platform}: ${handle}`)
+    .join('\n');
+
+  return buildSafePrompt(
+    SYSTEM_PROMPT,
+    `Analyze the following social media profiles and extract brand DNA:
+
+${handleList}
+
+Brand ID: ${input.brandId}
+User ID: ${input.userId}
+
+Scrape each profile, analyze the visual aesthetic, and return a complete SocialAnalysis JSON object.`
+  );
+}

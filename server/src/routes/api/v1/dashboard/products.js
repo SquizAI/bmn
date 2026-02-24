@@ -85,13 +85,13 @@ productsRoutes.get(
         .sort((a, b) => b.totalRevenue - a.totalRevenue)
         .slice(0, limit);
 
-      res.json({
+      return res.json({
         success: true,
         data: { items: sorted },
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Top products query failed');
-      next(err);
+      return next(err);
     }
   }
 );

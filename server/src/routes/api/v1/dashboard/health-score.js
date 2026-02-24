@@ -117,7 +117,7 @@ healthScoreRoutes.get('/', async (req, res, next) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
         overall,
@@ -135,6 +135,6 @@ healthScoreRoutes.get('/', async (req, res, next) => {
     });
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'Health score fetch failed');
-    next(err);
+    return next(err);
   }
 });

@@ -119,7 +119,7 @@ salesRoutes.get(
           ? Math.round((totalOrders / pageViews) * 10000) / 100
           : 0;
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -132,7 +132,7 @@ salesRoutes.get(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Sales analytics failed');
-      next(err);
+      return next(err);
     }
   }
 );

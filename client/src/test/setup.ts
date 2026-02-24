@@ -1,3 +1,5 @@
+/// <reference types="vitest/globals" />
+
 // Extend vitest matchers with jest-dom (toBeInTheDocument, toBeDisabled, etc.)
 // Uses a try/catch because transitive dependencies may not resolve in all
 // monorepo node_modules configurations.

@@ -78,7 +78,7 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>()(
   devtools(
-    (set, get) => ({
+    (set, _get) => ({
       sessionId: null,
       brandContext: null,
       messages: [],

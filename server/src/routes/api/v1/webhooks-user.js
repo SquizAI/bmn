@@ -34,12 +34,12 @@ userWebhookRoutes.get('/', async (req, res, next) => {
       throw error;
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: { items: webhooks || [] },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 
@@ -77,7 +77,7 @@ userWebhookRoutes.post(
 
       logger.info({ userId, webhookId: webhook.id, url }, 'Webhook config created');
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: {
           ...webhook,
@@ -85,7 +85,7 @@ userWebhookRoutes.post(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -138,12 +138,12 @@ userWebhookRoutes.patch(
 
       logger.info({ userId, webhookId: id }, 'Webhook config updated');
 
-      res.json({
+      return res.json({
         success: true,
         data: updated,
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -173,12 +173,12 @@ userWebhookRoutes.delete(
 
       logger.info({ userId, webhookId: id }, 'Webhook config deleted');
 
-      res.json({
+      return res.json({
         success: true,
         data: { message: 'Webhook configuration deleted' },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -217,12 +217,12 @@ userWebhookRoutes.post(
         'Webhook test sent',
       );
 
-      res.json({
+      return res.json({
         success: true,
         data: result,
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );
@@ -271,7 +271,7 @@ userWebhookRoutes.get(
         throw error;
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           items: deliveries || [],
@@ -281,7 +281,7 @@ userWebhookRoutes.get(
         },
       });
     } catch (err) {
-      next(err);
+      return next(err);
     }
   },
 );

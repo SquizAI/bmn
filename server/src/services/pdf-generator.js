@@ -316,7 +316,7 @@ export function generateDossierPdf(dossierData) {
     </div>
 
     <!-- Brand Readiness Score -->
-    ${readiness.score != null || readiness.overall != null ? `
+    ${readiness.score !== null && readiness.score !== undefined || readiness.overall !== null && readiness.overall !== undefined ? `
     <div class="section">
       <div class="section-title">Brand Readiness Score</div>
       ${renderScoreBar(readiness.score || readiness.overall || 0)}

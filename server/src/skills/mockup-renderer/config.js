@@ -3,10 +3,19 @@
 /** @type {import('../_shared/types.js').SkillConfig} */
 export const skillConfig = {
   name: 'mockup-renderer',
-  description: 'Generate product mockups using GPT Image 1.5, text-on-product via Ideogram v3, and bundle compositions via Gemini 3 Pro Image.',
+  description: 'Generate product mockups with logo placement, text-on-product renders, and bundle composition images.',
   model: 'claude-sonnet-4-6',
-  maxTurns: 25,
-  maxBudgetUsd: 0.80,
+  maxTurns: 30,
+  maxBudgetUsd: 1.50,
   timeoutMs: 300_000,
-  retryAttempts: 2,
+  retryPolicy: {
+    maxRetries: 3,
+    backoffMs: 2000,
+    backoffMultiplier: 2,
+  },
+  models: {
+    productMockup: 'gpt-image-1.5',
+    textOnProduct: 'ideogram-v3',
+    bundleComposition: 'gemini-3-pro-image',
+  },
 };

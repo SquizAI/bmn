@@ -96,7 +96,7 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
   const safePlatforms = Array.isArray(platforms) ? platforms : [];
   const engagementRates = safePlatforms
     .map((p) => p.metrics?.engagementRate)
-    .filter((r): r is number => r != null);
+    .filter((r): r is number => r !== null && r !== undefined);
   const avgEngagement =
     engagementRates.length > 0
       ? (engagementRates.reduce((a, b) => a + b, 0) / engagementRates.length * 100).toFixed(1)
@@ -635,9 +635,9 @@ function buildReportHtml(dossier: CreatorDossier, profileImageBase64: string | n
             <td style="font-weight:600;">${platformLabels[p.platform] || p.platform}</td>
             <td>@${p.handle}</td>
             <td>${formatNumber(p.metrics?.followers || 0)}</td>
-            <td>${p.metrics?.postCount != null ? formatNumber(p.metrics.postCount) : '-'}</td>
-            <td>${p.metrics?.engagementRate != null ? `${(p.metrics.engagementRate * 100).toFixed(1)}%` : '-'}</td>
-            <td>${p.metrics?.avgLikes != null ? formatNumber(p.metrics.avgLikes) : '-'}</td>
+            <td>${p.metrics?.postCount !== null && p.metrics?.postCount !== undefined ? formatNumber(p.metrics.postCount) : '-'}</td>
+            <td>${p.metrics?.engagementRate !== null && p.metrics?.engagementRate !== undefined ? `${(p.metrics.engagementRate * 100).toFixed(1)}%` : '-'}</td>
+            <td>${p.metrics?.avgLikes !== null && p.metrics?.avgLikes !== undefined ? formatNumber(p.metrics.avgLikes) : '-'}</td>
           </tr>
         `,
           )

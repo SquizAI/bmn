@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { Card, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 

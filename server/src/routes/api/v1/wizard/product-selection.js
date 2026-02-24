@@ -88,13 +88,13 @@ productSelectionRouter.put(
         .update({ wizard_step: 'product-selection', updated_at: new Date().toISOString() })
         .eq('id', brandId);
 
-      res.json({
+      return res.json({
         success: true,
         data: { brandId, selectedSkus: productSkus, count: productSkus.length },
       });
     } catch (err) {
       logger.error({ msg: 'Product selection save failed', error: err.message });
-      next(err);
+      return next(err);
     }
   }
 );

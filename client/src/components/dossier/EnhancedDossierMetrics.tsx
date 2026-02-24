@@ -119,7 +119,7 @@ export default function EnhancedDossierMetrics({
                 </motion.div>
               ))}
             </div>
-            {content.hashtagStrategy.avgHashtagsPerPost != null && (
+            {content.hashtagStrategy.avgHashtagsPerPost !== null && content.hashtagStrategy.avgHashtagsPerPost !== undefined && (
               <p className="text-xs text-[var(--bmn-color-text-muted)]">
                 Avg{' '}
                 <span className="font-medium text-[var(--bmn-color-text)]">

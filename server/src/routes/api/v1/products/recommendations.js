@@ -155,10 +155,10 @@ recommendationsRouter.post(
         return res.status(500).json({ success: false, error: 'Failed to synthesize recommendations' });
       }
 
-      res.json({ success: true, data: synthesized.data });
+      return res.json({ success: true, data: synthesized.data });
     } catch (err) {
       logger.error({ msg: 'Recommendation generation failed', error: err.message });
-      next(err);
+      return next(err);
     }
   }
 );
@@ -192,7 +192,7 @@ recommendationsRouter.get(
         });
       }
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           brandId: data.brand_id,
@@ -204,7 +204,7 @@ recommendationsRouter.get(
       });
     } catch (err) {
       logger.error({ msg: 'Failed to fetch recommendations', error: err.message });
-      next(err);
+      return next(err);
     }
   }
 );

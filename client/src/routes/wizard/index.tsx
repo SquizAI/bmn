@@ -60,8 +60,6 @@ export default function WizardLayout() {
   const resumeAttempted = useRef(false);
 
   const currentStep = useWizardStore((s) => s.meta.currentStep);
-  const brandId = useWizardStore((s) => s.meta.brandId);
-  const sessionId = useWizardStore((s) => s.meta.sessionId);
   const location = useLocation();
 
   // Brand data for LiveBrandPreview sidebar

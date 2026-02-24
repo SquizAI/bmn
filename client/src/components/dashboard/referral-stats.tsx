@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { MousePointer, UserPlus, ShoppingCart, DollarSign } from 'lucide-react';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { formatCurrency, formatNumber, cn } from '@/lib/utils';
 import type { ReferralStats as ReferralStatsType } from '@/hooks/use-dashboard';
 

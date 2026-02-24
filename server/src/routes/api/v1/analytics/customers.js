@@ -169,7 +169,7 @@ customerRoutes.get(
         value: Math.round((total / (aovCountMap.get(date) || 1)) * 100) / 100,
       }));
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           demographics: {
@@ -190,7 +190,7 @@ customerRoutes.get(
       });
     } catch (err) {
       logger.error({ err, userId: req.user?.id }, 'Customer analytics failed');
-      next(err);
+      return next(err);
     }
   }
 );

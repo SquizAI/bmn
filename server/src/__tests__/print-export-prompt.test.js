@@ -24,7 +24,7 @@ import { describe, it, expect } from 'vitest';
  * @param {string} params.format
  * @returns {string}
  */
-function composePrintPrompt({ template, brand, product, logoUrl, format }) {
+function composePrintPrompt({ template, brand, product, logoUrl: _logoUrl, format: _format }) {
   const identity = brand.wizard_state?.['brand-identity'] || {};
   const colorPalette = identity.colors || identity.colorPalette || [];
   const brandVision = identity.vision || identity.brandVision || '';

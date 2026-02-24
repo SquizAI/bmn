@@ -59,7 +59,7 @@ describe('useGenerationProgress', () => {
   it('should register event listeners for all event types', () => {
     renderHook(() => useGenerationProgress('job-123'));
 
-    const registeredEvents = mockSocket.on.mock.calls.map(([event]: [string]) => event);
+    const registeredEvents = mockSocket.on.mock.calls.map((call: unknown[]) => call[0]);
     expect(registeredEvents).toContain('job:progress');
     expect(registeredEvents).toContain('job:complete');
     expect(registeredEvents).toContain('job:failed');
@@ -72,8 +72,8 @@ describe('useGenerationProgress', () => {
     const { result } = renderHook(() => useGenerationProgress('job-123'));
 
     // Find the onProgress handler for 'job:progress'
-    const progressCall = mockSocket.on.mock.calls.find(([event]: [string]) => event === 'job:progress');
-    const onProgress = progressCall[1];
+    const progressCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'job:progress');
+    const onProgress = progressCall![1];
 
     act(() => {
       onProgress({ jobId: 'job-123', progress: 50, status: 'processing', message: 'Generating...' });
@@ -87,8 +87,8 @@ describe('useGenerationProgress', () => {
   it('should filter events by jobId', () => {
     const { result } = renderHook(() => useGenerationProgress('job-123'));
 
-    const progressCall = mockSocket.on.mock.calls.find(([event]: [string]) => event === 'job:progress');
-    const onProgress = progressCall[1];
+    const progressCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'job:progress');
+    const onProgress = progressCall![1];
 
     act(() => {
       onProgress({ jobId: 'job-other', progress: 80, message: 'Wrong job' });
@@ -101,8 +101,8 @@ describe('useGenerationProgress', () => {
   it('should mark complete when job:complete event fires', () => {
     const { result } = renderHook(() => useGenerationProgress('job-123'));
 
-    const completeCall = mockSocket.on.mock.calls.find(([event]: [string]) => event === 'job:complete');
-    const onComplete = completeCall[1];
+    const completeCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'job:complete');
+    const onComplete = completeCall![1];
 
     act(() => {
       onComplete({ jobId: 'job-123', result: { logos: [{ id: 'l1' }] } });
@@ -117,8 +117,8 @@ describe('useGenerationProgress', () => {
   it('should mark error when job:failed event fires', () => {
     const { result } = renderHook(() => useGenerationProgress('job-123'));
 
-    const failedCall = mockSocket.on.mock.calls.find(([event]: [string]) => event === 'job:failed');
-    const onFailed = failedCall[1];
+    const failedCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'job:failed');
+    const onFailed = failedCall![1];
 
     act(() => {
       onFailed({ jobId: 'job-123', error: 'API rate limit exceeded' });
@@ -134,7 +134,7 @@ describe('useGenerationProgress', () => {
 
     unmount();
 
-    const offEvents = mockSocket.off.mock.calls.map(([event]: [string]) => event);
+    const offEvents = mockSocket.off.mock.calls.map((call: unknown[]) => call[0]);
     expect(offEvents).toContain('job:progress');
     expect(offEvents).toContain('job:complete');
     expect(offEvents).toContain('job:failed');
@@ -145,9 +145,9 @@ describe('useGenerationProgress', () => {
     const { result } = renderHook(() => useGenerationProgress('job-123'));
 
     // Simulate progress
-    const progressCall = mockSocket.on.mock.calls.find(([event]: [string]) => event === 'job:progress');
+    const progressCall = mockSocket.on.mock.calls.find((call: unknown[]) => call[0] === 'job:progress');
     act(() => {
-      progressCall[1]({ jobId: 'job-123', progress: 75, message: 'Working...' });
+      progressCall![1]({ jobId: 'job-123', progress: 75, message: 'Working...' });
     });
     expect(result.current.progress).toBe(75);
 

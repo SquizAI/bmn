@@ -244,6 +244,22 @@ export const QUEUE_CONFIGS = {
       removeOnFail: { count: 100, age: 604_800 },
     },
   },
+
+  'dead-letter': {
+    name: 'dead-letter',
+    concurrency: 2,
+    timeout: 30_000,        // 30 seconds (just logging + DB write)
+    priority: 1,            // High priority -- failures need immediate attention
+    retry: {
+      attempts: 3,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 1000, age: 2_592_000 },  // Keep 1000 or 30 days
+      removeOnFail: { count: 1000, age: 2_592_000 },      // Keep 1000 or 30 days
+    },
+  },
 };
 
 /** @type {Map<string, Queue>} */

@@ -70,13 +70,13 @@ mockupGenerationRouter.post(
 
       logger.info({ jobId: result.jobId, brandId, userId, productCount: productSkus.length }, 'Mockup generation job dispatched via BullMQ');
 
-      res.json({
+      return res.json({
         success: true,
         data: { jobId: result.jobId, queueName: result.queueName },
       });
     } catch (err) {
       logger.error({ msg: 'Mockup generation dispatch failed', error: err.message });
-      next(err);
+      return next(err);
     }
   }
 );
@@ -124,7 +124,7 @@ mockupGenerationRouter.put(
 
       const results = await Promise.all(updates);
 
-      res.json({
+      return res.json({
         success: true,
         data: {
           brandId,
@@ -134,7 +134,7 @@ mockupGenerationRouter.put(
       });
     } catch (err) {
       logger.error({ msg: 'Mockup approvals save failed', error: err.message });
-      next(err);
+      return next(err);
     }
   }
 );

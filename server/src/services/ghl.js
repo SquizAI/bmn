@@ -14,7 +14,7 @@ import {
   GHL_FIELD_MAP,
   BLOCKED_FIELDS,
   GHL_API_CONFIG,
-  GHL_TAGS,
+  GHL_TAGS as _GHL_TAGS,
 } from '../config/ghl-fields.js';
 
 const logger = rootLogger.child({ service: 'ghl' });
@@ -295,7 +295,7 @@ export async function upsertContact(userId, data) {
         logger.warn({ key }, 'GHL: No field mapping for custom field, skipping');
         continue;
       }
-      if (value != null && value !== '') {
+      if (value !== null && value !== undefined && value !== '') {
         mappedFields.push({ id: fieldId, field_value: String(value) });
       }
     }
@@ -370,7 +370,7 @@ export async function updateCustomFields(contactId, fields) {
       logger.warn({ key }, 'GHL: No field mapping for custom field, skipping');
       continue;
     }
-    if (value != null && value !== '') {
+    if (value !== null && value !== undefined && value !== '') {
       mappedFields.push({ id: fieldId, field_value: String(value) });
     }
   }

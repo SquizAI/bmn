@@ -245,7 +245,7 @@ async function handleSubscriptionUpdated(subscription, io) {
     .eq('id', userId);
 
   // If tier changed (upgrade/downgrade), re-allocate credits
-  const { data: currentCredits } = await supabaseAdmin.rpc('get_credit_summary', {
+  const { data: _currentCredits } = await supabaseAdmin.rpc('get_credit_summary', {
     p_user_id: userId,
   });
 
@@ -577,7 +577,7 @@ export async function handleStripeWebhook(req, res) {
   }
 
   // 7. Return 200
-  res.json({ received: true });
+  return res.json({ received: true });
 }
 
 // ─── GHL Webhook ─────────────────────────────────────────────────────────────
@@ -672,5 +672,5 @@ export async function handleGHLWebhook(req, res) {
   }
 
   // 6. Return 200
-  res.json({ received: true });
+  return res.json({ received: true });
 }

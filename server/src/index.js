@@ -135,7 +135,7 @@ function registerShutdownHandlers(server, io) {
 }
 
 // Process-level error handlers -- catch anything that slips through
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logger.error({
     msg: 'Unhandled promise rejection',
     reason: reason instanceof Error ? reason.message : String(reason),

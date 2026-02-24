@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
-import { QUERY_KEYS } from '@/lib/constants';
 import { useWizardStore } from '@/stores/wizard-store';
 
 // ------ Types ------

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Copy, Check, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 
 interface ReferralLinkProps {
   referralUrl: string;

@@ -1,120 +1,166 @@
 // server/src/skills/video-creator/tools.js
 
 import { z } from 'zod';
-import { logger as rootLogger } from '../../lib/logger.js';
-import { config } from '../../config/index.js';
 
-const logger = rootLogger.child({ skill: 'video-creator' });
+// ── Input Schemas ──────────────────────────────────────────────────
 
-/**
- * Feature flag for video generation. Set VIDEO_GENERATION_ENABLED=true
- * in environment when Google Veo 3 API access is ready.
- * @type {boolean}
- */
-const VIDEO_GENERATION_ENABLED = process.env.VIDEO_GENERATION_ENABLED === 'true';
+export const ComposeVideoPromptInput = z.object({
+  videoType: z
+    .enum(['product-spotlight', 'brand-showcase', 'lifestyle'])
+    .describe('Type of video to generate'),
+  prompt: z
+    .string()
+    .min(20)
+    .max(500)
+    .describe('Veo 3 generation prompt describing the scene'),
+  durationSec: z
+    .number()
+    .int()
+    .min(3)
+    .max(16)
+    .default(8)
+    .describe('Video duration in seconds (3-16)'),
+  aspectRatio: z
+    .enum(['16:9', '9:16', '1:1'])
+    .default('16:9')
+    .describe('Video aspect ratio'),
+  productName: z
+    .string()
+    .nullable()
+    .describe('Product name associated with the video'),
+});
 
-export const tools = {
-  generateProductVideo: {
-    name: 'generateProductVideo',
-    description: 'Generate a short product showcase video using Google Veo 3. Returns a "coming soon" response until VIDEO_GENERATION_ENABLED=true.',
-    inputSchema: z.object({
-      brandId: z.string().uuid().describe('Brand ID that owns this product'),
-      prompt: z.string().min(10).max(500).describe('Video generation prompt describing the product showcase'),
-      duration: z.number().int().min(3).max(30).default(10).describe('Video duration in seconds (3-30)'),
-      productImageUrl: z.string().url().describe('URL of the product image to animate'),
-      productName: z.string().max(200).optional().describe('Product name for the video'),
-      brandName: z.string().max(200).optional().describe('Brand name for overlay text'),
-      style: z.enum(['cinematic', 'minimal', 'dynamic', 'editorial']).default('minimal').describe('Video style'),
-      colorPalette: z.array(z.string()).max(8).optional().describe('Brand hex colors for video theming'),
-    }),
+export const GenerateProductVideoInput = z.object({
+  prompt: z
+    .string()
+    .min(20)
+    .describe('Veo 3 generation prompt (use composeVideoPrompt to build this)'),
+  durationSec: z
+    .number()
+    .int()
+    .min(3)
+    .max(16)
+    .default(8)
+    .describe('Video duration in seconds'),
+  aspectRatio: z
+    .enum(['16:9', '9:16', '1:1'])
+    .default('16:9')
+    .describe('Video aspect ratio'),
+  resolution: z
+    .enum(['720p', '1080p'])
+    .default('720p')
+    .describe('Video resolution'),
+});
 
-    /**
-     * @param {Object} input
-     * @param {string} input.brandId
-     * @param {string} input.prompt
-     * @param {number} input.duration
-     * @param {string} input.productImageUrl
-     * @param {string} [input.productName]
-     * @param {string} [input.brandName]
-     * @param {string} input.style
-     * @param {string[]} [input.colorPalette]
-     */
-    async execute({ brandId, prompt, duration, productImageUrl, productName, brandName, style, colorPalette }) {
-      // Log every request for analytics regardless of feature status
-      logger.info({
-        brandId,
-        productName: productName || 'unknown',
-        prompt: prompt.slice(0, 100),
-        duration,
-        style,
-        enabled: VIDEO_GENERATION_ENABLED,
-      }, 'Video generation requested');
+export const UploadVideoAssetInput = z.object({
+  videoUrl: z
+    .string()
+    .url()
+    .describe('URL of the generated video to download and upload to storage'),
+  brandId: z
+    .string()
+    .uuid()
+    .describe('Brand ID that owns this video'),
+  videoType: z
+    .string()
+    .describe('Type of video (product-spotlight, brand-showcase, lifestyle)'),
+  metadata: z
+    .object({
+      prompt: z.string(),
+      model: z.string(),
+      durationSec: z.number(),
+      productName: z.string().nullable(),
+    })
+    .describe('Video generation metadata'),
+});
 
-      if (!VIDEO_GENERATION_ENABLED) {
-        return {
-          status: 'not_available',
-          message: 'Video generation is coming in Phase 2. This feature will use Google Veo 3 for short product showcase videos.',
-          estimatedAvailability: 'Q3 2026',
-          requestedParams: {
-            brandId,
-            productName: productName || null,
-            prompt: prompt.slice(0, 100),
-            duration,
-            style,
-          },
-        };
-      }
+export const SaveVideoAssetsInput = z.object({
+  brandId: z
+    .string()
+    .uuid()
+    .describe('Brand ID'),
+  userId: z
+    .string()
+    .uuid()
+    .describe('User ID'),
+  videos: z
+    .array(
+      z.object({
+        url: z.string().url(),
+        thumbnailUrl: z.string().url().nullable(),
+        videoType: z.string(),
+        durationSec: z.number(),
+        prompt: z.string(),
+        model: z.string(),
+        productName: z.string().nullable(),
+      })
+    )
+    .describe('Array of video assets to save'),
+});
 
-      // ── Veo 3 implementation (activated when VIDEO_GENERATION_ENABLED=true) ──
-      try {
-        const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/veo-3:generateVideo',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${config.GOOGLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prompt,
-              duration,
-              image: productImageUrl,
-              style,
-            }),
-            signal: AbortSignal.timeout(120_000),
-          }
-        );
+// ── Output Schemas ─────────────────────────────────────────────────
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error({ brandId, status: response.status, error: errorText }, 'Veo 3 API error');
-          return {
-            status: 'error',
-            message: `Video generation failed: ${response.status}`,
-            requestedParams: { brandId, productName, prompt: prompt.slice(0, 100), duration, style },
-          };
-        }
+export const ComposeVideoPromptOutput = z.object({
+  success: z.boolean(),
+  videoType: z.string(),
+  prompt: z.string(),
+});
 
-        const data = await response.json();
+export const GenerateProductVideoOutput = z.object({
+  success: z.boolean(),
+  videoUrl: z.string().url().nullable(),
+  thumbnailUrl: z.string().url().nullable(),
+  durationSec: z.number().nullable(),
+  model: z.string(),
+  error: z.string().nullable(),
+});
 
-        logger.info({ brandId, productName, videoUrl: data.videoUrl }, 'Video generated successfully');
+export const UploadVideoAssetOutput = z.object({
+  success: z.boolean(),
+  permanentUrl: z.string().url().nullable(),
+  thumbnailUrl: z.string().url().nullable(),
+  error: z.string().nullable(),
+});
 
-        return {
-          status: 'completed',
-          videoUrl: data.videoUrl || data.url,
-          thumbnailUrl: data.thumbnailUrl || null,
-          durationSeconds: duration,
-          brandId,
-          productName: productName || null,
-        };
-      } catch (err) {
-        logger.error({ brandId, error: err.message }, 'Video generation failed');
-        return {
-          status: 'error',
-          message: `Video generation encountered an error: ${err.message}`,
-          requestedParams: { brandId, productName, prompt: prompt.slice(0, 100), duration, style },
-        };
-      }
-    },
+export const SaveVideoAssetsOutput = z.object({
+  success: z.boolean(),
+  brandId: z.string().uuid(),
+  savedVideos: z.array(
+    z.object({ assetId: z.string().uuid(), url: z.string().url() })
+  ),
+  error: z.string().nullable(),
+});
+
+// ── Tool Definitions ───────────────────────────────────────────────
+
+/** @type {import('../_shared/types.js').ToolDefinition[]} */
+export const toolDefinitions = [
+  {
+    name: 'composeVideoPrompt',
+    description:
+      'Compose and validate a Veo 3 prompt for video generation. Pure function, no API call.',
+    inputSchema: ComposeVideoPromptInput,
+    outputSchema: ComposeVideoPromptOutput,
   },
-};
+  {
+    name: 'generateProductVideo',
+    description:
+      'Generate a product showcase video using Veo 3 (Google AI direct API). 3-16 second clips. Cost: ~$0.20-0.50 per video.',
+    inputSchema: GenerateProductVideoInput,
+    outputSchema: GenerateProductVideoOutput,
+  },
+  {
+    name: 'uploadVideoAsset',
+    description:
+      'Upload generated video to permanent Supabase Storage.',
+    inputSchema: UploadVideoAssetInput,
+    outputSchema: UploadVideoAssetOutput,
+  },
+  {
+    name: 'saveVideoAssets',
+    description:
+      'Save all video assets to the brand_assets table. Call LAST after all videos are uploaded.',
+    inputSchema: SaveVideoAssetsInput,
+    outputSchema: SaveVideoAssetsOutput,
+  },
+];

@@ -20,7 +20,7 @@ import { wrapInLayout, primaryButton, heading, paragraph } from './layout.js';
  */
 export function buildSubscriptionConfirmedEmail({ tier, tierDisplayName, price }) {
   const safeTier = escapeHtml(tierDisplayName || tier || 'Premium');
-  const safePrice = price != null ? escapeHtml(String(price)) : null;
+  const safePrice = price !== null && price !== undefined ? escapeHtml(String(price)) : null;
 
   const priceLine = safePrice
     ? `Your ${safeTier} subscription is now active at <strong>$${safePrice}/mo</strong>.`

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Card, CardTitle } from '@/components/ui/card';
-import { Activity, AlertTriangle, CheckCircle, Lightbulb } from 'lucide-react';
+import { Activity, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BrandHealthScore } from '@/hooks/use-dashboard';
 
@@ -38,7 +38,7 @@ function BrandHealthGauge({ score, loading, className }: BrandHealthGaugeProps) 
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    if (score?.overall != null) {
+    if (score?.overall !== null && score?.overall !== undefined) {
       const timer = setTimeout(() => setAnimatedScore(score.overall), 100);
       return () => clearTimeout(timer);
     }

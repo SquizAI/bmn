@@ -1,5 +1,4 @@
-import { motion } from 'motion/react';
-import { X, Check, Minus } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import type { RecommendedProduct } from './ProductRecommendationCard';

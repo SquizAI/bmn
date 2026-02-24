@@ -50,6 +50,40 @@ function mockFetchResponse(data, options = {}) {
   };
 }
 
+/**
+ * Create a mock fetch that simulates the FAL.ai Queue API 3-step flow:
+ *   1. Submit (POST queue.fal.run/<model>) -> { request_id }
+ *   2. Poll status (GET .../status) -> { status: 'COMPLETED' }
+ *   3. Fetch result (GET .../requests/<id>) -> final data
+ *
+ * @param {Object} resultData - The final response payload from step 3
+ * @param {Object} [options]
+ * @param {string} [options.requestId='test-req-123'] - The request_id returned by step 1
+ * @returns {import('vitest').Mock} - A vi.fn() mock for globalThis.fetch
+ */
+function mockFalQueueFetch(resultData, options = {}) {
+  const { requestId = 'test-req-123' } = options;
+  return vi.fn()
+    // Step 1: Submit -> returns request_id
+    .mockResolvedValueOnce(mockFetchResponse({ request_id: requestId }))
+    // Step 2: Poll status -> COMPLETED immediately
+    .mockResolvedValueOnce(mockFetchResponse({ status: 'COMPLETED' }))
+    // Step 3: Fetch result -> the actual model output
+    .mockResolvedValueOnce(mockFetchResponse(resultData));
+}
+
+/**
+ * Create a mock fetch that fails on the submit step (step 1).
+ * @param {Object} errorBody - Error response body
+ * @param {number} status - HTTP status code
+ * @returns {import('vitest').Mock}
+ */
+function mockFalQueueSubmitError(errorBody, status) {
+  return vi.fn().mockResolvedValueOnce(
+    mockFetchResponse(errorBody, { ok: false, status })
+  );
+}
+
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('recraftClient', () => {
@@ -57,46 +91,63 @@ describe('recraftClient', () => {
 
   beforeEach(() => {
     originalFetch = globalThis.fetch;
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    vi.useRealTimers();
   });
+
+  /**
+   * Helper to run a recraftClient call with fake timers.
+   * Starts the async operation, immediately attaches a no-op catch
+   * (to prevent unhandled rejection warnings), advances timers so
+   * the polling setTimeout resolves, then returns the original promise
+   * so the caller can still assert on rejection.
+   */
+  async function runWithTimers(asyncFn) {
+    const promise = asyncFn();
+    // Prevent unhandled rejection warning while timers advance
+    promise.catch(() => {});
+    // Advance past the poll interval (2000ms) so the setTimeout resolves
+    await vi.advanceTimersByTimeAsync(3000);
+    return promise;
+  }
 
   describe('generateVector()', () => {
     it('should return imageUrl and contentType on success', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [
-            {
-              url: 'https://fal.run/result/logo.svg',
-              content_type: 'image/svg+xml',
-              file_size: 12345,
-            },
-          ],
-        })
-      );
-
-      const result = await recraftClient.generateVector({
-        prompt: 'A modern minimalist logo',
+      globalThis.fetch = mockFalQueueFetch({
+        images: [
+          {
+            url: 'https://fal.run/result/logo.svg',
+            content_type: 'image/svg+xml',
+            file_size: 12345,
+          },
+        ],
       });
+
+      const result = await runWithTimers(() =>
+        recraftClient.generateVector({ prompt: 'A modern minimalist logo' })
+      );
 
       expect(result.imageUrl).toBe('https://fal.run/result/logo.svg');
       expect(result.contentType).toBe('image/svg+xml');
       expect(result.fileSize).toBe(12345);
     });
 
-    it('should call the correct Recraft V4 endpoint', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/test.svg', content_type: 'image/svg+xml' }],
-        })
+    it('should call the correct Recraft V4 endpoint via FAL queue', async () => {
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/test.svg', content_type: 'image/svg+xml' }],
+      });
+
+      await runWithTimers(() =>
+        recraftClient.generateVector({ prompt: 'Test logo' })
       );
 
-      await recraftClient.generateVector({ prompt: 'Test logo' });
-
+      // First call is the queue submit
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://fal.run/fal-ai/recraft/v4/text-to-vector',
+        'https://queue.fal.run/fal-ai/recraft/v4/text-to-vector',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -108,17 +159,18 @@ describe('recraftClient', () => {
     });
 
     it('should pass brand colors as RGB objects', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/colored.svg' }],
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/colored.svg' }],
+      });
+
+      await runWithTimers(() =>
+        recraftClient.generateVector({
+          prompt: 'Logo with colors',
+          colors: ['#FF0000', '#00FF00'],
         })
       );
 
-      await recraftClient.generateVector({
-        prompt: 'Logo with colors',
-        colors: ['#FF0000', '#00FF00'],
-      });
-
+      // First call (index 0) is the submit; check its body
       const callBody = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
       expect(callBody.colors).toEqual([
         { r: 255, g: 0, b: 0 },
@@ -126,72 +178,70 @@ describe('recraftClient', () => {
       ]);
     });
 
-    it('should handle API errors gracefully (non-200 responses)', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse(
-          { error: 'Rate limit exceeded' },
-          { ok: false, status: 429 }
-        )
+    it('should handle API errors gracefully (non-200 on queue submit)', async () => {
+      globalThis.fetch = mockFalQueueSubmitError(
+        { error: 'Rate limit exceeded' },
+        429
       );
 
       await expect(
         recraftClient.generateVector({ prompt: 'Will fail' })
-      ).rejects.toThrow('Recraft V4 request failed: 429');
+      ).rejects.toThrow('FAL queue submit failed: 429');
     });
 
     it('should throw when no image is returned in response', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({ images: [] })
-      );
+      globalThis.fetch = mockFalQueueFetch({ images: [] });
 
       await expect(
-        recraftClient.generateVector({ prompt: 'No image' })
+        runWithTimers(() =>
+          recraftClient.generateVector({ prompt: 'No image' })
+        )
       ).rejects.toThrow('Recraft V4 returned no image in response');
     });
 
     it('should throw when images array is undefined', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({})
-      );
+      globalThis.fetch = mockFalQueueFetch({});
 
       await expect(
-        recraftClient.generateVector({ prompt: 'No images key' })
+        runWithTimers(() =>
+          recraftClient.generateVector({ prompt: 'No images key' })
+        )
       ).rejects.toThrow('Recraft V4 returned no image in response');
     });
 
     it('should default contentType to image/svg+xml when not provided', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/no-type.svg' }],
-        })
-      );
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/no-type.svg' }],
+      });
 
-      const result = await recraftClient.generateVector({ prompt: 'Test' });
+      const result = await runWithTimers(() =>
+        recraftClient.generateVector({ prompt: 'Test' })
+      );
       expect(result.contentType).toBe('image/svg+xml');
     });
 
     it('should default fileSize to 0 when not provided', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/no-size.svg' }],
-        })
-      );
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/no-size.svg' }],
+      });
 
-      const result = await recraftClient.generateVector({ prompt: 'Test' });
+      const result = await runWithTimers(() =>
+        recraftClient.generateVector({ prompt: 'Test' })
+      );
       expect(result.fileSize).toBe(0);
     });
 
     it('should pass background_color as RGB when provided', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/bg.svg' }],
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/bg.svg' }],
+      });
+
+      await runWithTimers(() =>
+        recraftClient.generateVector({
+          prompt: 'Logo with bg',
+          background_color: '#FFFFFF',
         })
       );
-
-      await recraftClient.generateVector({
-        prompt: 'Logo with bg',
-        background_color: '#FFFFFF',
-      });
 
       const callBody = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
       expect(callBody.background_color).toEqual({ r: 255, g: 255, b: 255 });
@@ -200,38 +250,37 @@ describe('recraftClient', () => {
 
   describe('vectorize()', () => {
     it('should return svgUrl on success', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [
-            {
-              url: 'https://fal.run/result/vectorized.svg',
-              content_type: 'image/svg+xml',
-              file_size: 8000,
-            },
-          ],
-        })
-      );
-
-      const result = await recraftClient.vectorize({
-        imageUrl: 'https://example.com/logo.png',
+      globalThis.fetch = mockFalQueueFetch({
+        images: [
+          {
+            url: 'https://fal.run/result/vectorized.svg',
+            content_type: 'image/svg+xml',
+            file_size: 8000,
+          },
+        ],
       });
+
+      const result = await runWithTimers(() =>
+        recraftClient.vectorize({ imageUrl: 'https://example.com/logo.png' })
+      );
 
       expect(result.svgUrl).toBe('https://fal.run/result/vectorized.svg');
       expect(result.contentType).toBe('image/svg+xml');
       expect(result.fileSize).toBe(8000);
     });
 
-    it('should call the correct vectorize endpoint', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({
-          images: [{ url: 'https://fal.run/result/vec.svg' }],
-        })
+    it('should call the correct vectorize endpoint via FAL queue', async () => {
+      globalThis.fetch = mockFalQueueFetch({
+        images: [{ url: 'https://fal.run/result/vec.svg' }],
+      });
+
+      await runWithTimers(() =>
+        recraftClient.vectorize({ imageUrl: 'https://example.com/raster.png' })
       );
 
-      await recraftClient.vectorize({ imageUrl: 'https://example.com/raster.png' });
-
+      // First call is the queue submit to the vectorize model
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'https://fal.run/fal-ai/recraft/vectorize',
+        'https://queue.fal.run/fal-ai/recraft/vectorize',
         expect.objectContaining({ method: 'POST' })
       );
 
@@ -240,25 +289,23 @@ describe('recraftClient', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse(
-          { error: 'Image too large' },
-          { ok: false, status: 400 }
-        )
+      globalThis.fetch = mockFalQueueSubmitError(
+        { error: 'Image too large' },
+        400
       );
 
       await expect(
         recraftClient.vectorize({ imageUrl: 'https://example.com/huge.png' })
-      ).rejects.toThrow('Recraft vectorize failed: 400');
+      ).rejects.toThrow('FAL queue submit failed: 400');
     });
 
     it('should throw when no image is returned', async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockFetchResponse({ images: [] })
-      );
+      globalThis.fetch = mockFalQueueFetch({ images: [] });
 
       await expect(
-        recraftClient.vectorize({ imageUrl: 'https://example.com/empty.png' })
+        runWithTimers(() =>
+          recraftClient.vectorize({ imageUrl: 'https://example.com/empty.png' })
+        )
       ).rejects.toThrow('Recraft vectorize returned no image in response');
     });
   });
