@@ -508,10 +508,11 @@ export async function generateLogos(req, res, next) {
       brandVision,
       archetype,
       industry: industry.slice(0, 200),
-      count: req.body.variations?.length || req.body.count || 4,
-      variations: req.body.variations || undefined,
+      count: (req.body.variations?.length > 0 ? req.body.variations.length : null) || req.body.count || 4,
+      variations: (Array.isArray(req.body.variations) && req.body.variations.length > 0) ? req.body.variations : undefined,
       isRefinement: !!req.body.refinementNotes,
       refinementNotes: req.body.refinementNotes || undefined,
+      previousLogoUrl: req.body.previousLogoUrl || undefined,
     });
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Logo generation job dispatched');

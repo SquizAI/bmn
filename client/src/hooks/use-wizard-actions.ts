@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { QUERY_KEYS } from '@/lib/constants';
@@ -145,11 +145,13 @@ export function useDispatchLogoGeneration() {
           count: payload.count,
         },
       ),
-    onSuccess: (data) => {
-      // Save current logos to history before generating new ones
+    onMutate: () => {
+      // Save current logos to history BEFORE dispatching (survives API failures)
       if (logos.length > 0) {
         pushLogoHistory(logos);
       }
+    },
+    onSuccess: (data) => {
       setActiveJob(data.jobId);
     },
   });
@@ -305,17 +307,3 @@ export function useSaveProjections() {
   });
 }
 
-/**
- * Fetch available logo styles, variations, and archetypes.
- */
-export function useLogoOptions() {
-  return useQuery({
-    queryKey: ['logo-options'],
-    queryFn: () => apiClient.get<{
-      styles: Array<{ id: string; label: string; description: string }>;
-      variations: Array<{ id: string; label: string; description: string }>;
-      archetypes: string[];
-    }>('/api/v1/brands/logo-options'),
-    staleTime: Infinity,
-  });
-}

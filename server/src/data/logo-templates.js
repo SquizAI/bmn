@@ -205,6 +205,8 @@ export const LOGO_VARIATIONS = [
  * @param {string} [params.industry] - Industry/niche for contextual hints
  * @param {string[]} [params.colorPalette] - Hex color strings
  * @param {number} [params.count=4] - Number of logos to generate
+ * @param {string[]} [params.variations] - Specific variation type IDs to generate
+ * @param {string} [params.refinementNotes] - User refinement instructions to incorporate
  * @returns {Object} Resolved template with prompts array
  */
 export function resolveLogoTemplate({

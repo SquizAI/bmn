@@ -44,7 +44,7 @@ export function ColorPaletteEditor({
         <AnimatePresence mode="popLayout">
           {colors.map((color, i) => (
             <motion.div
-              key={`${i}-${color}`}
+              key={i}
               layout
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

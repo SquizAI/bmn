@@ -375,6 +375,7 @@ export default function LogoGenerationPage() {
       style: localStyle,
       variations: localVariations,
       colorPalette: localColors,
+      count: localVariations.length,
     });
   };
 
@@ -387,6 +388,7 @@ export default function LogoGenerationPage() {
       variations: localVariations,
       colorPalette: localColors,
       refinementNotes: notes,
+      count: localVariations.length,
     });
   };
 
@@ -412,7 +414,23 @@ export default function LogoGenerationPage() {
   };
 
   const handleSelect = (id: string) => {
-    setSelectedId(id === selectedId ? null : id);
+    // If selecting the same logo, deselect
+    if (id === selectedId) {
+      setSelectedId(null);
+      return;
+    }
+
+    // Check if this logo is from history (not in current batch)
+    const isInCurrentBatch = logos.some((l) => l.id === id);
+    if (!isInCurrentBatch) {
+      // Find the logo in history and add it to the current batch
+      const historyLogo = logoHistory.flat().find((l) => l.id === id);
+      if (historyLogo) {
+        setAssets({ logos: [...logos, historyLogo] });
+      }
+    }
+
+    setSelectedId(id);
   };
 
   const handlePinToggle = (logoId: string) => {
