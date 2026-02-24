@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router';
+import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowLeft,
@@ -8,6 +9,7 @@ import {
   Package,
   TrendingUp,
   Type,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -16,6 +18,7 @@ import { ColorPalette, type ColorEntry } from '@/components/color-palette';
 import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
 import { RevenueChart, type RevenueBarData } from '@/components/revenue-chart';
 import { useBrandDetail } from '@/hooks/use-brand-detail';
+import { useBrandStore } from '@/stores/brand-store';
 import { ROUTES } from '@/lib/constants';
 import { formatCurrency, capitalize, cn } from '@/lib/utils';
 
@@ -23,7 +26,21 @@ import { formatCurrency, capitalize, cn } from '@/lib/utils';
 
 export default function BrandDetailPage() {
   const { brandId } = useParams<{ brandId: string }>();
+  const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
   const { data: brand, isLoading, error } = useBrandDetail(brandId);
+
+  // Sync active brand context when viewing this brand
+  useEffect(() => {
+    if (brand) {
+      setActiveBrand({
+        id: brand.id,
+        name: brand.name,
+        status: brand.status,
+        thumbnailUrl: brand.logos?.[0]?.thumbnailUrl ?? brand.logos?.[0]?.url ?? null,
+        primaryColor: brand.identity?.colorPalette?.[0]?.hex ?? null,
+      });
+    }
+  }, [brand, setActiveBrand]);
 
   if (isLoading) {
     return (
@@ -87,7 +104,7 @@ export default function BrandDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link to={ROUTES.DASHBOARD}>
+          <Link to={ROUTES.DASHBOARD_BRANDS}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -128,6 +145,11 @@ export default function BrandDetailPage() {
           <div className="flex items-center gap-2 mb-4">
             <Palette className="h-5 w-5 text-primary" />
             <CardTitle>Brand Identity</CardTitle>
+            <Link to={ROUTES.DASHBOARD_BRAND_IDENTITY(brand.id)} className="ml-auto">
+              <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
+                Edit
+              </Button>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -229,9 +251,14 @@ export default function BrandDetailPage() {
           <div className="flex items-center gap-2 mb-4">
             <ImageIcon className="h-5 w-5 text-primary" />
             <CardTitle>Logos</CardTitle>
-            <span className="ml-auto text-sm text-text-muted">
+            <span className="text-sm text-text-muted">
               {logoImages.length} logos
             </span>
+            <Link to={ROUTES.DASHBOARD_BRAND_LOGOS(brand.id)} className="ml-auto">
+              <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
+                Edit
+              </Button>
+            </Link>
           </div>
           <ImageGallery images={logoImages} columns={4} />
         </Card>
@@ -243,10 +270,15 @@ export default function BrandDetailPage() {
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5 text-primary" />
             <CardTitle>Product Mockups</CardTitle>
-            <span className="ml-auto text-sm text-text-muted">
+            <span className="text-sm text-text-muted">
               {mockupImages.filter((m) => m.status === 'approved').length} approved of{' '}
               {mockupImages.length}
             </span>
+            <Link to={ROUTES.DASHBOARD_BRAND_MOCKUPS(brand.id)} className="ml-auto">
+              <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
+                Edit
+              </Button>
+            </Link>
           </div>
           <ImageGallery images={mockupImages} columns={3} />
         </Card>

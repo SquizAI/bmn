@@ -3,9 +3,10 @@ import { NavLink, useLocation } from 'react-router';
 import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { useBrandStore } from '@/stores/brand-store';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { dashboardNav, adminNav, adminLinkItem } from './nav-items';
+import { brandScopedNav, globalNav, accountNav, adminNav, adminLinkItem } from './nav-items';
 
 function Sidebar() {
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
@@ -13,10 +14,15 @@ function Sidebar() {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebarCollapsed = useUIStore((s) => s.toggleSidebarCollapsed);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
   const location = useLocation();
   const isAdminSection = location.pathname.startsWith('/admin');
 
-  const navItems = isAdminSection ? adminNav : dashboardNav;
+  const navItems = isAdminSection
+    ? adminNav
+    : activeBrand
+      ? brandScopedNav(activeBrand.id)
+      : globalNav;
 
   // Auto-close sidebar on route change (mobile)
   useEffect(() => {
@@ -87,6 +93,49 @@ function Sidebar() {
               </span>
             </NavLink>
           ))}
+
+          {/* Account-level nav (All Brands, Organization, Settings) */}
+          {!isAdminSection && activeBrand && (
+            <>
+              <div className="my-3 border-t border-border" />
+              <div
+                className={cn(
+                  'mb-3 px-3 text-xs sm:text-[11px] font-medium uppercase tracking-widest text-text-muted',
+                  'transition-opacity duration-200',
+                  sidebarCollapsed && 'md:hidden',
+                )}
+              >
+                Account
+              </div>
+              {accountNav.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === ROUTES.DASHBOARD_BRANDS}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center rounded-md px-3 py-3 sm:py-2 text-sm sm:text-[13px] font-medium transition-colors',
+                      sidebarCollapsed ? 'md:justify-center md:px-0' : 'gap-3',
+                      isActive
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-text-secondary hover:bg-surface-hover hover:text-text',
+                    )
+                  }
+                >
+                  <span className="shrink-0">{item.icon}</span>
+                  <span
+                    className={cn(
+                      'transition-opacity duration-200',
+                      sidebarCollapsed && 'md:hidden',
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </NavLink>
+              ))}
+            </>
+          )}
 
           {/* Admin link for admin users when on dashboard */}
           {isAdmin && !isAdminSection && (

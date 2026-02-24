@@ -1,7 +1,8 @@
 import { NavLink, useLocation } from 'react-router';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
-import { dashboardNav, adminNav } from './nav-items';
+import { useBrandStore } from '@/stores/brand-store';
+import { brandScopedNav, globalNav, adminNav } from './nav-items';
 
 /**
  * Sticky bottom tab bar for mobile screens (< md: breakpoint).
@@ -9,10 +10,18 @@ import { dashboardNav, adminNav } from './nav-items';
  * Hidden on desktop and wizard pages (controlled by parent rendering).
  */
 function MobileFooterNav() {
+  const activeBrand = useBrandStore((s) => s.activeBrand);
   const location = useLocation();
   const isAdminSection = location.pathname.startsWith('/admin');
 
-  const navItems = isAdminSection ? adminNav : dashboardNav;
+  const allNavItems = isAdminSection
+    ? adminNav
+    : activeBrand
+      ? brandScopedNav(activeBrand.id)
+      : globalNav;
+
+  // Limit to 5 items on mobile footer (brand-scoped has 6, skip Analytics)
+  const navItems = allNavItems.slice(0, 5);
 
   return (
     <nav

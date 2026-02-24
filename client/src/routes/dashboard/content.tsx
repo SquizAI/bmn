@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { ContentGenerator } from '@/components/dashboard/content-generator';
 import { ContentCalendar } from '@/components/dashboard/content-calendar';
-import { useBrands } from '@/hooks/use-brands';
+import { useActiveBrand } from '@/hooks/use-active-brand';
 import { apiClient } from '@/lib/api';
 import type { z } from 'zod';
 import type { generatedContentSchema } from '@shared/schemas/dashboard';
@@ -14,14 +13,11 @@ type GeneratedContent = z.infer<typeof generatedContentSchema>;
 /**
  * AI Content Generation page.
  * Generates social media content using brand voice and identity.
+ * Scoped to the active brand from the global brand store.
  */
 export default function ContentPage() {
-  const { data: brands } = useBrands();
-  const brandsList = brands?.items || [];
-  const [selectedBrandId, setSelectedBrandId] = useState<string>('');
-
-  // Auto-select first brand
-  const activeBrandId = selectedBrandId || brandsList[0]?.id || '';
+  const activeBrand = useActiveBrand();
+  const activeBrandId = activeBrand?.id ?? '';
 
   // Fetch previously generated content for the calendar
   const { data: generatedContent } = useQuery({
@@ -33,7 +29,7 @@ export default function ContentPage() {
     enabled: !!activeBrandId,
   });
 
-  if (brandsList.length === 0) {
+  if (!activeBrand) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -41,9 +37,9 @@ export default function ContentPage() {
         className="flex flex-col items-center justify-center py-20"
       >
         <Sparkles className="mb-4 h-12 w-12 text-text-muted" />
-        <h2 className="text-lg font-semibold text-text">No brands yet</h2>
+        <h2 className="text-lg font-semibold text-text">No brand selected</h2>
         <p className="mt-1 text-[13px] text-text-muted">
-          Create a brand first to start generating content.
+          Select a brand from the header to start generating content.
         </p>
       </motion.div>
     );
@@ -62,24 +58,9 @@ export default function ContentPage() {
             Content Generation
           </h1>
           <p className="mt-0.5 text-[13px] text-text-muted">
-            AI-powered social media content using your brand voice.
+            AI-powered social media content for {activeBrand.name}.
           </p>
         </div>
-
-        {/* Brand selector */}
-        {brandsList.length > 1 && (
-          <select
-            value={activeBrandId}
-            onChange={(e) => setSelectedBrandId(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-[13px] text-text focus:border-border-focus focus:outline-none"
-          >
-            {brandsList.map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
 
       {/* Content Calendar */}

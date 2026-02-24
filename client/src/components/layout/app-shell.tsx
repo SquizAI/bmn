@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { MobileFooterNav } from '@/components/layout/mobile-footer-nav';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { useUIStore } from '@/stores/ui-store';
+import { useActiveBrandInit } from '@/hooks/use-active-brand';
 import { cn } from '@/lib/utils';
 
 interface AppShellProps {
@@ -18,6 +19,9 @@ interface AppShellProps {
 function AppShell({ showSidebar = true }: AppShellProps) {
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
   const chatOpen = useUIStore((s) => s.chatOpen);
+
+  // Auto-select active brand on mount (picks most recent if none stored)
+  useActiveBrandInit();
 
   return (
     <div className="min-h-screen bg-background">

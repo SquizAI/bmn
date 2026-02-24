@@ -4,6 +4,7 @@ import { Menu, LogOut, Settings, Moon, Sun, MessageSquare, PanelLeftClose, Panel
 import { useAuth } from '@/hooks/use-auth';
 import { useUIStore } from '@/stores/ui-store';
 import { Button } from '@/components/ui/button';
+import { BrandSwitcher } from '@/components/layout/brand-switcher';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { toggleTheme, getResolvedTheme } from '@/lib/theme';
@@ -76,6 +77,12 @@ function Header({ className }: HeaderProps) {
           <span className="text-base font-light tracking-tight text-text-muted">me</span>
           <span className="text-base font-bold tracking-tight text-text">now</span>
         </Link>
+        {isAuthenticated && (
+          <>
+            <div className="mx-2 h-5 w-px bg-border hidden sm:block" />
+            <BrandSwitcher />
+          </>
+        )}
       </div>
 
       {/* Right: User actions */}

@@ -11,6 +11,11 @@ export const ROUTES = {
   DASHBOARD: '/dashboard',
   DASHBOARD_BRANDS: '/dashboard/brands',
   DASHBOARD_BRAND_DETAIL: (brandId: string) => `/dashboard/brands/${brandId}` as const,
+  DASHBOARD_BRAND_IDENTITY: (brandId: string) => `/dashboard/brands/${brandId}/identity` as const,
+  DASHBOARD_BRAND_LOGOS: (brandId: string) => `/dashboard/brands/${brandId}/logos` as const,
+  DASHBOARD_BRAND_PRODUCTS: (brandId: string) => `/dashboard/brands/${brandId}/products` as const,
+  DASHBOARD_BRAND_MOCKUPS: (brandId: string) => `/dashboard/brands/${brandId}/mockups` as const,
+  DASHBOARD_BRAND_ANALYTICS: (brandId: string) => `/dashboard/brands/${brandId}/analytics` as const,
   DASHBOARD_OVERVIEW: '/dashboard',
   DASHBOARD_CONTENT: '/dashboard/content',
   DASHBOARD_ANALYTICS: '/dashboard/analytics',
@@ -137,6 +142,7 @@ export const BRAND_TIPS = [
 
 // ------ Query Keys ------
 export const QUERY_KEYS = {
+  activeBrand: () => ['active-brand'] as const,
   brands: (filters?: Record<string, unknown>) => ['brands', filters] as const,
   brand: (brandId: string) => ['brand', brandId] as const,
   brandAssets: (brandId: string, assetType: string) =>

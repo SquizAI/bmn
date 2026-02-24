@@ -12,10 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useBrands, useDeleteBrand, type Brand } from '@/hooks/use-brands';
+import { useBrandStore } from '@/stores/brand-store';
 import { ROUTES } from '@/lib/constants';
 import { cn, capitalize } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 
 // ------ Status Badge ------
 
@@ -44,6 +46,19 @@ function BrandCard({ brand }: { brand: Brand }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const deleteBrand = useDeleteBrand();
   const addToast = useUIStore((s) => s.addToast);
+  const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
+  const navigate = useNavigate();
+
+  const handleSelectBrand = () => {
+    setActiveBrand({
+      id: brand.id,
+      name: brand.name,
+      status: brand.status,
+      thumbnailUrl: brand.thumbnailUrl ?? null,
+      primaryColor: null,
+    });
+    navigate(ROUTES.DASHBOARD_BRAND_DETAIL(brand.id));
+  };
 
   const handleDelete = async () => {
     if (!confirm(`Delete "${brand.name}"? This cannot be undone.`)) return;
@@ -68,7 +83,7 @@ function BrandCard({ brand }: { brand: Brand }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Card variant="interactive" padding="none" className="group overflow-hidden">
+      <Card variant="interactive" padding="none" className="group overflow-hidden cursor-pointer" onClick={handleSelectBrand}>
         {/* Thumbnail / Gradient placeholder */}
         <div className="relative aspect-16/10 w-full overflow-hidden">
           {brand.thumbnailUrl ? (

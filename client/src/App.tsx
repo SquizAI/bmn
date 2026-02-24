@@ -68,6 +68,11 @@ const DashboardIntegrations = lazyRetry(() => import('@/routes/dashboard/integra
 const SettingsPage = lazyRetry(() => import('@/routes/dashboard/settings'));
 const OrganizationPage = lazyRetry(() => import('@/routes/dashboard/organization'));
 const ProductCatalogPage = lazyRetry(() => import('@/routes/dashboard/product-catalog'));
+const BrandIdentityEdit = lazyRetry(() => import('@/routes/dashboard/brand-identity-edit'));
+const BrandLogosEdit = lazyRetry(() => import('@/routes/dashboard/brand-logos-edit'));
+const BrandProductsEdit = lazyRetry(() => import('@/routes/dashboard/brand-products-edit'));
+const BrandMockupsEdit = lazyRetry(() => import('@/routes/dashboard/brand-mockups-edit'));
+const BrandAnalyticsDetail = lazyRetry(() => import('@/routes/dashboard/brand-analytics-detail'));
 
 // Admin
 const AdminUsersPage = lazyRetry(() => import('@/routes/admin/users'));
@@ -275,6 +280,26 @@ const router = createBrowserRouter([
                 <BrandDetailPage />
               </SuspenseRoute>
             ),
+          },
+          {
+            path: 'brands/:brandId/identity',
+            element: <SuspenseRoute><BrandIdentityEdit /></SuspenseRoute>,
+          },
+          {
+            path: 'brands/:brandId/logos',
+            element: <SuspenseRoute><BrandLogosEdit /></SuspenseRoute>,
+          },
+          {
+            path: 'brands/:brandId/products',
+            element: <SuspenseRoute><BrandProductsEdit /></SuspenseRoute>,
+          },
+          {
+            path: 'brands/:brandId/mockups',
+            element: <SuspenseRoute><BrandMockupsEdit /></SuspenseRoute>,
+          },
+          {
+            path: 'brands/:brandId/analytics',
+            element: <SuspenseRoute><BrandAnalyticsDetail /></SuspenseRoute>,
           },
           {
             path: 'content',

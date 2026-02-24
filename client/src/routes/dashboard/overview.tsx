@@ -15,7 +15,7 @@ import {
   useCreateABTest,
   useBrandEvolution,
 } from '@/hooks/use-dashboard';
-import { useBrands } from '@/hooks/use-brands';
+import { useActiveBrand } from '@/hooks/use-active-brand';
 import { RevenueCard } from '@/components/dashboard/revenue-card';
 import { MetricsGrid, type MetricItem } from '@/components/dashboard/metrics-grid';
 import { TopProductsList } from '@/components/dashboard/top-products-list';
@@ -30,15 +30,14 @@ import { BrandEvolution } from '@/components/dashboard/brand-evolution';
  */
 export default function DashboardOverview() {
   const [period, setPeriod] = useState('30d');
+  const activeBrand = useActiveBrand();
   const { data: overview, isLoading: _overviewLoading } = useDashboardOverview(period);
   const { data: topProducts, isLoading: _productsLoading } = useTopProducts(5);
-  const { data: brands } = useBrands();
-  const firstBrandId = brands?.items?.[0]?.id;
-  const { data: healthScore, isLoading: healthLoading } = useBrandHealthScore(firstBrandId);
+  const { data: healthScore, isLoading: healthLoading } = useBrandHealthScore(activeBrand?.id);
   const { data: restockData, isLoading: restockLoading } = useRestockAlerts();
   const { data: abTestData, isLoading: abTestLoading } = useABTests();
   const { mutate: createABTest } = useCreateABTest();
-  const { data: evolutionData, isLoading: evolutionLoading } = useBrandEvolution(firstBrandId);
+  const { data: evolutionData, isLoading: evolutionLoading } = useBrandEvolution(activeBrand?.id);
 
   const periods = [
     { value: 'today', label: 'Today' },
@@ -85,9 +84,11 @@ export default function DashboardOverview() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-text">Dashboard</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-text">
+            {activeBrand ? activeBrand.name : 'Dashboard'}
+          </h1>
           <p className="mt-0.5 text-[13px] text-text-muted">
-            Your brand performance at a glance.
+            {activeBrand ? 'Brand performance at a glance.' : 'Select a brand to get started.'}
           </p>
         </div>
 
