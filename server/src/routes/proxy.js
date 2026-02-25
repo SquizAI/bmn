@@ -87,6 +87,7 @@ router.get('/image', async (req, res) => {
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=3600, s-maxage=86400',
       'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     });
 
     const contentLength = upstream.headers.get('content-length');
