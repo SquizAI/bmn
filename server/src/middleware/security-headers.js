@@ -40,6 +40,7 @@ export function securityHeaders() {
             imgSrc: [
               "'self'",
               'data:',
+              config.API_URL,
               'https://*.supabase.co',
               'https://*.r2.cloudflarestorage.com',
               'https://oaidalleapiprodscus.blob.core.windows.net',
@@ -71,6 +72,7 @@ export function securityHeaders() {
           },
         },
     crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: {
       maxAge: 31536000, // 1 year
       includeSubDomains: true,
