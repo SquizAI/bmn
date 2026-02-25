@@ -115,6 +115,18 @@ export const authLimiter = createLimiter({
 });
 
 /**
+ * Image proxy rate limiter.
+ * 60 requests per minute per IP -- public endpoint, no auth required.
+ */
+export const proxyLimiter = createLimiter({
+  windowMs: 60_000,
+  max: 60,
+  prefix: 'bmn:rl:proxy:',
+  message: 'Image proxy rate limit exceeded. Please slow down.',
+  keyGenerator: (req) => req.ip,
+});
+
+/**
  * Webhook rate limiter.
  * 200 requests per minute per IP -- Stripe/GHL may burst.
  */

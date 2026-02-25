@@ -22,7 +22,7 @@ import { proxyRoutes } from './proxy.js';
 import { jobRoutes } from './api/v1/jobs.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { apiKeyAuth } from '../middleware/api-key-auth.js';
-import { authLimiter as _authLimiter, webhookLimiter } from '../middleware/rate-limit.js';
+import { authLimiter as _authLimiter, webhookLimiter, proxyLimiter } from '../middleware/rate-limit.js';
 
 /**
  * Register all API routes on the Express app.
@@ -51,8 +51,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
 
-  // -- Proxy routes (authenticated, for CORS bypass on external images) --
-  app.use('/api/v1/proxy', requireAuth, proxyRoutes);
+  // -- Proxy routes (public -- img tags can't send auth headers cross-origin) --
+  // Security: allowlisted to social media CDN hostnames only (see proxy.js)
+  app.use('/api/v1/proxy', proxyLimiter, proxyRoutes);
 
   // -- Authenticated routes --
   app.use('/api/v1/packaging-templates', requireAuth, packagingTemplateRoutes);
