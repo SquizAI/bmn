@@ -545,6 +545,48 @@ async function runSubTask(taskDef, dataContext, hasData, jobLog) {
 // ------ Compile Results ------
 
 /**
+ * Map a scraped post to the PostData schema expected by the frontend.
+ * Handles field name variations from different scrapers (Apify, Firecrawl).
+ *
+ * @param {Object} p - Raw post object from scrapedData.posts
+ * @returns {Object} PostData-compatible object
+ */
+function mapPostToSchema(p) {
+  const likeCount = p.likes ?? p.likeCount ?? 0;
+  const commentCount = p.comments ?? p.commentCount ?? 0;
+  return {
+    id: p.id || p.shortCode || '',
+    caption: p.caption || null,
+    imageUrl: p.imageUrl || p.displayUrl || null,
+    videoUrl: p.videoUrl || null,
+    thumbnailUrl: p.thumbnailUrl || null,
+    likeCount,
+    commentCount,
+    shareCount: p.shareCount ?? p.shares ?? null,
+    viewCount: p.viewCount ?? p.videoViewCount ?? null,
+    timestamp: p.timestamp || null,
+    hashtags: p.hashtags || [],
+    type: normalizePostType(p.type),
+    engagementScore: null,
+  };
+}
+
+/**
+ * Normalize post type string to match PostData type union.
+ * @param {string} [type]
+ * @returns {'image'|'video'|'carousel'|'reel'|'story'|'short'}
+ */
+function normalizePostType(type) {
+  if (!type) return 'image';
+  const lower = type.toLowerCase();
+  if (lower === 'video' || lower === 'reel' || lower === 'carousel' || lower === 'story' || lower === 'short') {
+    return /** @type {any} */ (lower);
+  }
+  if (lower === 'sidecar') return 'carousel';
+  return 'image';
+}
+
+/**
  * Merge all sub-task results into a single dossier object.
  *
  * @param {Array<{ name: string, result: Object }>} taskResults
@@ -603,8 +645,12 @@ function compileDossier(taskResults, scrapedData) {
           avgShares: null,
           avgViews: null,
         },
-        recentPosts: [],
-        topPosts: [],
+        recentPosts: (scrapedData?.posts || []).slice(0, 12).map((p) => mapPostToSchema(p)),
+        topPosts: (scrapedData?.posts || [])
+          .slice()
+          .sort((a, b) => (b.likes || b.likeCount || 0) - (a.likes || a.likeCount || 0))
+          .slice(0, 6)
+          .map((p) => mapPostToSchema(p)),
         scrapedAt: new Date().toISOString(),
       },
     ];
