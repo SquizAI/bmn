@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCurrentSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
+import { normalizeDirections } from './use-brand-generation';
 import type { BrandDirection, BrandDirectionsResult } from './use-brand-generation';
 
 // ── Progress phase types ─────────────────────────────────────────
@@ -84,7 +85,7 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
         setMessage(progressData.message);
       }
       if (progressData.data?.directions) {
-        setDirections(progressData.data.directions);
+        setDirections(normalizeDirections(progressData.data.directions));
       }
       if (progressData.data?.socialContext) {
         setSocialContext(progressData.data.socialContext);
@@ -100,7 +101,7 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
       if (data.result && typeof data.result === 'object') {
         const result = data.result as Partial<BrandDirectionsResult>;
         if (result.directions && result.directions.length > 0) {
-          setDirections(result.directions);
+          setDirections(normalizeDirections(result.directions));
         }
         if (result.socialContext) {
           setSocialContext(result.socialContext);

@@ -636,8 +636,27 @@ function withTimeout(promise, ms, label) {
  */
 function parseAiJson(text) {
   let jsonText = text.trim();
-  const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) jsonText = jsonMatch[1].trim();
+
+  // Strip markdown fences: ```json ... ``` (closed)
+  const closedFence = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (closedFence) {
+    jsonText = closedFence[1].trim();
+  } else {
+    // Handle unclosed fences: ```json ... (no closing ```)
+    const openFence = jsonText.match(/```(?:json)?\s*([\s\S]*)/);
+    if (openFence) {
+      jsonText = openFence[1].trim();
+    }
+  }
+
+  // If the text still doesn't start with { or [, try to find JSON within it
+  if (!jsonText.startsWith('{') && !jsonText.startsWith('[')) {
+    const jsonStart = jsonText.search(/[{[]/);
+    if (jsonStart !== -1) {
+      jsonText = jsonText.slice(jsonStart);
+    }
+  }
+
   return JSON.parse(jsonText);
 }
 

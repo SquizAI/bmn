@@ -41,6 +41,7 @@ import { useSaveBrandIdentity } from '@/hooks/use-wizard-actions';
 import {
   useDispatchBrandGeneration,
   useSelectBrandDirection,
+  normalizeDirections,
   type BrandDirection,
 } from '@/hooks/use-brand-generation';
 import { useBrandDirections } from '@/hooks/use-brand-directions';
@@ -223,7 +224,7 @@ export default function BrandIdentityPage() {
         onSuccess: (data) => {
           // Case 1: Server returned directions directly (cached or freshly generated)
           if (data?.directions?.length) {
-            setDirections(data.directions);
+            setDirections(normalizeDirections(data.directions));
             setPhase('choose-direction');
             return;
           }
@@ -353,8 +354,9 @@ export default function BrandIdentityPage() {
       { brandId },
       {
         onSuccess: (data) => {
-          if (data?.cached && data?.directions?.length) {
-            setDirections(data.directions);
+          // Handle both cached and freshly-generated directions
+          if (data?.directions?.length) {
+            setDirections(normalizeDirections(data.directions));
             setPhase('choose-direction');
             return;
           }
@@ -386,7 +388,7 @@ export default function BrandIdentityPage() {
       {
         onSuccess: (data) => {
           if (data?.directions?.length) {
-            setDirections(data.directions);
+            setDirections(normalizeDirections(data.directions));
             setPhase('choose-direction');
             return;
           }

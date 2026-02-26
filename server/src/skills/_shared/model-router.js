@@ -180,15 +180,25 @@ async function callProvider(provider, model, options) {
   switch (provider) {
     case 'anthropic': {
       const client = getAnthropicClient();
+      // When jsonMode is requested, use assistant prefill to force JSON output
+      const messages = [{ role: 'user', content: prompt }];
+      if (jsonMode) {
+        messages.push({ role: 'assistant', content: '{' });
+      }
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         temperature,
         ...(systemPrompt && { system: systemPrompt }),
-        messages: [{ role: 'user', content: prompt }],
+        messages,
       });
+      let text = response.content[0].text;
+      // Prepend the prefill opening brace that the model continues from
+      if (jsonMode) {
+        text = '{' + text;
+      }
       return {
-        text: response.content[0].text,
+        text,
         usage: {
           inputTokens: response.usage.input_tokens,
           outputTokens: response.usage.output_tokens,
