@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { useChatStore } from '@/stores/chat-store';
 import { useAuthStore } from '@/stores/auth-store';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+const SOCKET_URL =
+  import.meta.env.VITE_WS_URL ||
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  '';
 
 /**
  * Manages the Socket.io /chat namespace connection and event handling.

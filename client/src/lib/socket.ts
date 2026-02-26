@@ -1,7 +1,11 @@
 import { io, type Socket } from 'socket.io-client';
 import { supabase } from '@/lib/supabase';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || '';
+const SOCKET_URL =
+  import.meta.env.VITE_WS_URL ||
+  import.meta.env.VITE_SOCKET_URL ||
+  import.meta.env.VITE_API_URL ||
+  '';
 
 let socket: Socket | null = null;
 
