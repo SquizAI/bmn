@@ -24,7 +24,7 @@ export async function getSocket(): Promise<Socket> {
   socket = io(SOCKET_URL, {
     path: '/socket.io',
     auth: { token: session.access_token },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     reconnection: true,
     reconnectionAttempts: 10,
     reconnectionDelay: 1000,
