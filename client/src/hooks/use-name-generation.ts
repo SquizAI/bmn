@@ -104,14 +104,19 @@ export function parseNameGenerationResult(raw: unknown): NameGenerationResult {
     rationale: s.rationale || s.reasoning || '',
     pronunciation: s.pronunciation || undefined,
     scores: {
-      memorability: s.scores?.memorability ?? s.memorability ?? 7,
-      brandability: s.scores?.brandability ?? s.brandability ?? 7,
+      memorability: normalizeScore(s.scores?.memorability ?? s.memorabilityScore ?? s.memorability ?? 7),
+      brandability: normalizeScore(s.scores?.brandability ?? s.brandabilityScore ?? s.brandability ?? 7),
     },
-    domain: {
-      com: normalizeDomainStatus(s.domain?.com),
-      co: normalizeDomainStatus(s.domain?.co),
-      io: normalizeDomainStatus(s.domain?.io),
-      bestAvailable: s.domain?.bestAvailable ?? null,
+    domain: s.domain ? {
+      com: normalizeDomainStatus(s.domain.com),
+      co: normalizeDomainStatus(s.domain.co),
+      io: normalizeDomainStatus(s.domain.io),
+      bestAvailable: s.domain.bestAvailable ?? null,
+    } : {
+      com: s.domainLikelihood === 'likely' ? 'available' : s.domainLikelihood === 'unlikely' ? 'taken' : 'unchecked' as const,
+      co: 'unchecked' as const,
+      io: 'unchecked' as const,
+      bestAvailable: null,
     },
     socialHandles: s.socialHandles
       ? {
@@ -137,6 +142,12 @@ export function parseNameGenerationResult(raw: unknown): NameGenerationResult {
     disclaimer:
       data.disclaimer || empty.disclaimer,
   };
+}
+
+/** Convert scores from 0-100 scale to 0-10 if needed. */
+function normalizeScore(val: number): number {
+  if (val > 10) return Math.round(val / 10);
+  return val;
 }
 
 function normalizeDomainStatus(

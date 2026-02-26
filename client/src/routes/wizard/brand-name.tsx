@@ -230,7 +230,8 @@ export default function BrandNamePage() {
           onSuccess: (data) => {
             // Server returned suggestions directly (synchronous Claude call)
             if (data?.suggestions?.length) {
-              setSuggestions(data.suggestions);
+              const parsed = parseNameGenerationResult(data);
+              setSuggestions(parsed.suggestions);
               setHasGenerated(true);
               return;
             }
@@ -276,7 +277,8 @@ export default function BrandNamePage() {
       });
       // Handle direct results from synchronous Claude call
       if (data?.suggestions?.length) {
-        setSuggestions(data.suggestions);
+        const parsed = parseNameGenerationResult(data);
+        setSuggestions(parsed.suggestions);
         setHasGenerated(true);
       }
     } catch {

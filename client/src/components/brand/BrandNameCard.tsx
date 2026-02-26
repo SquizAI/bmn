@@ -118,8 +118,8 @@ export function BrandNameCard({
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
-  const domainBest = suggestion.domain.bestAvailable;
-  const comAvailable = suggestion.domain.com === 'available';
+  const domainBest = suggestion.domain?.bestAvailable;
+  const comAvailable = suggestion.domain?.com === 'available';
 
   return (
     <motion.button
@@ -161,10 +161,10 @@ export function BrandNameCard({
           {suggestion.technique}
         </span>
         <span className="text-xs text-text-muted">
-          {suggestion.scores.memorability}/10 memorable
+          {suggestion.scores?.memorability ?? '?'}/10 memorable
         </span>
         <span className="text-xs text-text-muted">
-          {suggestion.scores.brandability}/10 brandable
+          {suggestion.scores?.brandability ?? '?'}/10 brandable
         </span>
       </div>
 
@@ -178,7 +178,7 @@ export function BrandNameCard({
         ) : (
           <span className="text-sm text-text-muted">.com taken</span>
         )}
-        <AvailabilityDot status={suggestion.domain.com} />
+        <AvailabilityDot status={suggestion.domain?.com ?? 'unchecked'} />
       </div>
 
       {/* Social handles quick summary */}
@@ -198,7 +198,7 @@ export function BrandNameCard({
 
       {/* Trademark risk */}
       <div className="mt-3">
-        <TrademarkBadge risk={suggestion.trademark.risk} />
+        <TrademarkBadge risk={suggestion.trademark?.risk ?? 'unchecked'} />
       </div>
 
       {/* Rationale */}
@@ -234,14 +234,14 @@ export function BrandNameCard({
                 <div key={tld} className="flex items-center justify-between text-xs">
                   <span className="text-text-secondary">{cleanHandle}.{tld}</span>
                   <div className="flex items-center gap-1">
-                    <AvailabilityDot status={suggestion.domain[tld]} />
+                    <AvailabilityDot status={suggestion.domain?.[tld] ?? 'unchecked'} />
                     <span className={cn(
-                      suggestion.domain[tld] === 'available' ? 'text-success'
-                        : suggestion.domain[tld] === 'taken' ? 'text-error'
+                      suggestion.domain?.[tld] === 'available' ? 'text-success'
+                        : suggestion.domain?.[tld] === 'taken' ? 'text-error'
                         : 'text-text-muted',
                     )}>
-                      {suggestion.domain[tld] === 'available' ? 'Available'
-                        : suggestion.domain[tld] === 'taken' ? 'Taken'
+                      {suggestion.domain?.[tld] === 'available' ? 'Available'
+                        : suggestion.domain?.[tld] === 'taken' ? 'Taken'
                         : 'Unknown'}
                     </span>
                   </div>
@@ -263,7 +263,7 @@ export function BrandNameCard({
           )}
 
           {/* Trademark notes */}
-          {suggestion.trademark.notes && (
+          {suggestion.trademark?.notes && (
             <div>
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">Trademark Notes</p>
               <p className="text-xs text-text-secondary">{suggestion.trademark.notes}</p>
