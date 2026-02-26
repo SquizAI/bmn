@@ -46,7 +46,7 @@ export const validateInput = {
       };
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
 
     const prompts = {
       social_handle: `Validate if this looks like a real social media handle (not gibberish, not offensive). Handle: "${input}". Return JSON: { "valid": boolean, "reason": string }`,

@@ -298,7 +298,7 @@ export async function composeBundleImage({ prompt, bundleName, productDescriptio
 
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.0-pro',
+      model: 'gemini-3.1-pro-preview',
       generationConfig: { responseMimeType: 'image/png' },
     });
 

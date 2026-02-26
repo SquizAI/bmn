@@ -25,7 +25,7 @@ export const MODEL_ROUTES = {
   'brand-vision': {
     model: 'claude-sonnet-4-6',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-pro',
+    fallbackModel: 'gemini-3.1-pro-preview',
     fallbackProvider: 'google',
     reason: 'Best creative + structured output',
     estimatedCostPer1kTokens: 0.009,
@@ -33,7 +33,7 @@ export const MODEL_ROUTES = {
   'social-analysis': {
     model: 'claude-sonnet-4-6',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-pro',
+    fallbackModel: 'gemini-3.1-pro-preview',
     fallbackProvider: 'google',
     reason: 'Extended thinking for complex analysis',
     estimatedCostPer1kTokens: 0.009,
@@ -49,7 +49,7 @@ export const MODEL_ROUTES = {
   'chatbot': {
     model: 'claude-haiku-4-5',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-flash',
+    fallbackModel: 'gemini-3-flash-preview',
     fallbackProvider: 'google',
     reason: 'Fast + affordable conversational AI',
     estimatedCostPer1kTokens: 0.0024,
@@ -57,13 +57,13 @@ export const MODEL_ROUTES = {
   'extraction': {
     model: 'claude-haiku-4-5',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-flash',
+    fallbackModel: 'gemini-3-flash-preview',
     fallbackProvider: 'google',
     reason: 'Fast + cheap structured extraction',
     estimatedCostPer1kTokens: 0.0024,
   },
   'validation': {
-    model: 'gemini-3.0-flash',
+    model: 'gemini-3-flash-preview',
     provider: 'google',
     fallbackModel: 'claude-haiku-4-5',
     fallbackProvider: 'anthropic',
@@ -71,7 +71,7 @@ export const MODEL_ROUTES = {
     estimatedCostPer1kTokens: 0.000375,
   },
   'large-context': {
-    model: 'gemini-3.0-pro',
+    model: 'gemini-3.1-pro-preview',
     provider: 'google',
     fallbackModel: 'claude-sonnet-4-6',
     fallbackProvider: 'anthropic',
@@ -81,7 +81,7 @@ export const MODEL_ROUTES = {
   'context-analysis': {
     model: 'claude-haiku-4-5',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-flash',
+    fallbackModel: 'gemini-3-flash-preview',
     fallbackProvider: 'google',
     reason: 'Fast context distillation + archetype suggestion',
     estimatedCostPer1kTokens: 0.0024,
@@ -89,7 +89,7 @@ export const MODEL_ROUTES = {
   'brand-validation': {
     model: 'claude-haiku-4-5',
     provider: 'anthropic',
-    fallbackModel: 'gemini-3.0-flash',
+    fallbackModel: 'gemini-3-flash-preview',
     fallbackProvider: 'google',
     reason: 'Fast validation + harmonization of generated directions',
     estimatedCostPer1kTokens: 0.0024,
@@ -180,23 +180,23 @@ async function callProvider(provider, model, options) {
   switch (provider) {
     case 'anthropic': {
       const client = getAnthropicClient();
-      // When jsonMode is requested, use assistant prefill to force JSON output
       const messages = [{ role: 'user', content: prompt }];
+      // Enhance system prompt to enforce JSON output when jsonMode is requested
+      let effectiveSystem = systemPrompt || '';
       if (jsonMode) {
-        messages.push({ role: 'assistant', content: '{' });
+        const jsonInstruction = 'IMPORTANT: You MUST respond with ONLY valid JSON. No markdown fences, no explanatory text, no comments. Start your response with { or [.';
+        effectiveSystem = effectiveSystem
+          ? `${effectiveSystem}\n\n${jsonInstruction}`
+          : jsonInstruction;
       }
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
         temperature,
-        ...(systemPrompt && { system: systemPrompt }),
+        ...(effectiveSystem && { system: effectiveSystem }),
         messages,
       });
-      let text = response.content[0].text;
-      // Prepend the prefill opening brace that the model continues from
-      if (jsonMode) {
-        text = '{' + text;
-      }
+      const text = response.content[0].text;
       return {
         text,
         usage: {
