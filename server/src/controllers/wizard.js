@@ -16,7 +16,7 @@ import {
   VALIDATION_SYSTEM,
   buildValidationPrompt,
 } from '../skills/brand-generator/prompts.js';
-import { SYSTEM_PROMPT as NAME_GENERATOR_PROMPT } from '../skills/name-generator/prompts.js';
+// Name generator prompt is now inline in generateNames() for JSON-only output
 import { analyzeCompetitors as runCompetitorAnalysis } from '../services/competitor.js';
 import { scrapeWebsite } from '../services/website-scraper.js';
 import { generateDossierPdf } from '../services/pdf-generator.js';
@@ -1160,33 +1160,65 @@ export async function generateNames(req, res, next) {
     if (req.body?.archetype) contextParts.push(`User-Preferred Archetype: ${req.body.archetype}`);
     if (req.body?.traits?.length > 0) contextParts.push(`User Traits: ${req.body.traits.join(', ')}`);
 
-    const taskPrompt = `Generate 8-10 creative brand name suggestions based on the following brand identity context:
+    const nameSystemPrompt = `You are a brand naming expert. You MUST respond with ONLY valid JSON — no markdown, no explanation, no narrative, no tool calls. Your entire response must be a single JSON object.
 
-Brand ID: ${brandId}
+Return this exact JSON structure:
+{
+  "suggestions": [
+    {
+      "name": "BrandName",
+      "strategy": "evocative|descriptive|compound|abstract|metaphorical|acronym|personal",
+      "rationale": "1-2 sentence explanation of why this name works",
+      "confidence": 0.85,
+      "pronunciationGuide": "brand-name",
+      "memorabilityScore": 85,
+      "brandabilityScore": 90,
+      "domainLikelihood": "likely|possible|unlikely",
+      "tagline": "Optional short tagline"
+    }
+  ],
+  "topRecommendation": "BestNameHere"
+}
+
+NAMING RULES:
+- Names must be 1-3 words maximum
+- Easy to spell and pronounce in English
+- No negative connotations in major languages
+- Use at least 3 different naming strategies across suggestions
+- Include at least 2 "safe" options and 2 "bold" options
+- Sort by confidence score (highest first)`;
+
+    const taskPrompt = `Generate 8-10 creative brand name suggestions for this brand:
 
 <brand_context>
 ${contextParts.length > 0 ? contextParts.join('\n') : 'No prior brand context available. Generate creative, versatile brand names suitable for a personal creator brand.'}
 </brand_context>
 
 ${req.body?.userPreferences ? `<user_preferences>\n${JSON.stringify(req.body.userPreferences, null, 2)}\n</user_preferences>\n` : ''}
-Generate names using various techniques (portmanteau, evocative, invented, metaphor, descriptive). For each name, provide rationale, pronunciation guide, memorability/brandability scores, and note that domain/trademark checks require separate verification. Return as structured JSON per the output format.`;
+Respond with ONLY the JSON object. No other text.`;
 
     logger.info({ brandId, userId }, 'Calling Claude for brand name suggestions');
 
     const aiResult = await routeModel('name-generation', {
-      systemPrompt: NAME_GENERATOR_PROMPT,
+      systemPrompt: nameSystemPrompt,
       prompt: taskPrompt,
       maxTokens: 6144,
       temperature: 0.9,
       jsonMode: true,
     });
 
-    // Parse the AI response
+    // Parse the AI response — try direct JSON, then extract from markdown/narrative
     let parsed;
     try {
       let jsonText = aiResult.text.trim();
+      // Strip markdown code fences if present
       const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) jsonText = jsonMatch[1].trim();
+      // Try to find JSON object in response if it starts with non-JSON text
+      if (!jsonText.startsWith('{')) {
+        const objMatch = jsonText.match(/\{[\s\S]*"suggestions"[\s\S]*\}/);
+        if (objMatch) jsonText = objMatch[0];
+      }
       parsed = JSON.parse(jsonText);
     } catch (parseErr) {
       logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse AI names response');
