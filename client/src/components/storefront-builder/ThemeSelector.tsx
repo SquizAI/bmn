@@ -1,7 +1,5 @@
 import { useStorefrontStore } from '@/stores/storefront-store';
 import { useStorefrontThemes, useUpdateStorefront } from '@/hooks/use-storefront';
-import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Check, Palette } from 'lucide-react';
 
 export function ThemeSelector() {
@@ -25,7 +23,7 @@ export function ThemeSelector() {
       {isLoading ? (
         <div className="grid grid-cols-3 gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-lg" />
+            <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
           ))}
         </div>
       ) : (

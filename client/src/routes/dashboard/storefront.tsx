@@ -3,7 +3,6 @@ import { useStorefronts, useStorefront } from '@/hooks/use-storefront';
 import { useStorefrontStore } from '@/stores/storefront-store';
 import { StorefrontBuilder } from '@/components/storefront-builder/StorefrontBuilder';
 import { CreateStorefrontFlow } from '@/components/storefront-builder/CreateStorefrontFlow';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Store } from 'lucide-react';
 
 export default function StorefrontPage() {
@@ -47,8 +46,8 @@ export default function StorefrontPage() {
   if (isLoading) {
     return (
       <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-[600px] w-full" />
+        <div className="h-8 w-64 rounded bg-muted animate-pulse" />
+        <div className="h-150 w-full rounded bg-muted animate-pulse" />
       </div>
     );
   }

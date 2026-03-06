@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useStorefrontStore, type Testimonial } from '@/stores/storefront-store';
 import {
-  useCreateTestimonial, useUpdateTestimonial, useDeleteTestimonial,
+  useCreateTestimonial, useUpdateTestimonial, useDeleteTestimonial
 } from '@/hooks/use-storefront';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,6 @@ import { Plus, Pencil, Trash2, Quote, Loader2, X } from 'lucide-react';
 
 export function TestimonialManager() {
   const { storefront, testimonials } = useStorefrontStore();
-  const createMutation = useCreateTestimonial();
-  const updateMutation = useUpdateTestimonial();
   const deleteMutation = useDeleteTestimonial();
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [isAdding, setIsAdding] = useState(false);

@@ -46,7 +46,7 @@ export function CreateStorefrontFlow() {
   // Auto-generate slug from brand name
   const handleBrandSelect = (brandId: string) => {
     setValue('brandId', brandId);
-    const brand = brands?.find((b: { id: string }) => b.id === brandId);
+    const brand = brands?.items?.find((b) => b.id === brandId);
     if (brand) {
       const autoSlug = (brand.name as string)
         .toLowerCase()
@@ -104,7 +104,7 @@ export function CreateStorefrontFlow() {
               </div>
             ) : (
               <div className="grid gap-2">
-                {(brands || []).map((brand: { id: string; name: string; status: string; primaryColor: string | null }) => (
+                {(brands?.items || []).map((brand) => (
                   <button
                     key={brand.id}
                     type="button"

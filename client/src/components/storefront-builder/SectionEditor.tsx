@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { useStorefrontStore } from '@/stores/storefront-store';
 import { useUpdateSection } from '@/hooks/use-storefront';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Layers } from 'lucide-react';
 
 export function SectionEditor() {
@@ -51,14 +50,13 @@ export function SectionEditor() {
 
 function SectionForm({
   section,
-  storefrontId,
   onUpdate,
 }: {
   section: { id: string; sectionType: string; content: Record<string, unknown> };
   storefrontId: string;
   onUpdate: (content: Record<string, unknown>) => void;
 }) {
-  const { register, handleSubmit, watch } = useForm({
+  const { register, handleSubmit } = useForm({
     defaultValues: section.content as Record<string, string>,
   });
 

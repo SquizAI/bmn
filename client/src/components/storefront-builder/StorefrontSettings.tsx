@@ -144,7 +144,7 @@ export function StorefrontSettings() {
       <div className="flex items-center justify-between pt-4 border-t">
         <Button
           type="button"
-          variant="destructive"
+          variant="danger"
           size="sm"
           onClick={handleDelete}
           disabled={deleteMutation.isPending}

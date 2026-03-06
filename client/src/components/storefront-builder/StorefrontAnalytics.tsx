@@ -3,7 +3,25 @@ import { useStorefrontStore } from '@/stores/storefront-store';
 import { useStorefrontAnalytics } from '@/hooks/use-storefront';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+
+interface AnalyticsTotals {
+  pageViews: number;
+  uniqueVisitors: number;
+  productViews: number;
+  addToCarts: number;
+  checkouts: number;
+  revenue: number;
+}
+
+interface DailyMetric {
+  date: string;
+  pageViews: number;
+}
+
+interface AnalyticsData {
+  totals: AnalyticsTotals;
+  daily: DailyMetric[];
+}
 import {
   Eye, Users, ShoppingBag, ShoppingCart, CreditCard, DollarSign,
   TrendingUp,
@@ -18,7 +36,8 @@ const PERIODS = [
 export function StorefrontAnalytics() {
   const { storefront } = useStorefrontStore();
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
-  const { data, isLoading } = useStorefrontAnalytics(storefront?.id || '', period);
+  const { data: rawData, isLoading } = useStorefrontAnalytics(storefront?.id || '', period);
+  const data = rawData as AnalyticsData | undefined;
 
   if (!storefront) return null;
 
@@ -65,8 +84,8 @@ export function StorefrontAnalytics() {
           <Card key={m.label} className="p-4">
             {isLoading ? (
               <>
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-8 w-16" />
+                <div className="h-4 w-20 mb-2 rounded bg-muted animate-pulse" />
+                <div className="h-8 w-16 rounded bg-muted animate-pulse" />
               </>
             ) : (
               <>
@@ -74,7 +93,7 @@ export function StorefrontAnalytics() {
                   <m.icon className={`h-4 w-4 ${m.color}`} />
                   <span className="text-xs text-muted-foreground font-medium">{m.label}</span>
                 </div>
-                <p className="text-2xl font-bold">{m.value.toLocaleString()}</p>
+                <p className="text-2xl font-bold">{typeof m.value === 'number' ? m.value.toLocaleString() : m.value}</p>
               </>
             )}
           </Card>
@@ -110,12 +129,12 @@ export function StorefrontAnalytics() {
       )}
 
       {/* Daily Chart Placeholder */}
-      {data?.daily?.length > 0 && (
+      {(data?.daily?.length ?? 0) > 0 && data && (
         <Card className="p-6 mt-4">
           <h3 className="font-semibold mb-4">Daily Page Views</h3>
           <div className="flex items-end gap-1 h-32">
-            {data.daily.map((d: { date: string; pageViews: number }, i: number) => {
-              const max = Math.max(...data.daily.map((x: { pageViews: number }) => x.pageViews), 1);
+            {data.daily.map((d, i) => {
+              const max = Math.max(...data.daily.map((x) => x.pageViews), 1);
               const height = (d.pageViews / max) * 100;
               return (
                 <div
