@@ -38,6 +38,9 @@ storefrontRoutes.post(
 // GET /api/v1/storefronts -- List user's storefronts
 storefrontRoutes.get('/', storefrontController.listStorefronts);
 
+// GET /api/v1/storefronts/themes -- List available themes (must be before :storefrontId)
+storefrontRoutes.get('/themes', storefrontController.listThemes);
+
 // GET /api/v1/storefronts/:storefrontId -- Get storefront details
 storefrontRoutes.get(
   '/:storefrontId',

@@ -20,6 +20,8 @@ import { apiKeyRoutes } from './api/v1/api-keys.js';
 import { publicApiRoutes } from './api/v1/public-api.js';
 import { proxyRoutes } from './proxy.js';
 import { jobRoutes } from './api/v1/jobs.js';
+import { storefrontRoutes } from './storefronts.js';
+import { publicStoreRoutes } from './public-store.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { apiKeyAuth } from '../middleware/api-key-auth.js';
 import { authLimiter as _authLimiter, webhookLimiter, proxyLimiter } from '../middleware/rate-limit.js';
@@ -51,6 +53,9 @@ export function registerRoutes(app) {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/webhooks', webhookLimiter, webhookRoutes);
 
+  // -- Public storefront routes (no auth -- serves published store data to customers) --
+  app.use('/api/v1/store', publicStoreRoutes);
+
   // -- Proxy routes (public -- img tags can't send auth headers cross-origin) --
   // Security: allowlisted to social media CDN hostnames only (see proxy.js)
   app.use('/api/v1/proxy', proxyLimiter, proxyRoutes);
@@ -80,6 +85,9 @@ export function registerRoutes(app) {
 
   // -- Integrations routes --
   app.use('/api/v1/integrations', requireAuth, integrationRoutes);
+
+  // -- Storefront builder routes (authenticated) --
+  app.use('/api/v1/storefronts', requireAuth, storefrontRoutes);
 
   // -- User webhook management (requires session auth) --
   app.use('/api/v1/user-webhooks', requireAuth, userWebhookRoutes);
