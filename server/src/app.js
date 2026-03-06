@@ -11,6 +11,8 @@ import { generalLimiter } from './middleware/rate-limit.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { notFoundHandler } from './middleware/not-found.js';
 import { registerRoutes } from './routes/index.js';
+import { createBullBoardAdapter } from './lib/bull-board.js';
+import { requireAdmin } from './middleware/auth.js';
 
 /**
  * Create and configure the Express application.
@@ -67,6 +69,12 @@ export function createApp() {
   // ROUTES
   // ──────────────────────────────────────────────
   registerRoutes(app);
+
+  // ──────────────────────────────────────────────
+  // BULL BOARD (admin-only queue dashboard)
+  // ──────────────────────────────────────────────
+  const { serverAdapter } = createBullBoardAdapter();
+  app.use('/admin/queues', requireAdmin, serverAdapter.getRouter());
 
   // ──────────────────────────────────────────────
   // ERROR HANDLING (must be after routes)

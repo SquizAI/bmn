@@ -16,6 +16,7 @@ import { useBrandDetail } from '@/hooks/use-brand-detail';
 import { useGenerationProgress } from '@/hooks/use-generation-progress';
 import { useUIStore } from '@/stores/ui-store';
 import { apiClient } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { ROUTES, QUERY_KEYS } from '@/lib/constants';
 
 // ------ Progress Bar ------
@@ -148,11 +149,15 @@ export default function BrandLogosEditPage() {
         const formData = new FormData();
         formData.append('file', file);
 
+        const { data: { session } } = await supabase.auth.getSession();
         const response = await fetch(
           `${import.meta.env.VITE_API_URL || ''}/api/v1/brands/${brandId}/logos/upload`,
           {
             method: 'POST',
             body: formData,
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
           },
         );
 

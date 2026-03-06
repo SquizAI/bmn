@@ -1,26 +1,13 @@
 // server/src/workers/print-export.js
 
 import { Worker } from 'bullmq';
-import { redis } from '../lib/redis.js';
+import { redis, getBullRedisConfig } from '../lib/redis.js';
 import { QUEUE_CONFIGS } from '../queues/index.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { dispatchJob } from '../queues/dispatch.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
 import { getOpenAIClient } from '../services/providers.js';
-
-/**
- * @returns {import('ioredis').RedisOptions}
- */
-function getBullRedisConfig() {
-  return {
-    host: redis.options.host,
-    port: redis.options.port,
-    password: redis.options.password,
-    db: redis.options.db,
-    maxRetriesPerRequest: null,
-  };
-}
 
 /**
  * Build a print-ready generation prompt from a packaging template and brand data.

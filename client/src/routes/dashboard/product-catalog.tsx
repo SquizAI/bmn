@@ -129,10 +129,10 @@ export default function ProductCatalogPage() {
   const { data: categoriesData } = useProductCategories();
   const { data: tiersData } = useProductTiers();
 
-  const products = productsData?.items ?? [];
+  const products = useMemo(() => productsData?.items ?? [], [productsData]);
   const total = productsData?.total ?? 0;
   const categories = categoriesData ?? [];
-  const tiers = tiersData?.tiers ?? [];
+  const tiers = useMemo(() => tiersData?.tiers ?? [], [tiersData]);
 
   // Count products per tier (from current filtered set or full catalog)
   const tierProductCounts = useMemo(() => {

@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { MobileFooterNav } from '@/components/layout/mobile-footer-nav';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { useUIStore } from '@/stores/ui-store';
 import { useActiveBrandInit } from '@/hooks/use-active-brand';
 import { cn } from '@/lib/utils';
@@ -42,7 +43,9 @@ function AppShell({ showSidebar = true }: AppShellProps) {
         )}
       >
         <div className="mx-auto max-w-[var(--bmn-max-width-content)] p-3 sm:p-4 md:p-6">
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
       {showSidebar && <MobileFooterNav />}

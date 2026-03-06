@@ -5,22 +5,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js';
 import { ExpressAdapter } from '@bull-board/express';
 import { Queue } from 'bullmq';
 import { redis } from './redis.js';
-
-/**
- * Queue names that match the BullMQ workers defined in server/src/workers/.
- * Every queue registered here appears in the Bull Board dashboard.
- */
-const QUEUE_NAMES = [
-  'brand-analysis',
-  'logo-generation',
-  'mockup-generation',
-  'bundle-composition',
-  'social-analysis',
-  'brand-identity',
-  'email-send',
-  'crm-sync',
-  'cleanup',
-];
+import { QUEUE_CONFIGS } from '../queues/index.js';
 
 /**
  * Create Bull Board Express adapter and register all queues.
@@ -34,7 +19,9 @@ export function createBullBoardAdapter() {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
-  const queues = QUEUE_NAMES.map((name) => new Queue(name, { connection: redis }));
+  const queues = Object.keys(QUEUE_CONFIGS).map(
+    (name) => new Queue(name, { connection: redis })
+  );
 
   createBullBoard({
     queues: queues.map((q) => new BullMQAdapter(q)),

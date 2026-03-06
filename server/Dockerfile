@@ -1,4 +1,6 @@
 # server/Dockerfile
+#
+# Build context: repo root (to include shared/ directory)
 
 # ============================================
 # Stage 1: Dependencies
@@ -8,7 +10,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 # Copy dependency files only (for layer caching)
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY server/package.json server/package-lock.json* server/pnpm-lock.yaml* ./
 
 # Install production dependencies only
 RUN npm install --omit=dev --legacy-peer-deps
@@ -20,11 +22,11 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY server/package.json server/package-lock.json* server/pnpm-lock.yaml* ./
 RUN npm install --legacy-peer-deps
 
 # Copy source code
-COPY src/ ./src/
+COPY server/src/ ./src/
 
 # ============================================
 # Stage 3: Production
@@ -46,6 +48,12 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy application source from build stage
 COPY --from=build /app/src ./src
 COPY --from=build /app/package.json ./package.json
+
+# Copy shared schemas so server imports can resolve them.
+# Imports use varying levels of ../ so we place shared at /app/shared/
+# and symlink /shared/ -> /app/shared/ to cover both resolved paths.
+COPY shared/ /app/shared/
+RUN ln -s /app/shared /shared
 
 # Set ownership to non-root user
 RUN chown -R bmn:bmn /app

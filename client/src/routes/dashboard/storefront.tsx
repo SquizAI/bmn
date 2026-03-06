@@ -41,7 +41,7 @@ export default function StorefrontPage() {
     }
 
     return () => reset();
-  }, [storefrontDetail]);
+  }, [storefrontDetail, setStorefront, setSections, setTestimonials, setFaqs, setTheme, reset]);
 
   if (isLoading) {
     return (

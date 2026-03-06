@@ -17,7 +17,7 @@ dotenvConfig({ path: resolve(import.meta.dirname, '../../../.env') });
  *   import { config } from '../config/index.js';
  *   console.log(config.PORT); // number, guaranteed to exist
  */
-export const config = cleanEnv(process.env, {
+const env = cleanEnv(process.env, {
   // ── App ────────────────────────────────────────────────────
   NODE_ENV: str({
     choices: ['development', 'staging', 'production', 'test'],
@@ -157,4 +157,12 @@ export const config = cleanEnv(process.env, {
     default: 'https://us.posthog.com',
     desc: 'PostHog API host',
   }),
+});
+
+export const config = Object.freeze({
+  ...env,
+  isDev: env.NODE_ENV === 'development',
+  isTest: env.NODE_ENV === 'test',
+  isProd: env.NODE_ENV === 'production',
+  isProduction: env.NODE_ENV === 'production',
 });

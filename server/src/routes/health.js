@@ -79,7 +79,13 @@ healthRoute.get('/', async (_req, res) => {
   try {
     const bullStart = Date.now();
     const testQueue = new Queue('health-check', {
-      connection: { url: config.REDIS_URL },
+      connection: {
+        host: redis.options.host,
+        port: redis.options.port,
+        password: redis.options.password,
+        db: redis.options.db,
+        maxRetriesPerRequest: null,
+      },
     });
 
     await testQueue.getJobCounts();

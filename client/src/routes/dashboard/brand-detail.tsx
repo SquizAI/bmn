@@ -18,6 +18,7 @@ import { ColorPalette, type ColorEntry } from '@/components/color-palette';
 import { ImageGallery, type GalleryImage } from '@/components/image-gallery';
 import { RevenueChart, type RevenueBarData } from '@/components/revenue-chart';
 import { useBrandDetail } from '@/hooks/use-brand-detail';
+import { ApiClientError } from '@/lib/api';
 import { useBrandStore } from '@/stores/brand-store';
 import { ROUTES } from '@/lib/constants';
 import { formatCurrency, capitalize, cn } from '@/lib/utils';
@@ -51,14 +52,27 @@ export default function BrandDetailPage() {
   }
 
   if (error || !brand) {
+    const is404 = error instanceof ApiClientError && error.status === 404;
     return (
       <div className="flex flex-col items-center gap-4 py-20">
-        <p className="text-lg text-text-secondary">Brand not found</p>
-        <Link to={ROUTES.DASHBOARD}>
-          <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />}>
-            Back to Dashboard
-          </Button>
-        </Link>
+        <p className="text-lg text-text-secondary">
+          {is404 ? 'Brand not found' : 'Failed to load brand'}
+        </p>
+        <div className="flex items-center gap-2">
+          {!is404 && (
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          )}
+          <Link to={ROUTES.DASHBOARD}>
+            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+              Back to Dashboard
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }

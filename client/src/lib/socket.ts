@@ -48,6 +48,13 @@ export async function getSocket(): Promise<Socket> {
     console.error('[Socket] Connection error:', err.message);
   });
 
+  // Keep socket auth token in sync with Supabase session refreshes
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (socket && session?.access_token) {
+      socket.auth = { token: session.access_token };
+    }
+  });
+
   return socket;
 }
 

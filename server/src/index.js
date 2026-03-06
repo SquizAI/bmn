@@ -10,9 +10,10 @@ import { createSocketServer } from './sockets/index.js';
 import { config } from './config/index.js';
 import { logger } from './lib/logger.js';
 import { redis } from './lib/redis.js';
-import { initQueues, shutdownQueues } from './queues/index.js';
+import { initQueues, shutdownQueues, getQueue } from './queues/index.js';
 import { initWorkers, shutdownWorkers } from './workers/index.js';
 import { initializeSkillRegistry } from './skills/_shared/tool-registry.js';
+import { registerAbandonmentCron } from './cron/detect-abandonment.js';
 
 /**
  * Boot the server.
@@ -44,6 +45,9 @@ async function main() {
 
   // Step 5: Initialize BullMQ queues (must be before workers)
   initQueues();
+
+  // Step 5b: Register abandonment detection cron (runs hourly via cleanup queue)
+  await registerAbandonmentCron(getQueue('cleanup'));
 
   // Step 6: Start BullMQ workers (logo gen, mockup gen, CRM sync, etc.)
   initWorkers(io);

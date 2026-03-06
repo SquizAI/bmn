@@ -47,7 +47,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME || 'deploy' }}
           key: ${{ secrets.DO_SSH_KEY }}
           script_stop: true
-          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,BFL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,SENTRY_DSN,POSTHOG_API_KEY,APIFY_API_TOKEN,FIRECRAWL_API_KEY
+          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,BFL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,STRIPE_WEBHOOK_SECRET,SENTRY_DSN,POSTHOG_API_KEY,APIFY_API_TOKEN,FIRECRAWL_API_KEY,REDIS_PASSWORD,RESUME_TOKEN_SECRET,RESEND_API_KEY,CORS_ORIGINS,VITE_STRIPE_PUBLISHABLE_KEY
           script: |
             cd /opt/bmn
             echo "=== Fixing permissions ==="
@@ -87,6 +87,12 @@ jobs:
             inject_secret "POSTHOG_API_KEY" "$POSTHOG_API_KEY"
             inject_secret "APIFY_API_TOKEN" "$APIFY_API_TOKEN"
             inject_secret "FIRECRAWL_API_KEY" "$FIRECRAWL_API_KEY"
+            inject_secret "REDIS_PASSWORD" "$REDIS_PASSWORD"
+            inject_secret "STRIPE_WEBHOOK_SECRET" "$STRIPE_WEBHOOK_SECRET"
+            inject_secret "RESUME_TOKEN_SECRET" "$RESUME_TOKEN_SECRET"
+            inject_secret "RESEND_API_KEY" "$RESEND_API_KEY"
+            inject_secret "CORS_ORIGINS" "$CORS_ORIGINS"
+            inject_secret "VITE_STRIPE_PUBLISHABLE_KEY" "$VITE_STRIPE_PUBLISHABLE_KEY"
 
             echo "=== Building and deploying ==="
             bash deploy/deploy.sh
@@ -109,6 +115,12 @@ jobs:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
           FIRECRAWL_API_KEY: ${{ secrets.FIRECRAWL_API_KEY }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          RESUME_TOKEN_SECRET: ${{ secrets.RESUME_TOKEN_SECRET }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
 
       - name: Notify on failure
         if: failure()

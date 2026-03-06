@@ -12,24 +12,11 @@
 
 import { Worker } from 'bullmq';
 import * as Sentry from '@sentry/node';
-import { redis } from '../lib/redis.js';
+import { redis, getBullRedisConfig } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';
 import { buildSafePrompt } from '../skills/_shared/prompt-utils.js';
-
-/**
- * @returns {import('ioredis').RedisOptions}
- */
-function getBullRedisConfig() {
-  return {
-    host: redis.options.host,
-    port: redis.options.port,
-    password: redis.options.password,
-    db: redis.options.db,
-    maxRetriesPerRequest: null,
-  };
-}
 
 // ------ Prompt Templates ------
 

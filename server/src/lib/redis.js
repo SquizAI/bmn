@@ -39,3 +39,19 @@ redis.on('error', (err) => {
 redis.on('close', () => {
   logger.warn({ msg: 'Redis connection closed' });
 });
+
+/**
+ * Redis connection config for BullMQ.
+ * BullMQ needs raw config so it can create its own connections.
+ * Extracted from the shared redis client options.
+ * @returns {import('ioredis').RedisOptions}
+ */
+export function getBullRedisConfig() {
+  return {
+    host: redis.options.host,
+    port: redis.options.port,
+    password: redis.options.password,
+    db: redis.options.db,
+    maxRetriesPerRequest: null,
+  };
+}

@@ -16,6 +16,7 @@ import {
   useBrandEvolution,
 } from '@/hooks/use-dashboard';
 import { useActiveBrand } from '@/hooks/use-active-brand';
+import { SkeletonBar, SkeletonCard } from '@/components/ui/skeleton';
 import { RevenueCard } from '@/components/dashboard/revenue-card';
 import { MetricsGrid, type MetricItem } from '@/components/dashboard/metrics-grid';
 import { TopProductsList } from '@/components/dashboard/top-products-list';
@@ -31,8 +32,8 @@ import { BrandEvolution } from '@/components/dashboard/brand-evolution';
 export default function DashboardOverview() {
   const [period, setPeriod] = useState('30d');
   const activeBrand = useActiveBrand();
-  const { data: overview, isLoading: _overviewLoading } = useDashboardOverview(period);
-  const { data: topProducts, isLoading: _productsLoading } = useTopProducts(5);
+  const { data: overview, isLoading: overviewLoading } = useDashboardOverview(period);
+  const { data: topProducts, isLoading: productsLoading } = useTopProducts(5);
   const { data: healthScore, isLoading: healthLoading } = useBrandHealthScore(activeBrand?.id);
   const { data: restockData, isLoading: restockLoading } = useRestockAlerts();
   const { data: abTestData, isLoading: abTestLoading } = useABTests();
@@ -45,6 +46,30 @@ export default function DashboardOverview() {
     { value: '30d', label: '30 Days' },
     { value: '90d', label: '90 Days' },
   ];
+
+  if (overviewLoading && productsLoading) {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <SkeletonBar className="h-6 w-40" />
+            <SkeletonBar className="mt-2 h-4 w-64" />
+          </div>
+          <SkeletonBar className="h-8 w-48" />
+        </div>
+        <SkeletonCard><SkeletonBar className="h-24 w-full" /></SkeletonCard>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i}><SkeletonBar className="h-16 w-full" /></SkeletonCard>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <SkeletonCard className="md:col-span-2"><SkeletonBar className="h-40 w-full" /></SkeletonCard>
+          <SkeletonCard><SkeletonBar className="h-40 w-full" /></SkeletonCard>
+        </div>
+      </div>
+    );
+  }
 
   const metricsItems: MetricItem[] = [
     {

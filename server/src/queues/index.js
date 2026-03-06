@@ -1,7 +1,7 @@
 // server/src/queues/index.js
 
 import { Queue } from 'bullmq';
-import { redis } from '../lib/redis.js';
+import { redis, getBullRedisConfig } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -296,24 +296,6 @@ export const QUEUE_CONFIGS = {
 
 /** @type {Map<string, Queue>} */
 const queues = new Map();
-
-/**
- * Redis connection config for BullMQ.
- * BullMQ needs the raw config so it can create its own connections.
- * We extract connection options from the existing redis client.
- * @type {import('ioredis').RedisOptions}
- */
-function getBullRedisConfig() {
-  return {
-    host: redis.options.host,
-    port: redis.options.port,
-    password: redis.options.password,
-    db: redis.options.db,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: true,
-    lazyConnect: false,
-  };
-}
 
 /**
  * Initialize all BullMQ queues.

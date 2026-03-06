@@ -17,7 +17,7 @@
 
 import { Worker } from 'bullmq';
 import * as Sentry from '@sentry/node';
-import { redis } from '../lib/redis.js';
+import { redis, getBullRedisConfig } from '../lib/redis.js';
 import { QUEUE_CONFIGS } from '../queues/index.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
@@ -27,19 +27,6 @@ import {
   addTag as _addTag,
   updateCustomFields,
 } from '../services/ghl.js';
-
-/**
- * @returns {import('ioredis').RedisOptions}
- */
-function getBullRedisConfig() {
-  return {
-    host: redis.options.host,
-    port: redis.options.port,
-    password: redis.options.password,
-    db: redis.options.db,
-    maxRetriesPerRequest: null,
-  };
-}
 
 // ── Profile Resolution ────────────────────────────────────────────
 

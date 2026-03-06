@@ -442,7 +442,7 @@ export const useWizardStore = create<WizardState>()(
         name: 'bmn-wizard',
         version: 4,
         partialize: (state) => ({
-          dossier: state.dossier,
+          dossier: { ...state.dossier, rawDossier: null },
           nameGen: state.nameGen,
           brand: state.brand,
           design: state.design,
