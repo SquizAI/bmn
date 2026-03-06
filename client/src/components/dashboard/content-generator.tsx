@@ -24,7 +24,7 @@ interface GeneratedContent {
   platform: string;
   contentType: string;
   caption: string;
-  hashtags: string[];
+  hashtags?: string[];
   imagePrompt?: string;
   scheduledFor: string | null;
   createdAt: string;
@@ -114,7 +114,8 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
 
   const handleCopy = async () => {
     if (!generated) return;
-    const text = `${generated.caption}\n\n${generated.hashtags.map((h) => `#${h}`).join(' ')}`;
+    const hashtagText = generated.hashtags?.length ? `\n\n${generated.hashtags.map((h) => `#${h}`).join(' ')}` : '';
+    const text = `${generated.caption}${hashtagText}`;
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -276,9 +277,9 @@ function GeneratedPost({ content, onCopy, copied }: GeneratedPostProps) {
             {content.caption}
           </p>
 
-          {content.hashtags.length > 0 && (
+          {(content.hashtags?.length ?? 0) > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {content.hashtags.map((tag) => (
+              {content.hashtags!.map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex items-center gap-0.5 rounded-full bg-info-bg px-2 py-0.5 text-xs font-medium text-info"

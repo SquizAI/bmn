@@ -91,7 +91,8 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
   }));
 
   // Extract projections from product recommendations
-  const projections = (productsState?.revenueProjection || productsState?.products || [])
+  const productList = Array.isArray(productsState?.products) ? productsState.products : [];
+  const projections = productList
     .map((p) => ({
       productSku: p.sku || p.productSku || '',
       productName: p.name || p.productName || '',
