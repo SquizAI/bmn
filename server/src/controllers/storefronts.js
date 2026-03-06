@@ -364,7 +364,7 @@ export async function createStorefront(req, res, next) {
       data: toStorefrontResponse(storefront),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -393,7 +393,7 @@ export async function listStorefronts(req, res, next) {
       })),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -459,7 +459,7 @@ export async function getStorefront(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -505,7 +505,7 @@ export async function updateStorefront(req, res, next) {
 
     return res.json({ success: true, data: toStorefrontResponse(data) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -535,7 +535,7 @@ export async function deleteStorefront(req, res, next) {
     logger.info({ storefrontId }, 'Storefront deleted');
     return res.json({ success: true, data: { deleted: true } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -567,7 +567,7 @@ export async function publishStorefront(req, res, next) {
     logger.info({ storefrontId, slug: data.slug }, 'Storefront published');
     return res.json({ success: true, data: toStorefrontResponse(data) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -599,7 +599,7 @@ export async function unpublishStorefront(req, res, next) {
     logger.info({ storefrontId }, 'Storefront unpublished');
     return res.json({ success: true, data: toStorefrontResponse(data) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -625,7 +625,7 @@ export async function listSections(req, res, next) {
     if (error) throw error;
     return res.json({ success: true, data: (data || []).map(toSectionResponse) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -672,7 +672,7 @@ export async function createSection(req, res, next) {
     if (error) throw error;
     return res.status(201).json({ success: true, data: toSectionResponse(data) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -706,7 +706,7 @@ export async function updateSection(req, res, next) {
     if (!data) return res.status(404).json({ success: false, error: 'Section not found' });
     return res.json({ success: true, data: toSectionResponse(data) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -730,7 +730,7 @@ export async function deleteSection(req, res, next) {
     if (error) throw error;
     return res.json({ success: true, data: { deleted: true } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -768,7 +768,7 @@ export async function reorderSections(req, res, next) {
     if (error) throw error;
     return res.json({ success: true, data: (data || []).map(toSectionResponse) });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -799,7 +799,7 @@ export async function listTestimonials(req, res, next) {
       })),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -836,7 +836,7 @@ export async function createTestimonial(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -876,7 +876,7 @@ export async function updateTestimonial(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -898,7 +898,7 @@ export async function deleteTestimonial(req, res, next) {
     if (error) throw error;
     return res.json({ success: true, data: { deleted: true } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -928,7 +928,7 @@ export async function listFaqs(req, res, next) {
       })),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -962,7 +962,7 @@ export async function createFaq(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -999,7 +999,7 @@ export async function updateFaq(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1021,7 +1021,7 @@ export async function deleteFaq(req, res, next) {
     if (error) throw error;
     return res.json({ success: true, data: { deleted: true } });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1080,7 +1080,7 @@ export async function getAnalytics(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1109,7 +1109,7 @@ export async function listContacts(req, res, next) {
       })),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -1133,6 +1133,6 @@ export async function listThemes(req, res, next) {
       })),
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }

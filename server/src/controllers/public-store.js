@@ -136,7 +136,7 @@ export async function getPublicStore(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -158,7 +158,7 @@ export async function getStoreProducts(req, res, next) {
     const { category, limit, offset } = req.query;
 
     // Get brand's selected products
-    let query = supabaseAdmin
+    const query = supabaseAdmin
       .from('brand_products')
       .select('product_id, products(*)')
       .eq('brand_id', brandId);
@@ -197,7 +197,7 @@ export async function getStoreProducts(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -260,7 +260,7 @@ export async function getStoreProduct(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -359,7 +359,7 @@ export async function createOrUpdateCart(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -403,7 +403,7 @@ export async function getCart(req, res, next) {
       },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -485,7 +485,7 @@ export async function createCheckoutSession(req, res, next) {
       data: { checkoutUrl: checkoutSession.url },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -540,7 +540,7 @@ export async function submitContactForm(req, res, next) {
       data: { submitted: true },
     });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 }
 
@@ -553,7 +553,7 @@ export async function submitContactForm(req, res, next) {
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
-export async function trackPageView(req, res, next) {
+export async function trackPageView(req, res, _next) {
   try {
     const { slug } = req.params;
 
