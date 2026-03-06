@@ -3,6 +3,10 @@ import { useStorefrontStore } from '@/stores/storefront-store';
 import { useStorefrontAnalytics } from '@/hooks/use-storefront';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Eye, Users, ShoppingBag, ShoppingCart, CreditCard, DollarSign,
+  TrendingUp,
+} from 'lucide-react';
 
 interface AnalyticsTotals {
   pageViews: number;
@@ -22,10 +26,6 @@ interface AnalyticsData {
   totals: AnalyticsTotals;
   daily: DailyMetric[];
 }
-import {
-  Eye, Users, ShoppingBag, ShoppingCart, CreditCard, DollarSign,
-  TrendingUp,
-} from 'lucide-react';
 
 const PERIODS = [
   { id: '7d' as const, label: '7 Days' },
