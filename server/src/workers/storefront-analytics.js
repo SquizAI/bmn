@@ -118,7 +118,7 @@ export function initStorefrontAnalyticsWorker(_io) {
       if (type === 'metric-increment') {
         const { storefrontId, date, metric, increment } = job.data;
 
-        if (!storefrontId || !date || !metric || increment == null) {
+        if (!storefrontId || !date || !metric || increment === null || increment === undefined) {
           jobLog.warn({ storefrontId, date, metric, increment }, 'Missing required fields for metric-increment');
           return { processed: false, reason: 'Missing required fields' };
         }
