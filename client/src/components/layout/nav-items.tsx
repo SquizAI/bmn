@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   Fingerprint,
   BarChart3,
+  Store,
 } from 'lucide-react';
 import { ROUTES } from '@/lib/constants';
 
@@ -39,6 +40,7 @@ export function brandScopedNav(brandId: string): NavItem[] {
     { label: 'Products', path: ROUTES.DASHBOARD_BRAND_PRODUCTS(brandId), icon: <ShoppingBag className="h-4 w-4" /> },
     { label: 'Mockups', path: ROUTES.DASHBOARD_BRAND_MOCKUPS(brandId), icon: <Package className="h-4 w-4" /> },
     { label: 'Analytics', path: ROUTES.DASHBOARD_BRAND_ANALYTICS(brandId), icon: <BarChart3 className="h-4 w-4" /> },
+    { label: 'Storefront', path: ROUTES.DASHBOARD_STOREFRONT, icon: <Store className="h-4 w-4" /> },
   ];
 }
 

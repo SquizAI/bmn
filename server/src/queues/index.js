@@ -245,6 +245,38 @@ export const QUEUE_CONFIGS = {
     },
   },
 
+  'storefront-analytics': {
+    name: 'storefront-analytics',
+    concurrency: 2,
+    timeout: 60_000,        // 1 minute
+    priority: 8,
+    retry: {
+      attempts: 3,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 200, age: 86_400 },
+      removeOnFail: { count: 100, age: 604_800 },
+    },
+  },
+
+  'storefront-contact': {
+    name: 'storefront-contact',
+    concurrency: 5,
+    timeout: 30_000,        // 30 seconds
+    priority: 5,
+    retry: {
+      attempts: 3,
+      backoffDelay: 3_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 500, age: 86_400 },
+      removeOnFail: { count: 200, age: 604_800 },
+    },
+  },
+
   'dead-letter': {
     name: 'dead-letter',
     concurrency: 2,
@@ -333,6 +365,17 @@ export function initQueues() {
     {
       repeat: { every: 604_800_000 },  // 7 days
       jobId: 'recurring-health-score',
+    }
+  );
+
+  // Set up repeatable storefront analytics aggregation (every 24 hours)
+  const storefrontAnalyticsQueue = queues.get('storefront-analytics');
+  storefrontAnalyticsQueue.add(
+    'daily-aggregation',
+    { type: 'daily-aggregation' },
+    {
+      repeat: { every: 86_400_000 },  // 24 hours
+      jobId: 'recurring-storefront-analytics',
     }
   );
 

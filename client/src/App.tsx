@@ -73,6 +73,7 @@ const BrandLogosEdit = lazyRetry(() => import('@/routes/dashboard/brand-logos-ed
 const BrandProductsEdit = lazyRetry(() => import('@/routes/dashboard/brand-products-edit'));
 const BrandMockupsEdit = lazyRetry(() => import('@/routes/dashboard/brand-mockups-edit'));
 const BrandAnalyticsDetail = lazyRetry(() => import('@/routes/dashboard/brand-analytics-detail'));
+const StorefrontPage = lazyRetry(() => import('@/routes/dashboard/storefront'));
 
 // Admin
 const AdminUsersPage = lazyRetry(() => import('@/routes/admin/users'));
@@ -354,6 +355,14 @@ const router = createBrowserRouter([
             element: (
               <SuspenseRoute>
                 <ProductCatalogPage />
+              </SuspenseRoute>
+            ),
+          },
+          {
+            path: 'storefront',
+            element: (
+              <SuspenseRoute>
+                <StorefrontPage />
               </SuspenseRoute>
             ),
           },

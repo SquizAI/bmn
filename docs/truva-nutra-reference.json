@@ -1,0 +1,436 @@
+{
+  "source": "https://truva-nutra.square.site/",
+  "scrapedAt": "2026-02-25",
+  "platform": "Square Online (Weebly-based)",
+  "purpose": "Reference site for influencer storefront builder - this is the template being replaced",
+
+  "branding": {
+    "colorScheme": "light",
+    "colors": {
+      "primary": "#214A1E",
+      "accent": "#ADC59A",
+      "background": "#FFFFFF",
+      "textPrimary": "#214A1E",
+      "themeColor": "#ADC59A"
+    },
+    "fonts": {
+      "heading": "Larsseit",
+      "body": "Open Sans",
+      "accent": "Montserrat",
+      "fallback": ["Inter", "Helvetica", "Arial", "sans-serif"]
+    },
+    "typography": {
+      "h1": "59.66px",
+      "h2": "39.23px",
+      "body": "14px"
+    },
+    "components": {
+      "buttonPrimary": {
+        "background": "#ADC59A",
+        "textColor": "#000000",
+        "borderRadius": "100px",
+        "label": "Shop Now"
+      },
+      "buttonSecondary": {
+        "background": "#214A1E",
+        "textColor": "#FFFFFF",
+        "borderRadius": "100px",
+        "label": "Submit"
+      },
+      "input": {
+        "background": "#FFFFFF",
+        "textColor": "#1B1B1B",
+        "borderColor": "#949494",
+        "borderRadius": "8px"
+      }
+    },
+    "personality": {
+      "tone": "professional",
+      "energy": "medium",
+      "targetAudience": "health-conscious consumers"
+    },
+    "logo": {
+      "main": "https://86c36ed0ebf9f18035c6.cdn6.editmysite.com/uploads/b/86c36ed0ebf9f18035c6d2a730f334fce418632799c4bed9641f16a8f6dab475/ChatGPT%20Image%20Feb%2012%2C%202026%2C%2003_22_41%20PM-Photoroom_1770929079.png?width=2400&optimize=medium",
+      "footer": "https://86c36ed0ebf9f18035c6.cdn6.editmysite.com/uploads/b/86c36ed0ebf9f18035c6d2a730f334fce418632799c4bed9641f16a8f6dab475/TruvaNutra-icon-removebg-preview_1770925800.png?width=2400&optimize=medium"
+    }
+  },
+
+  "siteStructure": {
+    "navigation": [
+      { "label": "Home", "href": "/" },
+      { "label": "Shop", "href": "/s/shop" },
+      { "label": "Reviews", "href": "/#kANEti" },
+      { "label": "About Us", "href": "/#WGTgus" },
+      { "label": "Contact", "href": "/#nSuoWq" },
+      { "label": "FAQs", "href": "/#qSoBUt" },
+      { "label": "Blogs", "href": "/s/stories" }
+    ],
+    "footerLinks": [
+      { "label": "Disclaimer", "href": "/disclaimer" },
+      { "label": "Refund Policy", "href": "/refund-policy" },
+      { "label": "Privacy Policy", "href": "/privacy-policy" },
+      { "label": "Shipping Policy", "href": "/shipping-policy" },
+      { "label": "Terms & Conditions", "href": "/terms-and-conditions" }
+    ],
+    "sections": [
+      "hero-banner",
+      "tagline-bar",
+      "welcome-section",
+      "bundle-cards-grid",
+      "three-steps",
+      "find-your-stack",
+      "bundle-detail-sections",
+      "why-bundles",
+      "quality-trust",
+      "testimonials",
+      "faqs-accordion",
+      "about-us",
+      "contact-form",
+      "footer"
+    ]
+  },
+
+  "homepageContent": {
+    "hero": {
+      "headline": "Smarter Supplements. Real Results. Zero Guesswork.",
+      "subheadline": "Strategic bundles designed to work together—perfectly timed and scientifically backed.",
+      "cta": "Shop All Bundles",
+      "trustBar": "Third-party tested. Made in the USA. GMP certified."
+    },
+    "welcome": {
+      "title": "Welcome to Truva Nutra",
+      "body": "We believe supplementation should be simple, not overwhelming. That's why we created strategic bundles — products formulated to work together synergistically, timed for your daily routine, and priced to actually make sense. No more guessing what to take or when. Just real ingredients, real science, and real results you can feel."
+    },
+    "threeSteps": {
+      "title": "Three Simple Steps to Better Health",
+      "subtitle": "Choose. Follow. Feel.",
+      "steps": [
+        { "title": "Choose Your Goal", "description": "Pick the bundle that matches where you're at — energy, fitness, fat loss, sleep, or vitality." },
+        { "title": "Follow the Timing", "description": "Each bundle comes with a simple daily protocol. No confusion, just results." },
+        { "title": "Feel the Difference", "description": "Products designed to work together = bigger impact than taking them alone." }
+      ]
+    },
+    "whyBundles": {
+      "title": "Why Choose Bundles Over Individual Supplements?",
+      "reasons": [
+        { "title": "Designed to Work Together", "description": "Products formulated for synergy. Combined effects are greater than taking them separately." },
+        { "title": "Save 15-20%", "description": "Better value than buying individual products. More impact for less money." },
+        { "title": "Simple Daily Routine", "description": "No guessing when to take what. Each bundle includes clear timing instructions." }
+      ]
+    },
+    "quality": {
+      "title": "Quality You Can Trust",
+      "body": "Every Truva Nutra product is third-party tested for purity and potency, manufactured in GMP-certified facilities, and made in the USA. We don't cut corners on quality — because your health deserves better."
+    },
+    "testimonials": [
+      { "quote": "The Morning Momentum Stack is a game changer. I actually have energy all day without the caffeine crash.", "author": "Lena M., 34" },
+      { "quote": "Best workout stack I've ever used. My strength gains in 8 weeks have been insane.", "author": "Maria T., 29" },
+      { "quote": "Finally sleeping through the night. This stack changed everything for my recovery.", "author": "Mark J., 36" },
+      { "quote": "This gave me the clean boost I needed to power through my workouts. I feel focused, alert, and lighter on my feet. It's become part of my routine.", "author": "Ethan Wang., 42" }
+    ],
+    "aboutUs": {
+      "title": "About Us",
+      "subtitle": "From Nature to Nutrition - With Intention.",
+      "body": "At Truva Nutra, we bridge the gap between natural wellness and modern performance. We believe supplements should work with your body - not against it - supporting balance, focus, and longevity. Every formula is crafted in the USA, third-party tested, and made with responsibly sourced ingredients. Because wellness isn't one-size-fits-all - it's a lifestyle built on small, intentional choices that compound into lasting change."
+    },
+    "faqs": [
+      { "q": "What is Truva Nutra?", "a": "Truva Nutra is a premium wellness brand focused on bridging the gap between natural nutrition and modern performance." },
+      { "q": "Where are your products made?", "a": "All products are formulated and manufactured in the USA, using responsibly sourced ingredients and produced in GMP-certified, third-party-tested facilities." },
+      { "q": "Are your supplements third-party tested?", "a": "Yes. Every batch is independently tested to verify ingredient integrity, purity, and quality." },
+      { "q": "Do your products contain artificial additives?", "a": "Our formulations are created with clean, science-driven ingredients. We avoid unnecessary fillers, artificial colors, or harsh additives whenever possible." },
+      { "q": "How long will it take to see results?", "a": "Consistency is key - most customers begin to notice benefits within a few weeks." },
+      { "q": "Are your products suitable for both men and women?", "a": "Yes! Our product line supports a wide range of goals for men and women alike." },
+      { "q": "Are your products FDA-approved?", "a": "Dietary supplements are not evaluated or approved by the FDA. However, all products are manufactured in FDA-registered facilities that follow GMP." }
+    ],
+    "fdaDisclaimer": "The statements made regarding these products have not been evaluated by the Food and Drug Administration. The efficacy of these products has not been confirmed by FDA-approved research. These products are not intended to diagnose, treat, cure or prevent any disease."
+  },
+
+  "shopCategories": [
+    { "name": "Supplement Bundles", "slug": "supplement-bundles" },
+    { "name": "Pre-Workout", "slug": "pre-workout" },
+    { "name": "Protein & Creatine", "slug": "protein-creatine" },
+    { "name": "Greens & Superfoods", "slug": "greens-superfoods" },
+    { "name": "Vitamins & Minerals", "slug": "vitamins-minerals" },
+    { "name": "Digestive Health", "slug": "digestive-health" },
+    { "name": "Sleep & Recovery", "slug": "sleep-recovery" },
+    { "name": "Men's Health", "slug": "mens-health" },
+    { "name": "Brain & Focus", "slug": "brain-focus" },
+    { "name": "Weight Management", "slug": "weight-management" }
+  ],
+
+  "bundles": [
+    {
+      "name": "Morning Momentum Stack",
+      "sku": "morning-momentum-stack",
+      "price": "$86.32",
+      "tagline": "Wake Up. Show Up. Win the Day",
+      "subtitle": "Your Daily Foundation for Energy, Immunity & Gut Health",
+      "description": "Start your morning the right way — greens, vitamins, and probiotics working together so you actually feel good before the day even begins. No crash, no slump, just clean energy and a gut that's happy. This is the stack your morning routine has been missing.",
+      "benefits": ["All-day natural energy", "Immune system support", "Optimal gut health & nutrient absorption"],
+      "includedProducts": [
+        "ROC937 – Organic Super Greens (Watermelon)",
+        "ROC831 – Vitamin K2 + D3",
+        "ROC816 – Probiotic 40 Billion CFU"
+      ],
+      "timing": "Together in the morning (with or before breakfast)"
+    },
+    {
+      "name": "Fitness Performance Stack",
+      "sku": "fitness-performance-stack",
+      "price": "$107.02",
+      "tagline": "Train Harder. Recover Faster. Look Better.",
+      "subtitle": "Complete Pre + Post Workout Power",
+      "description": "Everything you need from the moment you walk into the gym to the moment you walk out. Pre-workout to fuel your session, creatine to build real strength, and protein to lock in your gains. Your workouts just got an upgrade.",
+      "benefits": ["Explosive workout energy", "Increased strength & muscle growth", "Faster recovery & lean gains"],
+      "includedProducts": [
+        "ROC606/605 – Pre-Workout (Watermelon or Fruit Punch)",
+        "ROC809 – Creatine Powder 300g",
+        "ROC608/607 – Whey Protein 2lb (Vanilla or Chocolate)"
+      ],
+      "timing": "Pre-Workout: 30 min before training | Creatine: Daily | Protein: Post-workout"
+    },
+    {
+      "name": "Fat Loss Accelerator Stack",
+      "sku": "fat-loss-accelerator-stack",
+      "price": "$86.32",
+      "tagline": "Burn More. Bloat Less. Feel Like Yourself Again.",
+      "subtitle": "Metabolism + Detox + Digestion Support",
+      "description": "This trio tackles fat loss from every angle — boosting your metabolism, supporting digestion, and helping your body detox and reset. Less bloating, more energy, and a body that's actually working with you. Your transformation starts here.",
+      "benefits": ["Increased metabolism & fat burning", "Reduced bloating & water weight", "Gentle detox support"],
+      "includedProducts": [
+        "ROC123 – Oxy Burn",
+        "ROC304 – Max Detox w/ Acai Berry",
+        "ROC303 – Digestive Enzyme"
+      ],
+      "timing": "Oxy Burn: Morning and pre-workout | Max Detox: Morning | Digestive Enzyme: With meals"
+    },
+    {
+      "name": "Sleep & Recovery Stack",
+      "sku": "sleep-recovery-stack",
+      "price": "$80.92",
+      "tagline": "Wind Down. Sleep Deep. Wake Up Ready.",
+      "subtitle": "Deep Rest + Stress Relief + Muscle Recovery",
+      "description": "Because how you end your day matters just as much as how you start it. Magnesium, ashwagandha, and our sleep formula team up to melt away stress and get you into deep, restorative sleep every single night. Wake up feeling like a different person.",
+      "benefits": ["Deeper, more restorative sleep", "Stress & cortisol management", "Overnight muscle recovery"],
+      "includedProducts": [
+        "ROC817 – Sleep Formula",
+        "ROC824 – Magnesium Glycinate",
+        "ROC822 – Ashwagandha"
+      ],
+      "timing": "Together in the evening (30–60 minutes before bed)"
+    },
+    {
+      "name": "Men's Vitality Stack",
+      "sku": "mens-vitality-stack",
+      "price": "$82.72",
+      "tagline": "Show Up as Your Best Self. Every Single Day.",
+      "subtitle": "Testosterone + Performance + Mental Clarity",
+      "description": "Built for the man who refuses to run on empty — natural testosterone support, complete daily nutrition, and razor-sharp focus all in one morning stack. Feel stronger, think clearer, and move through your day with energy that actually lasts. This is what peak feels like.",
+      "benefits": ["Natural testosterone optimization", "Complete daily nutrition for men", "Enhanced focus & mental performance"],
+      "includedProducts": [
+        "ROC506 – Ultra Test Natural Testosterone Support",
+        "ROC507 – Ultra Multivitamin for Men",
+        "ROC812 – Neuro Plus Brain & Focus"
+      ],
+      "timing": "Together in the morning with food"
+    }
+  ],
+
+  "individualProducts": [
+    {
+      "name": "Organic Super Greens Watermelon",
+      "sku": "ROC937",
+      "price": "$29.97",
+      "category": "Greens & Superfoods",
+      "description": "Organic superfood powder with watermelon flavor for daily greens intake"
+    },
+    {
+      "name": "Vitamin K2 + D3",
+      "sku": "ROC831",
+      "price": "$20.97",
+      "category": "Vitamins & Minerals",
+      "description": "Bone and immune support vitamin combination"
+    },
+    {
+      "name": "Probiotic 40 Billion CFU",
+      "sku": "ROC816",
+      "price": "$24.97",
+      "category": "Digestive Health",
+      "description": "High-potency probiotic for gut health"
+    },
+    {
+      "name": "Pre-Workout - Watermelon",
+      "sku": "ROC606",
+      "price": "$39.97",
+      "category": "Pre-Workout",
+      "description": "Explosive energy pre-workout formula, watermelon flavor"
+    },
+    {
+      "name": "Pre-Workout - Fruit Punch",
+      "sku": "ROC605",
+      "price": "$39.97",
+      "category": "Pre-Workout",
+      "description": "Explosive energy pre-workout formula, fruit punch flavor"
+    },
+    {
+      "name": "Creatine Powder 300g",
+      "sku": "ROC809",
+      "price": "$32.97",
+      "category": "Protein & Creatine",
+      "description": "100% creatine monohydrate, no fillers, lab tested for purity. Supports exercise performance, cognitive function, immune health, and muscle growth."
+    },
+    {
+      "name": "Protein Whey 2lb - Chocolate",
+      "sku": "ROC608",
+      "price": "$49.97",
+      "category": "Protein & Creatine",
+      "description": "Whey protein concentrate/isolate blend. Supports muscle growth, immunity, digestive health, satiety, and metabolic rate."
+    },
+    {
+      "name": "Protein Whey 2lb - Vanilla",
+      "sku": "ROC607",
+      "price": "$49.97",
+      "category": "Protein & Creatine",
+      "description": "Whey protein concentrate/isolate blend, vanilla flavor"
+    },
+    {
+      "name": "Oxy Burn",
+      "sku": "ROC123",
+      "price": "$39.97",
+      "subscriptionPrice": "$29.98 (25% off monthly)",
+      "category": "Weight Management",
+      "description": "Natural thermogenic fat burner. Contains Raspberry Ketone, Caffeine, L-Carnitine, ECGC, Yohimbine Bark, Kola Nut. Supports fat burning, healthy cholesterol, inflammation response, immune health."
+    },
+    {
+      "name": "Max Detox w/ Acai Berry",
+      "sku": "ROC304",
+      "price": "$29.97",
+      "category": "Weight Management",
+      "description": "Detox support supplement with acai berry"
+    },
+    {
+      "name": "Digestive Enzyme",
+      "sku": "ROC303",
+      "price": "$24.97",
+      "category": "Digestive Health",
+      "description": "Digestive enzyme complex for nutrient breakdown"
+    },
+    {
+      "name": "Sleep Formula",
+      "sku": "ROC817",
+      "price": "$29.97",
+      "category": "Sleep & Recovery",
+      "description": "Natural sleep blend with melatonin, chamomile, vitamin B-6, L-Tryptophan, Goji Berry, Lemon Balm, Passion Flower, L-Taurine, Hops, St. John's Wort, GABA, Skullcap, L-Theanine, Ashwagandha, Inositol, 5-HTP, Valerian Root."
+    },
+    {
+      "name": "Magnesium Glycinate",
+      "sku": "ROC824",
+      "price": "$20.97",
+      "category": "Sleep & Recovery",
+      "description": "Highly bioavailable magnesium for nerve function, muscle recovery, and relaxation"
+    },
+    {
+      "name": "Ashwagandha",
+      "sku": "ROC822",
+      "price": "$29.97",
+      "category": "Sleep & Recovery",
+      "description": "Organic ashwagandha for stress reduction, hormonal support, exercise performance, sleep quality, and immune health."
+    },
+    {
+      "name": "Ultra Test Natural Testosterone Support",
+      "sku": "ROC506",
+      "price": "$32.97",
+      "category": "Men's Health",
+      "description": "Natural testosterone optimization supplement"
+    },
+    {
+      "name": "Ultra Multivitamin for Men",
+      "sku": "ROC507",
+      "price": "$24.97",
+      "category": "Men's Health",
+      "description": "Complete daily multivitamin formulated for men"
+    },
+    {
+      "name": "Neuro Plus Brain & Focus",
+      "sku": "ROC812",
+      "price": "$29.97",
+      "category": "Brain & Focus",
+      "description": "Cognitive support supplement for mental clarity and focus"
+    }
+  ],
+
+  "productDescriptionPattern": {
+    "structure": [
+      "Description (overview paragraph)",
+      "Formula Purposes & Benefits (detailed benefits paragraph)",
+      "Formula Ingredient Deck (each ingredient with bullet points of benefits + citations)",
+      "Proper Use of This Supplement (dosage instructions)",
+      "Our Formula Vs Other Formulas on the Market (comparison section)",
+      "Studies (academic citations with DOI links)",
+      "FDA Disclaimer"
+    ],
+    "notes": "Every product follows this exact same template. Science-backed with peer-reviewed citations. Each ingredient has numbered reference citations (e.g., (43,45)). This is a key differentiator - the credibility positioning."
+  },
+
+  "designPatterns": {
+    "homepage": {
+      "layout": "single-page with anchor sections",
+      "heroStyle": "full-width banner image with overlay text",
+      "productGrid": "5-card horizontal scroll/grid",
+      "bundleShowcase": "alternating left/right image+text blocks",
+      "testimonialStyle": "quote carousel with name/age attribution",
+      "faqStyle": "accordion/expandable",
+      "contactForm": "embedded form with name/email/message + reCAPTCHA",
+      "ctaPlacement": "hero, after welcome, after each bundle, about section"
+    },
+    "productPage": {
+      "layout": "image gallery left + details right",
+      "imageGallery": "thumbnail strip with main image swap (7 images per product)",
+      "pricing": "large price with add-to-cart button",
+      "descriptionStyle": "rich text with bold headers and bullet points",
+      "relatedProducts": "4-card grid at bottom",
+      "breadcrumbs": "category > product name"
+    },
+    "shopPage": {
+      "layout": "category sidebar + product grid",
+      "categoryNav": "left sidebar with category links",
+      "productCards": "image + name + price + Shop Now button"
+    }
+  },
+
+  "keyTakeaways": {
+    "whatWorksWell": [
+      "Bundle-first strategy - bundles featured prominently, individual products secondary",
+      "Goal-oriented navigation - 'Find Your Perfect Stack' with 5 clear goals",
+      "3-step simplification - Choose, Follow, Feel",
+      "Trust signals everywhere - third-party tested, USA made, GMP certified",
+      "Alternating layout for bundle details keeps scrolling interesting",
+      "Science-backed credibility with actual peer-reviewed citations",
+      "Clean, nature-inspired color palette (forest green + sage)",
+      "Pill-shaped CTA buttons with high contrast"
+    ],
+    "whatToImprove": [
+      "Square Online platform is limited - no custom animations, transitions",
+      "Product images are all mockups/renders - no lifestyle photography on product pages",
+      "No video content (product demos, testimonials)",
+      "No subscription management UI (only Oxy Burn has subscription option)",
+      "No ingredient comparison tools",
+      "No personalization/quiz",
+      "Blog section exists but minimal content",
+      "Contact form is basic - no live chat",
+      "No social proof counters (customers served, reviews count)",
+      "No before/after results showcase"
+    ],
+    "forInfluencerBuilder": [
+      "Template must support this exact content structure as the DEFAULT",
+      "Influencer needs to swap: brand name, logo, colors, hero images, about section, testimonials",
+      "Product catalog, descriptions, and pricing come from the shared Selfnamed/white-label catalog",
+      "Each influencer gets their own subdomain or custom domain",
+      "Builder must make it DEAD SIMPLE to customize - no coding required",
+      "Must look BETTER than Square Online - animations, transitions, premium feel",
+      "Must support subscriptions, bundles, individual products, and categories",
+      "Contact form should integrate with GHL CRM",
+      "Analytics per-influencer store for commission tracking"
+    ]
+  }
+}

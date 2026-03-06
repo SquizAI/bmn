@@ -50,6 +50,17 @@ supabase/.temp/
 # TypeScript build info
 *.tsbuildinfo
 
+# Test artifacts
+playwright-report/
+test-results/
+
+# Large reference docs (stored externally)
+docs/selfnamed_product_images/
+docs/selfnamed_gdrive_templates/
+docs/selfnamed_mockups/
+docs/Selfnamed_Full_Catalog.xlsx
+docs/Selfnamed_Influencer_Bundles.docx
+
 # Claude Code local
 .claude/debug/
 .claude/file-history/

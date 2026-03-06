@@ -800,7 +800,7 @@ Return ONLY a valid JSON object:
 
   calculateReadiness: {
     name: 'calculateReadiness',
-    description: 'Calculate a Brand Readiness Score (0-100) based on follower count, engagement rate, content consistency, niche clarity, visual consistency, and audience loyalty signals.',
+    description: 'Calculate a Brand Readiness Score (0-100) based on follower count, engagement rate, content consistency, niche clarity, visual consistency, audience loyalty, and monetization maturity signals.',
     inputSchema: z.object({
       followerCount: z.number().describe('Total followers across platforms'),
       engagementRate: z.number().nullable().describe('Average engagement rate (0-1)'),
@@ -809,6 +809,14 @@ Return ONLY a valid JSON object:
       nicheClarity: z.number().describe('Niche clarity score (0-100)'),
       aestheticCohesion: z.number().nullable().describe('Visual consistency score (0-100)'),
       audienceLoyalty: z.number().nullable().describe('Audience loyalty/engagement depth score (0-100)'),
+      monetizationSignals: z.object({
+        hasExistingBrand: z.boolean().describe('Whether an existing brand name was detected'),
+        brandConfidence: z.number().nullable().describe('Confidence of brand name detection (0-1)'),
+        hasBusinessUrl: z.boolean().describe('Whether external URL points to a business/shop'),
+        hasLegalEntity: z.boolean().describe('Whether LLC/Inc/TM was detected in bio'),
+        hasMerchLinks: z.boolean().describe('Whether merch/shop links detected in bio or linktree'),
+        hasAffiliateLinks: z.boolean().describe('Whether affiliate/promo codes detected in content'),
+      }).optional().describe('Signals from detectExistingBrandName and profile analysis'),
     }),
 
     /**
@@ -823,10 +831,11 @@ Return ONLY a valid JSON object:
       nicheClarity,
       aestheticCohesion,
       audienceLoyalty,
+      monetizationSignals,
     }) {
-      logger.info({ msg: 'Calculating Brand Readiness Score', followerCount });
+      logger.info({ msg: 'Calculating Brand Readiness Score', followerCount, hasMonetizationSignals: !!monetizationSignals });
 
-      // Factor: Follower Count (20% weight)
+      // Factor: Follower Count (15% weight)
       let followerScore;
       if (followerCount >= 100_000) followerScore = 100;
       else if (followerCount >= 50_000) followerScore = 90;
@@ -837,7 +846,7 @@ Return ONLY a valid JSON object:
       else if (followerCount >= 500) followerScore = 25;
       else followerScore = 10;
 
-      // Factor: Engagement Rate (25% weight)
+      // Factor: Engagement Rate (20% weight)
       let engagementScore;
       const er = engagementRate ?? 0;
       if (er >= 0.06) engagementScore = 100;
@@ -861,19 +870,33 @@ Return ONLY a valid JSON object:
       // Factor: Niche Clarity (15% weight)
       const nicheScore = Math.min(nicheClarity, 100);
 
-      // Factor: Visual Consistency (10% weight)
+      // Factor: Visual Consistency (5% weight)
       const visualScore = aestheticCohesion ?? 50;
 
       // Factor: Audience Loyalty (15% weight)
       const loyaltyScore = audienceLoyalty ?? 50;
 
+      // Factor: Monetization Maturity (15% weight)
+      let monetizationScore = 30; // Default: no signals detected
+      if (monetizationSignals) {
+        let signals = 0;
+        if (monetizationSignals.hasExistingBrand) signals += 30;
+        if (monetizationSignals.brandConfidence && monetizationSignals.brandConfidence > 0.7) signals += 15;
+        if (monetizationSignals.hasBusinessUrl) signals += 20;
+        if (monetizationSignals.hasLegalEntity) signals += 20;
+        if (monetizationSignals.hasMerchLinks) signals += 15;
+        if (monetizationSignals.hasAffiliateLinks) signals += 10;
+        monetizationScore = Math.min(signals, 100);
+      }
+
       const factors = [
-        { name: 'Follower Count', score: followerScore, weight: 0.20, weightedScore: followerScore * 0.20, tip: followerScore < 70 ? 'Grow your following by posting consistently and engaging with similar creators.' : 'Great audience size for launching a brand.' },
-        { name: 'Engagement Rate', score: engagementScore, weight: 0.25, weightedScore: engagementScore * 0.25, tip: engagementScore < 70 ? 'Boost engagement by asking questions, running polls, and responding to every comment.' : 'Your audience is highly engaged -- perfect for conversions.' },
+        { name: 'Follower Count', score: followerScore, weight: 0.15, weightedScore: followerScore * 0.15, tip: followerScore < 70 ? 'Grow your following by posting consistently and engaging with similar creators.' : 'Great audience size for launching a brand.' },
+        { name: 'Engagement Rate', score: engagementScore, weight: 0.20, weightedScore: engagementScore * 0.20, tip: engagementScore < 70 ? 'Boost engagement by asking questions, running polls, and responding to every comment.' : 'Your audience is highly engaged -- perfect for conversions.' },
         { name: 'Content Consistency', score: contentScore, weight: 0.15, weightedScore: contentScore * 0.15, tip: contentScore < 70 ? 'Post more regularly. Aim for 3-5 times per week across platforms.' : 'Excellent posting consistency.' },
         { name: 'Niche Clarity', score: nicheScore, weight: 0.15, weightedScore: nicheScore * 0.15, tip: nicheScore < 70 ? 'Focus your content around 1-2 core topics to build niche authority.' : 'Clear niche positioning helps brand relevance.' },
-        { name: 'Visual Consistency', score: visualScore, weight: 0.10, weightedScore: visualScore * 0.10, tip: visualScore < 70 ? 'Use consistent color schemes, filters, and composition in your posts.' : 'Strong visual identity already in place.' },
+        { name: 'Visual Consistency', score: visualScore, weight: 0.05, weightedScore: visualScore * 0.05, tip: visualScore < 70 ? 'Use consistent color schemes, filters, and composition in your posts.' : 'Strong visual identity already in place.' },
         { name: 'Audience Loyalty', score: loyaltyScore, weight: 0.15, weightedScore: loyaltyScore * 0.15, tip: loyaltyScore < 70 ? 'Build deeper connections through stories, DMs, and community engagement.' : 'Loyal, engaged fanbase ready to support your brand.' },
+        { name: 'Monetization Maturity', score: monetizationScore, weight: 0.15, weightedScore: monetizationScore * 0.15, tip: monetizationScore < 70 ? 'You have untapped monetization potential. Consider adding merch links, affiliate codes, or showcasing brand partnerships.' : 'Strong existing monetization signals -- your audience is primed for a branded product line.' },
       ];
 
       const totalScore = Math.round(factors.reduce((sum, f) => sum + f.weightedScore, 0));

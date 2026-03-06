@@ -47,6 +47,7 @@ export const ROUTES = {
   ADMIN_PRODUCT_TIERS: '/admin/product-tiers',
   ADMIN_MODERATION: '/admin/moderation',
   ADMIN_HEALTH: '/admin/health',
+  DASHBOARD_STOREFRONT: '/dashboard/storefront',
 } as const;
 
 // ------ Wizard Steps ------

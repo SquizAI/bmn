@@ -150,7 +150,7 @@ describe('synchronous handler delegation', () => {
     expect(result.success).toBe(true);
     expect(result.data.totalScore).toBeGreaterThan(0);
     expect(['prime', 'ready', 'emerging', 'not-ready']).toContain(result.data.tier);
-    expect(result.data.factors).toHaveLength(6);
+    expect(result.data.factors).toHaveLength(7);
     expect(result.data.summary).toBeTruthy();
   });
 

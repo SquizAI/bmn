@@ -212,7 +212,7 @@ describe('calculateReadiness execution', () => {
     expect(result.data.totalScore).toBeGreaterThan(0);
     expect(result.data.totalScore).toBeLessThanOrEqual(100);
     expect(['prime', 'ready', 'emerging', 'not-ready']).toContain(result.data.tier);
-    expect(result.data.factors).toHaveLength(6);
+    expect(result.data.factors).toHaveLength(7);
   });
 
   it('classifies low-follower accounts as not-ready or emerging', () => {
@@ -241,6 +241,61 @@ describe('calculateReadiness execution', () => {
     });
     expect(result.success).toBe(true);
     expect(result.data.totalScore).toBeGreaterThan(0);
+  });
+
+  it('boosts score when monetizationSignals indicate existing business', () => {
+    const withoutSignals = tools.calculateReadiness.execute({
+      followerCount: 10000,
+      engagementRate: 0.02,
+      postingFrequency: '3 times per week',
+      consistencyScore: 50,
+      nicheClarity: 60,
+      aestheticCohesion: 50,
+      audienceLoyalty: 50,
+    });
+
+    const withSignals = tools.calculateReadiness.execute({
+      followerCount: 10000,
+      engagementRate: 0.02,
+      postingFrequency: '3 times per week',
+      consistencyScore: 50,
+      nicheClarity: 60,
+      aestheticCohesion: 50,
+      audienceLoyalty: 50,
+      monetizationSignals: {
+        hasExistingBrand: true,
+        brandConfidence: 0.85,
+        hasBusinessUrl: true,
+        hasLegalEntity: true,
+        hasMerchLinks: true,
+        hasAffiliateLinks: false,
+      },
+    });
+
+    expect(withSignals.success).toBe(true);
+    expect(withSignals.data.totalScore).toBeGreaterThan(withoutSignals.data.totalScore);
+    expect(withSignals.data.factors).toHaveLength(7);
+
+    const monetizationFactor = withSignals.data.factors.find((f) => f.name === 'Monetization Maturity');
+    expect(monetizationFactor).toBeDefined();
+    expect(monetizationFactor.score).toBeGreaterThanOrEqual(85);
+    expect(monetizationFactor.weight).toBe(0.15);
+  });
+
+  it('uses default monetization score of 30 when monetizationSignals is omitted', () => {
+    const result = tools.calculateReadiness.execute({
+      followerCount: 10000,
+      engagementRate: 0.03,
+      postingFrequency: 'daily',
+      consistencyScore: 70,
+      nicheClarity: 70,
+      aestheticCohesion: 60,
+      audienceLoyalty: 60,
+    });
+
+    const monetizationFactor = result.data.factors.find((f) => f.name === 'Monetization Maturity');
+    expect(monetizationFactor).toBeDefined();
+    expect(monetizationFactor.score).toBe(30);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Instagram,
@@ -47,6 +47,23 @@ const platformIcons: Record<Platform, React.ReactNode> = {
   facebook: <Facebook className="h-3.5 w-3.5" />,
 };
 
+/** Subtle background tint for platform pills */
+const platformTints: Record<Platform, string> = {
+  instagram: 'rgba(225, 48, 108, 0.08)',
+  tiktok: 'rgba(255, 255, 255, 0.06)',
+  youtube: 'rgba(255, 0, 0, 0.07)',
+  twitter: 'rgba(29, 161, 242, 0.08)',
+  facebook: 'rgba(24, 119, 242, 0.08)',
+};
+
+const platformBorders: Record<Platform, string> = {
+  instagram: 'rgba(225, 48, 108, 0.2)',
+  tiktok: 'rgba(255, 255, 255, 0.12)',
+  youtube: 'rgba(255, 0, 0, 0.15)',
+  twitter: 'rgba(29, 161, 242, 0.2)',
+  facebook: 'rgba(24, 119, 242, 0.2)',
+};
+
 function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
@@ -54,10 +71,17 @@ function formatFollowers(count: number): string {
 }
 
 const tierColors: Record<string, string> = {
-  'prime': '#16a34a',
-  'ready': '#B8956A',
-  'emerging': '#d97706',
-  'not-ready': '#dc2626',
+  'prime': '#10b981',
+  'ready': '#c9952c',
+  'emerging': '#e5a336',
+  'not-ready': '#ef4444',
+};
+
+const tierLabels: Record<string, string> = {
+  'prime': 'Brand Prime',
+  'ready': 'Brand Ready',
+  'emerging': 'Emerging',
+  'not-ready': 'Building',
 };
 
 export default function ShareableProfileCard({
@@ -69,6 +93,7 @@ export default function ShareableProfileCard({
   dossier,
 }: ShareableProfileCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [hoveredSwatch, setHoveredSwatch] = useState<string | null>(null);
 
   const handleDownload = useCallback(async () => {
     if (!cardRef.current) return;
@@ -144,6 +169,7 @@ export default function ShareableProfileCard({
   }, [profile, platforms, niche, readiness]);
 
   const palette = aesthetic?.naturalPalette || aesthetic?.dominantColors.map((c) => c.hex) || [];
+  const tierColor = readiness ? tierColors[readiness.tier] || tierColors['not-ready'] : '';
 
   return (
     <motion.div
@@ -152,135 +178,206 @@ export default function ShareableProfileCard({
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className="space-y-3"
     >
-      {/* The shareable card */}
+      {/* Gradient border wrapper */}
       <div
-        ref={cardRef}
-        className="relative overflow-hidden rounded-2xl border border-[var(--bmn-color-border)] bg-[var(--bmn-color-surface)] shadow-[var(--bmn-shadow-xl)]"
+        className="rounded-2xl p-px"
+        style={{
+          background: palette.length >= 2
+            ? `linear-gradient(135deg, ${palette[0]}40, transparent 40%, transparent 60%, ${palette[1] || palette[0]}40)`
+            : `linear-gradient(135deg, var(--bmn-color-accent) 0%, transparent 40%, transparent 60%, var(--bmn-color-accent) 100%)`,
+          opacity: 0.8,
+        }}
       >
-        {/* Header gradient bar */}
+        {/* The shareable card */}
         <div
-          className="h-2"
-          style={{
-            background: palette.length >= 3
-              ? `linear-gradient(to right, ${palette.slice(0, 4).join(', ')})`
-              : 'linear-gradient(to right, var(--bmn-color-accent), var(--bmn-color-primary))',
-          }}
-        />
+          ref={cardRef}
+          className="relative overflow-hidden rounded-2xl bg-(--bmn-color-surface) shadow-xl"
+        >
+          {/* Header gradient bar with shimmer */}
+          <div
+            className="relative h-3 overflow-hidden"
+            style={{
+              background: palette.length >= 3
+                ? `linear-gradient(to right, ${palette.slice(0, 4).join(', ')})`
+                : 'linear-gradient(to right, var(--bmn-color-accent), var(--bmn-color-primary))',
+            }}
+          >
+            {/* Shimmer overlay */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)',
+                animation: 'shimmer 3s ease-in-out infinite',
+              }}
+            />
+            <style>{`
+              @keyframes shimmer {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+              }
+            `}</style>
+          </div>
 
-        <div className="p-5">
-          {/* Profile row */}
-          <div className="flex items-center gap-4">
-            {profile.profilePicUrl ? (
-              <img
-                src={proxyImageUrl(profile.profilePicUrl) || ''}
-                alt={profile.displayName || 'Creator'}
-                className="h-14 w-14 rounded-full object-cover ring-2 ring-[var(--bmn-color-accent)] ring-offset-2 ring-offset-[var(--bmn-color-surface)]"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bmn-color-primary-light)] text-lg font-bold text-[var(--bmn-color-text)]">
-                {(profile.displayName || '?')[0].toUpperCase()}
-              </div>
-            )}
+          <div className="p-5">
+            {/* Profile row */}
+            <div className="flex items-center gap-4">
+              {profile.profilePicUrl ? (
+                <img
+                  src={proxyImageUrl(profile.profilePicUrl) || ''}
+                  alt={profile.displayName || 'Creator'}
+                  className="h-14 w-14 rounded-full object-cover ring-2 ring-(--bmn-color-accent) ring-offset-2 ring-offset-(--bmn-color-surface)"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-(--bmn-color-primary-light) text-lg font-bold text-(--bmn-color-text)">
+                  {(profile.displayName || '?')[0].toUpperCase()}
+                </div>
+              )}
 
-            <div className="flex-1">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-base font-bold text-[var(--bmn-color-text)]">
-                  {profile.displayName || 'Creator'}
-                </h3>
-                {profile.isVerified && (
-                  <BadgeCheck className="h-4 w-4 text-[var(--bmn-color-info)]" />
-                )}
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-base font-bold text-(--bmn-color-text)">
+                    {profile.displayName || 'Creator'}
+                  </h3>
+                  {profile.isVerified && (
+                    <BadgeCheck className="h-4 w-4 text-(--bmn-color-info)" />
+                  )}
+                </div>
+                <p className="text-sm text-(--bmn-color-text-muted)">
+                  {formatFollowers(profile.totalFollowers)} total followers
+                </p>
               </div>
-              <p className="text-sm text-[var(--bmn-color-text-muted)]">
-                {formatFollowers(profile.totalFollowers)} total followers
-              </p>
+
+              {/* Readiness score badge */}
+              {readiness && (
+                <div
+                  className="relative flex h-14 w-14 flex-col items-center justify-center rounded-2xl"
+                  style={{
+                    background: `radial-gradient(circle at center, ${tierColor}20, ${tierColor}08)`,
+                    boxShadow: `0 0 0 1px ${tierColor}30, 0 0 12px ${tierColor}15`,
+                  }}
+                >
+                  <span
+                    className="text-xl font-extrabold leading-none"
+                    style={{ color: tierColor }}
+                  >
+                    {readiness.totalScore}
+                  </span>
+                  <span
+                    className="mt-0.5 text-[7px] font-semibold uppercase tracking-wider"
+                    style={{ color: tierColor, opacity: 0.8 }}
+                  >
+                    Score
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Readiness badge */}
-            {readiness && (
-              <div
-                className="flex h-12 w-12 flex-col items-center justify-center rounded-xl"
-                style={{ backgroundColor: `${tierColors[readiness.tier]}15` }}
-              >
-                <span
-                  className="text-lg font-bold"
-                  style={{ color: tierColors[readiness.tier] }}
-                >
-                  {readiness.totalScore}
-                </span>
-                <span className="text-[8px] uppercase" style={{ color: tierColors[readiness.tier] }}>
-                  Score
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Platform pills */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {platforms.map((p) => (
-              <div
-                key={p.platform}
-                className="flex items-center gap-1 rounded-full border border-[var(--bmn-color-border)] px-2.5 py-1 text-xs"
-              >
-                <span className="text-[var(--bmn-color-text-secondary)]">
-                  {platformIcons[p.platform]}
-                </span>
-                <span className="font-medium text-[var(--bmn-color-text)]">
-                  {formatFollowers(p.metrics.followers)}
-                </span>
-                {p.metrics.engagementRate !== null && (
-                  <span className="text-[var(--bmn-color-text-muted)]">
-                    {(p.metrics.engagementRate * 100).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Info chips row */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {niche && (
-              <div className="flex items-center gap-1 rounded-full bg-[var(--bmn-color-accent-light)] px-2.5 py-1 text-xs font-medium text-[var(--bmn-color-accent)]">
-                <Target className="h-3 w-3" />
-                <span className="capitalize">{niche.primaryNiche.name}</span>
-              </div>
-            )}
-            {aesthetic && aesthetic.visualMood.length > 0 && (
-              <div className="flex items-center gap-1 rounded-full bg-[var(--bmn-color-primary-light)] px-2.5 py-1 text-xs text-[var(--bmn-color-text-secondary)]">
-                <Palette className="h-3 w-3" />
-                {aesthetic.visualMood[0]}
-              </div>
-            )}
-            {readiness && (
-              <div className="flex items-center gap-1 rounded-full bg-[var(--bmn-color-primary-light)] px-2.5 py-1 text-xs text-[var(--bmn-color-text-secondary)]">
-                <Gauge className="h-3 w-3" />
-                {readiness.tier === 'prime' ? 'Brand Prime' : readiness.tier === 'ready' ? 'Brand Ready' : readiness.tier === 'emerging' ? 'Emerging' : 'Building'}
-              </div>
-            )}
-          </div>
-
-          {/* Color palette strip */}
-          {palette.length > 0 && (
-            <div className="mt-3 flex gap-1">
-              {palette.slice(0, 6).map((hex) => (
+            {/* Platform pills */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {platforms.map((p) => (
                 <div
-                  key={hex}
-                  className="h-4 flex-1 rounded-sm first:rounded-l-md last:rounded-r-md"
-                  style={{ backgroundColor: hex }}
-                />
+                  key={p.platform}
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition-colors"
+                  style={{
+                    backgroundColor: platformTints[p.platform],
+                    border: `1px solid ${platformBorders[p.platform]}`,
+                  }}
+                >
+                  <span className="text-(--bmn-color-text-secondary)">
+                    {platformIcons[p.platform]}
+                  </span>
+                  <span className="font-medium text-(--bmn-color-text)">
+                    {formatFollowers(p.metrics.followers)}
+                  </span>
+                  {p.metrics.engagementRate !== null && (
+                    <span className="text-(--bmn-color-text-muted)">
+                      {(p.metrics.engagementRate * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
               ))}
             </div>
-          )}
 
-          {/* Branding footer */}
-          <div className="mt-3 flex items-center justify-between border-t border-[var(--bmn-color-border)] pt-2">
-            <span className="text-xs text-[var(--bmn-color-text-muted)]">
-              Created with Brand Me Now
-            </span>
-            <span className="text-xs font-medium text-[var(--bmn-color-accent)]">
-              brandmenow.com
-            </span>
+            {/* Info chips row */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {niche && (
+                <div
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: 'var(--bmn-color-accent-light)',
+                    color: 'var(--bmn-color-accent)',
+                    border: '1px solid var(--bmn-color-accent)',
+                    borderColor: 'color-mix(in srgb, var(--bmn-color-accent) 30%, transparent)',
+                  }}
+                >
+                  <Target className="h-3 w-3" />
+                  <span className="capitalize">{niche.primaryNiche.name}</span>
+                </div>
+              )}
+              {aesthetic && aesthetic.visualMood.length > 0 && (
+                <div className="flex items-center gap-1 rounded-full bg-(--bmn-color-primary-light) px-2.5 py-1 text-xs text-(--bmn-color-text-secondary)">
+                  <Palette className="h-3 w-3" />
+                  {aesthetic.visualMood[0]}
+                </div>
+              )}
+              {readiness && (
+                <div
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+                  style={{
+                    backgroundColor: `${tierColor}12`,
+                    color: tierColor,
+                    boxShadow: readiness.tier === 'prime' ? `0 0 8px ${tierColor}25` : 'none',
+                    border: `1px solid ${tierColor}30`,
+                  }}
+                >
+                  <Gauge className="h-3 w-3" />
+                  {tierLabels[readiness.tier] || 'Building'}
+                </div>
+              )}
+            </div>
+
+            {/* Color palette strip */}
+            {palette.length > 0 && (
+              <div className="mt-3 flex gap-1.5">
+                {palette.slice(0, 6).map((hex) => (
+                  <div
+                    key={hex}
+                    className="group relative h-6 flex-1 cursor-pointer rounded-md transition-all duration-200 first:rounded-l-lg last:rounded-r-lg hover:scale-110 hover:shadow-md"
+                    style={{ backgroundColor: hex }}
+                    onMouseEnter={() => setHoveredSwatch(hex)}
+                    onMouseLeave={() => setHoveredSwatch(null)}
+                  >
+                    {hoveredSwatch === hex && (
+                      <div
+                        className="absolute -top-7 left-1/2 -translate-x-1/2 rounded px-1.5 py-0.5 text-[9px] font-mono font-medium whitespace-nowrap"
+                        style={{
+                          backgroundColor: 'var(--bmn-color-surface-elevated)',
+                          color: 'var(--bmn-color-text)',
+                          boxShadow: 'var(--bmn-shadow-md)',
+                          border: '1px solid var(--bmn-color-border)',
+                        }}
+                      >
+                        {hex.toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Branding footer */}
+            <div className="mt-3 flex items-center justify-between border-t border-(--bmn-color-border) pt-2">
+              <span className="text-xs text-(--bmn-color-text-muted)">
+                Created with Brand Me Now
+              </span>
+              <span
+                className="text-xs font-medium transition-all duration-200 hover:underline"
+                style={{ color: 'var(--bmn-color-accent)' }}
+              >
+                brandmenow.com
+              </span>
+            </div>
           </div>
         </div>
       </div>

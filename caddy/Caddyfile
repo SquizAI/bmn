@@ -1,6 +1,7 @@
 # Brand Me Now -- Caddy Reverse Proxy
 # Automatic HTTPS via Let's Encrypt
 
+# ─── Main Application ─────────────────────────────────────────────────
 app.prznl.com {
     reverse_proxy client:80
 }
@@ -10,5 +11,36 @@ api.prznl.com {
 }
 
 prznl.com {
+    redir https://app.prznl.com{uri} permanent
+}
+
+# ─── Influencer Storefronts ───────────────────────────────────────────
+# Wildcard subdomain routing for influencer storefronts.
+# Each influencer gets a unique subdomain: {slug}.brandmenow.store
+# Let's Encrypt requires DNS-01 challenge for wildcard certs,
+# so we use the Cloudflare DNS plugin for automated renewal.
+
+*.brandmenow.store {
+    # TLS -- wildcard cert via Cloudflare DNS-01 challenge
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    # Named matcher: routes starting with /api/
+    @api path /api/*
+
+    # API calls get proxied to the backend (more specific path first)
+    handle @api {
+        reverse_proxy server:4847
+    }
+
+    # SPA fallback -- serve index.html for all other routes (client-side routing)
+    handle {
+        reverse_proxy storefront:80
+    }
+}
+
+# Root domain redirect -- send brandmenow.store visitors to the main app
+brandmenow.store {
     redir https://app.prznl.com{uri} permanent
 }

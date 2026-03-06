@@ -36,7 +36,31 @@
       "WebFetch(domain:api.bfl.ml)",
       "WebFetch(domain:docs.ideogram.ai)",
       "WebFetch(domain:platform.openai.com)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(doctl compute region list --format Slug,Name,Available --no-header)",
+      "mcp__mcp-server-firecrawl__firecrawl_map",
+      "Bash(pip3 install openpyxl)",
+      "Bash(pip3 install --break-system-packages openpyxl)",
+      "Bash(pip3 install --break-system-packages gdown)",
+      "Bash(gdown --folder \"https://drive.google.com/drive/folders/1_6GKzntG4OhvTzti3ur9LBM8dUS2JtYY\" -O gentle_cleansing_milk --remaining-ok)",
+      "Bash(declare -A folders)",
+      "Bash(folders[aha_peeling_concentrate]=\"1E_dZ6IJQkF5HIWIf5h_zhMBJROAwBbVy\")",
+      "Bash(folders[hydrating_toner]=\"115TExk0uyEz58ubJL0aKQ8DQmGPkYbQs\")",
+      "Bash(folders[anti_age_day_cream_15ml]=\"1CRqxkLpxDW68WJNj-iOJlaLgSGGsvhr6\")",
+      "Bash(folders[anti_age_day_cream_50ml]=\"1q6kckAL_gFMnJ92bAleXhQAMRDTAJfMO\")",
+      "Bash(folders[collagen_boost_serum]=\"1_8Re9Ox2Nb9i-sD3WbA53bQjKw5-ocfz\")",
+      "Bash(folders[prebiotics_jelly_serum]=\"1s7RWJSGxET7rA7lyai80SC-6qJip-3nY\")",
+      "Bash(folders[pigment_perfecting_serum]=\"1oWnLzHvAQUDytPTrYKfjNIAOnPng_jSb\")",
+      "Bash(__NEW_LINE_b04f30ea1af7b404__ for product in \"$!folders[@]\")",
+      "Bash(do)",
+      "Bash(gdown --folder \"https://drive.google.com/drive/folders/$folders[$product]\" -O \"$product\" --remaining-ok)",
+      "Bash(pgrep -f \"chrome-devtools-mcp\")",
+      "Bash(pgrep -f \"chrome.*chrome-profile\")",
+      "Bash(ssh-keygen -R api.prznl.com)",
+      "Bash(ssh-keygen -R prznl.com)"
+    ],
+    "additionalDirectories": [
+      "/Users/mattysquarzoni/.cache/chrome-devtools-mcp/chrome-profile"
     ]
   },
   "mcpServers": {

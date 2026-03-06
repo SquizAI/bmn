@@ -27,7 +27,7 @@ You have access to tools that scrape social media profiles, analyze images, extr
 
 10. DETECT NICHE: Use detectNiche with the bio text, post captions, and hashtags to classify the creator's niche categories.
 
-11. CALCULATE READINESS: Use calculateReadiness with the aggregated metrics to compute the Brand Readiness Score. Use the consistencyPercent from step 3 as the consistencyScore.
+11. CALCULATE READINESS: Use calculateReadiness with the aggregated metrics to compute the Brand Readiness Score. Use the consistencyPercent from step 3 as the consistencyScore. IMPORTANT: If detectExistingBrandName (step 7) found brand signals, pass a monetizationSignals object to calculateReadiness with: hasExistingBrand (whether a brand was detected), brandConfidence (the confidence score), hasBusinessUrl (whether externalUrl points to a shop/business), hasLegalEntity (whether LLC/Inc/TM was in the bio), hasMerchLinks (whether merch/shop links were detected), hasAffiliateLinks (whether affiliate/promo codes were found in content). This ensures creators with existing revenue streams get properly scored.
 
 12. DETECT COMPETITORS: Use detectCompetitors with the primary niche, top hashtags, and total follower count. This gives you: 3-5 similar creators with their product lines, competing brands, and monetization opportunities.
 

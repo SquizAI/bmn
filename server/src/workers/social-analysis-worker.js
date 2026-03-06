@@ -438,7 +438,7 @@ const READINESS_TASK = {
   messageStart: 'Calculating brand readiness score...',
   messageComplete: 'Readiness score calculated!',
   buildSystemPrompt: () =>
-    'You are a brand readiness evaluator. Given all analysis data about a creator, compute a brand readiness score. Return ONLY valid JSON.',
+    'You are a brand readiness evaluator. Given all analysis data about a creator, compute a brand readiness score across 7 factors. Pay special attention to monetization signals -- if the creator already has a brand, business URL, legal entity, merch links, or affiliate partnerships, score their Monetization Maturity highly. Return ONLY valid JSON.',
   buildUserPrompt: (compiledResults) =>
     `Based on the following creator analysis data, compute a brand readiness score.
 
@@ -446,32 +446,47 @@ const READINESS_TASK = {
 ${compiledResults}
 </analysis_data>
 
-Return JSON:
+Return JSON with exactly 7 factors (weights must sum to 1.0):
 {
   "readinessScore": {
     "totalScore": number (0-100),
     "factors": [
-      {"name": "Audience Size", "score": number (0-100), "weight": 0.2, "weightedScore": number, "tip": "string"},
-      {"name": "Content Consistency", "score": number (0-100), "weight": 0.2, "weightedScore": number, "tip": "string"},
-      {"name": "Niche Clarity", "score": number (0-100), "weight": 0.2, "weightedScore": number, "tip": "string"},
-      {"name": "Engagement Quality", "score": number (0-100), "weight": 0.2, "weightedScore": number, "tip": "string"},
-      {"name": "Brand Potential", "score": number (0-100), "weight": 0.2, "weightedScore": number, "tip": "string"}
+      {"name": "Follower Count", "score": number (0-100), "weight": 0.15, "weightedScore": number, "tip": "string"},
+      {"name": "Engagement Rate", "score": number (0-100), "weight": 0.20, "weightedScore": number, "tip": "string"},
+      {"name": "Content Consistency", "score": number (0-100), "weight": 0.15, "weightedScore": number, "tip": "string"},
+      {"name": "Niche Clarity", "score": number (0-100), "weight": 0.15, "weightedScore": number, "tip": "string"},
+      {"name": "Visual Consistency", "score": number (0-100), "weight": 0.05, "weightedScore": number, "tip": "string"},
+      {"name": "Audience Loyalty", "score": number (0-100), "weight": 0.15, "weightedScore": number, "tip": "string"},
+      {"name": "Monetization Maturity", "score": number (0-100), "weight": 0.15, "weightedScore": number, "tip": "string"}
     ],
     "tier": "not-ready|emerging|ready|prime",
     "summary": "string summary paragraph",
     "actionItems": ["action1", "action2", "action3"]
   }
 }
-Ensure totalScore = sum of all weightedScore values. Return ONLY the JSON object.`,
+
+Monetization Maturity scoring guide:
+- Has an existing brand name detected: +30 points
+- Brand confidence > 0.7: +15 points
+- Has business URL (not just a link aggregator): +20 points
+- Has legal entity (LLC/Inc/TM in bio): +20 points
+- Has merch/shop links in bio or linktree: +15 points
+- Has affiliate/promo codes in content: +10 points
+- Cap at 100. If no signals found, default to 30.
+
+Tier thresholds: prime >= 80, ready >= 60, emerging >= 40, not-ready < 40.
+Ensure totalScore = sum of all weightedScore values (rounded). Return ONLY the JSON object.`,
   fallbackValue: {
     readinessScore: {
       totalScore: 50,
       factors: [
-        { name: 'Audience Size', score: 50, weight: 0.2, weightedScore: 10, tip: 'Grow your audience to unlock more brand opportunities.' },
-        { name: 'Content Consistency', score: 50, weight: 0.2, weightedScore: 10, tip: 'Post more consistently to build reliability.' },
-        { name: 'Niche Clarity', score: 50, weight: 0.2, weightedScore: 10, tip: 'Sharpen your niche focus for stronger brand identity.' },
-        { name: 'Engagement Quality', score: 50, weight: 0.2, weightedScore: 10, tip: 'Focus on meaningful engagement with your audience.' },
-        { name: 'Brand Potential', score: 50, weight: 0.2, weightedScore: 10, tip: 'Your brand has good potential -- keep building.' },
+        { name: 'Follower Count', score: 50, weight: 0.15, weightedScore: 7.5, tip: 'Grow your following by posting consistently and engaging with similar creators.' },
+        { name: 'Engagement Rate', score: 50, weight: 0.20, weightedScore: 10, tip: 'Boost engagement by asking questions, running polls, and responding to every comment.' },
+        { name: 'Content Consistency', score: 50, weight: 0.15, weightedScore: 7.5, tip: 'Post more consistently to build reliability.' },
+        { name: 'Niche Clarity', score: 50, weight: 0.15, weightedScore: 7.5, tip: 'Sharpen your niche focus for stronger brand identity.' },
+        { name: 'Visual Consistency', score: 50, weight: 0.05, weightedScore: 2.5, tip: 'Use consistent color schemes, filters, and composition in your posts.' },
+        { name: 'Audience Loyalty', score: 50, weight: 0.15, weightedScore: 7.5, tip: 'Build deeper connections through stories, DMs, and community engagement.' },
+        { name: 'Monetization Maturity', score: 30, weight: 0.15, weightedScore: 4.5, tip: 'You have untapped monetization potential. Consider adding merch links, affiliate codes, or showcasing brand partnerships.' },
       ],
       tier: 'emerging',
       summary: 'Readiness analysis unavailable -- default score assigned.',

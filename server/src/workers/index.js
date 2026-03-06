@@ -17,6 +17,8 @@ import { initContentGenWorker } from './content-gen-worker.js';
 import { initEmailCampaignWorker } from './email-campaign-worker.js';
 import { initAnalyticsWorker } from './analytics-worker.js';
 import { initSocialAnalysisWorker } from './social-analysis-worker.js';
+import { initStorefrontAnalyticsWorker } from './storefront-analytics.js';
+import { initStorefrontContactWorker } from './storefront-contact.js';
 import { initDeadLetterWorker } from './dead-letter.js';
 
 /** @type {import('bullmq').Worker[]} */
@@ -105,6 +107,8 @@ export function initWorkers(io) {
     { worker: initEmailCampaignWorker(io), queueName: 'email-campaign' },
     { worker: initAnalyticsWorker(io), queueName: 'analytics' },
     { worker: initSocialAnalysisWorker(io), queueName: 'social-analysis' },
+    { worker: initStorefrontAnalyticsWorker(io), queueName: 'storefront-analytics' },
+    { worker: initStorefrontContactWorker(io), queueName: 'storefront-contact' },
   ];
 
   // Attach dead-letter forwarding to each worker
