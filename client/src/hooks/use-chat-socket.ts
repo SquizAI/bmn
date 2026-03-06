@@ -36,7 +36,7 @@ export function useChatSocket() {
         const sock = io(`${SOCKET_URL}/chat`, {
           path: '/socket.io',
           auth: { token: session.access_token },
-          transports: ['websocket', 'polling'],
+          transports: ['polling', 'websocket'],
           reconnection: true,
           reconnectionAttempts: 10,
           reconnectionDelay: 1000,
