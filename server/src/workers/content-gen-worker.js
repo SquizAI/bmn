@@ -90,12 +90,13 @@ export function initContentGenWorker(io) {
 
       jobLog.info({ brandId, platform, contentType }, 'Content generation started');
 
-      // Emit progress
+      // Emit progress (standard event names matching useGenerationProgress hook)
       if (io) {
-        io.to(`user:${userId}`).emit('content:generation:progress', {
+        io.to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
-          status: 'generating',
+          status: 'processing',
           progress: 10,
+          message: 'Fetching brand identity...',
         });
       }
 
@@ -126,10 +127,11 @@ export function initContentGenWorker(io) {
 
       // Emit progress
       if (io) {
-        io.to(`user:${userId}`).emit('content:generation:progress', {
+        io.to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
-          status: 'generating',
+          status: 'processing',
           progress: 40,
+          message: 'Generating content with AI...',
         });
       }
 
@@ -145,10 +147,11 @@ export function initContentGenWorker(io) {
 
       // Emit progress
       if (io) {
-        io.to(`user:${userId}`).emit('content:generation:progress', {
+        io.to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
           status: 'processing',
           progress: 80,
+          message: 'Formatting content...',
         });
       }
 
@@ -190,30 +193,28 @@ export function initContentGenWorker(io) {
 
       await supabaseAdmin.from('generated_content').insert(contentRecord);
 
-      // Emit completion
+      // Emit completion (standard event name matching useGenerationProgress hook)
+      const generatedContent = {
+        id: contentRecord.id,
+        platform,
+        contentType,
+        caption: parsedContent.caption,
+        hashtags: parsedContent.hashtags || [],
+        imagePrompt: parsedContent.imagePrompt || null,
+        scheduledFor: null,
+        createdAt: contentRecord.created_at,
+      };
+
       if (io) {
-        io.to(`user:${userId}`).emit('content:generation:complete', {
+        io.to(`user:${userId}`).emit('generation:complete', {
           jobId: job.id,
-          content: {
-            id: contentRecord.id,
-            platform,
-            contentType,
-            caption: parsedContent.caption,
-            hashtags: parsedContent.hashtags || [],
-            imagePrompt: parsedContent.imagePrompt || null,
-            scheduledFor: null,
-            createdAt: contentRecord.created_at,
-          },
+          result: generatedContent,
         });
       }
 
       jobLog.info({ brandId, contentId: contentRecord.id }, 'Content generated successfully');
 
-      return {
-        contentId: contentRecord.id,
-        caption: parsedContent.caption,
-        hashtags: parsedContent.hashtags,
-      };
+      return generatedContent;
     },
     {
       connection: getBullRedisConfig(),
@@ -233,16 +234,13 @@ export function initContentGenWorker(io) {
       });
     }
 
-    // Emit error to user
+    // Emit error to user (standard event name matching useGenerationProgress hook)
     const userId = job?.data?.userId;
-    if (userId) {
-      const io = worker._io;
-      if (io) {
-        io.to(`user:${userId}`).emit('content:generation:error', {
-          jobId: job?.id,
-          error: 'Content generation failed. Please try again.',
-        });
-      }
+    if (userId && io) {
+      io.to(`user:${userId}`).emit('generation:error', {
+        jobId: job?.id,
+        error: 'Content generation failed. Please try again.',
+      });
     }
   });
 

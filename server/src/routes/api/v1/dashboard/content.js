@@ -109,7 +109,7 @@ contentRoutes.post('/generate', async (req, res, next) => {
     // Try to queue via BullMQ if available
     try {
       const { getQueue } = await import('../../../../lib/queue.js');
-      const contentQueue = getQueue('content-generation');
+      const contentQueue = getQueue('content-gen');
 
       const job = await contentQueue.add('generate-content', {
         brandId,
@@ -138,10 +138,12 @@ contentRoutes.post('/generate', async (req, res, next) => {
         success: true,
         data: {
           id: crypto.randomUUID(),
-          content: `Here's a ${contentType || 'post'} idea for ${brand.name}: Share your brand story and connect with your audience authentically.`,
-          type: contentType || 'social-post',
           platform: platform || 'instagram',
-          status: 'generated',
+          contentType: contentType || 'post',
+          caption: `Here's a ${contentType || 'post'} idea for ${brand.name}: Share your brand story and connect with your audience authentically.`,
+          hashtags: ['branding', 'socialmedia', brand.name.toLowerCase().replace(/\s+/g, '')],
+          imagePrompt: null,
+          scheduledFor: null,
           createdAt: new Date().toISOString(),
         },
       });

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -10,12 +10,14 @@ import {
   Copy,
   Check,
   Hash,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { apiClient } from '@/lib/api';
 import { useUIStore } from '@/stores/ui-store';
+import { useGenerationProgress } from '@/hooks/use-generation-progress';
 
 // ------ Types ------
 
@@ -28,6 +30,20 @@ interface GeneratedContent {
   imagePrompt?: string;
   scheduledFor: string | null;
   createdAt: string;
+}
+
+interface GenerateResponse {
+  jobId?: string;
+  status?: string;
+  // Direct content fields (fallback when BullMQ unavailable)
+  id?: string;
+  caption?: string;
+  platform?: string;
+  contentType?: string;
+  hashtags?: string[];
+  imagePrompt?: string | null;
+  scheduledFor?: string | null;
+  createdAt?: string;
 }
 
 interface GenerateRequest {
@@ -88,21 +104,52 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
   const [topic, setTopic] = useState('');
   const [generated, setGenerated] = useState<GeneratedContent | null>(null);
   const [copied, setCopied] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
   const addToast = useUIStore((s) => s.addToast);
+
+  // Track async job progress via Socket.io + polling fallback
+  const jobProgress = useGenerationProgress(jobId);
+
+  // When the job completes, extract the generated content from the result
+  useEffect(() => {
+    if (jobProgress.isComplete && jobProgress.result) {
+      const r = jobProgress.result as GeneratedContent;
+      if (r.caption) {
+        setGenerated(r);
+        addToast({ type: 'success', title: 'Content generated!' });
+        setJobId(null);
+      }
+    }
+    if (jobProgress.isError) {
+      addToast({ type: 'error', title: jobProgress.error || 'Content generation failed' });
+      setJobId(null);
+    }
+  }, [jobProgress.isComplete, jobProgress.isError, jobProgress.result, jobProgress.error, addToast]);
 
   const generateMutation = useMutation({
     mutationFn: (data: GenerateRequest) =>
-      apiClient.post<GeneratedContent>('/api/v1/dashboard/content/generate', data),
+      apiClient.post<GenerateResponse>('/api/v1/dashboard/content/generate', data),
     onSuccess: (data) => {
-      setGenerated(data);
-      addToast({ type: 'success', title: 'Content generated!' });
+      if (data.jobId) {
+        // Async path: job was queued, track via Socket.io
+        setJobId(data.jobId);
+      } else if (data.caption) {
+        // Sync fallback: content returned directly (BullMQ unavailable)
+        setGenerated(data as unknown as GeneratedContent);
+        addToast({ type: 'success', title: 'Content generated!' });
+      }
     },
     onError: () => {
       addToast({ type: 'error', title: 'Failed to generate content' });
     },
   });
 
+  const isGenerating = generateMutation.isPending || (!!jobId && !jobProgress.isComplete && !jobProgress.isError);
+
   const handleGenerate = () => {
+    setGenerated(null);
+    setJobId(null);
+    jobProgress.reset();
     generateMutation.mutate({
       brandId,
       platform,
@@ -221,12 +268,39 @@ function ContentGenerator({ brandId, className }: ContentGeneratorProps) {
       {/* Generate Button */}
       <Button
         onClick={handleGenerate}
-        loading={generateMutation.isPending}
+        loading={isGenerating}
         leftIcon={<Sparkles className="h-4 w-4" />}
         className="self-start"
       >
         Generate Content
       </Button>
+
+      {/* Job Progress Indicator */}
+      <AnimatePresence>
+        {jobId && !jobProgress.isComplete && !jobProgress.isError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-center gap-3 rounded-lg border border-border bg-surface p-4"
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <div className="flex-1">
+              <p className="text-[13px] font-medium text-text">
+                {jobProgress.message || 'Generating content...'}
+              </p>
+              {jobProgress.progress > 0 && (
+                <div className="mt-1.5 h-1.5 w-full rounded-full bg-surface-hover">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{ width: `${jobProgress.progress}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Generated Content Preview */}
       <AnimatePresence>
