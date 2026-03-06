@@ -11,10 +11,10 @@ import { RateLimitError } from '../utils/errors.js';
  * Used by the general API limiter when useTierLimits is enabled.
  */
 const TIER_LIMITS = {
-  free: 100,
-  starter: 300,
-  pro: 1000,
-  agency: 3000,
+  free: 500,
+  starter: 1000,
+  pro: 3000,
+  agency: 10000,
 };
 
 /**
@@ -88,7 +88,7 @@ export const generalLimiter = createLimiter({
   useTierLimits: true,
   prefix: 'bmn:rl:general:',
   message: 'Too many requests. Please slow down.',
-  skip: (req) => req.path === '/health',
+  skip: (req) => req.path === '/health' || req.path.startsWith('/socket.io'),
 });
 
 /**
