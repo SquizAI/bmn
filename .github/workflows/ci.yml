@@ -130,7 +130,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build server image
-        run: docker build -t bmn-server:${{ github.sha }} ./server
+        run: docker build -f server/Dockerfile -t bmn-server:${{ github.sha }} .
 
       - name: Build client image
         run: |
