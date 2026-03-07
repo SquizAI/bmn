@@ -51,6 +51,36 @@ async function getGoogleAIClient() {
   }
 }
 
+// ── Inline upload helper ─────────────────────────────────────────
+
+/**
+ * Upload base64 image data to Supabase Storage and return the public URL.
+ * Used by generate functions to avoid passing large base64 through agent context.
+ *
+ * @param {Buffer} imageBuffer
+ * @param {string} namespace - e.g. 'mockups', 'bundles'
+ * @param {string} identifier - e.g. productSku or bundleName
+ * @returns {Promise<string>} Public URL
+ */
+async function uploadToStorage(imageBuffer, namespace, identifier) {
+  const supabase = getSupabase();
+  const timestamp = Date.now();
+  const safeName = identifier.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const storagePath = `generated/${namespace}/${safeName}-${timestamp}.png`;
+
+  const { error } = await supabase.storage
+    .from('brand-assets')
+    .upload(storagePath, imageBuffer, { contentType: 'image/png', upsert: false });
+
+  if (error) {
+    logger.error({ error, storagePath }, 'Inline upload to storage failed');
+    throw new Error(`Storage upload failed: ${error.message}`);
+  }
+
+  const { data: urlData } = supabase.storage.from('brand-assets').getPublicUrl(storagePath);
+  return urlData.publicUrl;
+}
+
 // ── Retry helper ─────────────────────────────────────────────────
 
 /**
@@ -117,27 +147,29 @@ export async function generateProductMockup({ prompt, productSku, productName, l
         prompt,
         n: 1,
         size: size || '1024x1024',
-        quality: quality || 'hd',
-        response_format: 'url',
+        quality: quality || 'high',
       }),
     );
 
-    const imageData = result.data?.[0];
-    if (!imageData) {
+    const b64 = result.data?.[0]?.b64_json;
+    if (!b64) {
       return { success: false, imageUrl: null, revisedPrompt: null, model: 'gpt-image-1.5', error: 'No image returned from OpenAI' };
     }
 
+    // Upload to storage inline to avoid passing base64 through agent context
+    const imageBuffer = Buffer.from(b64, 'base64');
+    const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
+
     return {
       success: true,
-      imageUrl: imageData.url || null,
-      revisedPrompt: imageData.revised_prompt || null,
+      imageUrl,
+      revisedPrompt: null,
       model: 'gpt-image-1.5',
       error: null,
     };
   } catch (err) {
     logger.error({ err, productSku }, 'GPT Image 1.5 generation failed');
 
-    // Handle content policy violations specifically
     if (err.code === 'content_policy_violation') {
       return {
         success: false,
@@ -239,16 +271,41 @@ export async function generateTextOnProduct({ prompt, brandText, productSku, pro
 }
 
 /**
- * Fallback: generate an image via GPT Image 1.5 when Ideogram fails.
+ * Fallback chain: Gemini 3.1 Flash Image → GPT Image 1.5.
  *
  * @param {string} prompt
  * @param {string} productSku
  * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
  */
 async function fallbackToGPTImage(prompt, productSku) {
+  // Try Gemini 3.1 Flash Image first (fast, high-volume)
+  const genAI = await getGoogleAIClient();
+  if (genAI) {
+    try {
+      logger.info({ productSku }, 'Trying Gemini 3.1 Flash Image fallback');
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-3.1-flash-image-preview',
+        generationConfig: { responseMimeType: 'image/png' },
+      });
+      const result = await model.generateContent(prompt);
+      const imagePart = result.response.candidates?.[0]?.content?.parts?.find(
+        (part) => part.inlineData?.mimeType?.startsWith('image/'),
+      );
+      if (imagePart?.inlineData?.data) {
+        const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+        const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
+        return { success: true, imageUrl, model: 'gemini-3.1-flash-image', error: null };
+      }
+      logger.warn({ productSku }, 'Gemini returned no image, falling through to GPT Image 1.5');
+    } catch (err) {
+      logger.warn({ err: err.message, productSku }, 'Gemini 3.1 Flash Image fallback failed');
+    }
+  }
+
+  // Final fallback: GPT Image 1.5
   const openai = await getOpenAIClient();
   if (!openai) {
-    return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: 'OpenAI SDK not available for Ideogram fallback' };
+    return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: 'No image generation API available' };
   }
 
   try {
@@ -257,19 +314,21 @@ async function fallbackToGPTImage(prompt, productSku) {
       prompt,
       n: 1,
       size: '1024x1024',
-      quality: 'hd',
-      response_format: 'url',
+      quality: 'high',
     });
 
-    const url = result.data?.[0]?.url || null;
-    if (!url) {
+    const b64 = result.data?.[0]?.b64_json;
+    if (!b64) {
       return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: 'GPT Image 1.5 fallback returned no image' };
     }
 
-    return { success: true, imageUrl: url, model: 'gpt-image-1.5', error: null };
+    const imageBuffer = Buffer.from(b64, 'base64');
+    const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
+
+    return { success: true, imageUrl, model: 'gpt-image-1.5', error: null };
   } catch (err) {
     logger.error({ err, productSku }, 'GPT Image 1.5 fallback also failed');
-    return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: `Fallback also failed: ${err.message}` };
+    return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: `All fallbacks failed: ${err.message}` };
   }
 }
 
@@ -298,7 +357,7 @@ export async function composeBundleImage({ prompt, bundleName, productDescriptio
 
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-3-pro-image-preview',
       generationConfig: { responseMimeType: 'image/png' },
     });
 
@@ -380,8 +439,7 @@ async function fallbackBundleToGPTImage(prompt, bundleName, productDescriptions)
       prompt: gridPrompt,
       n: 1,
       size: '1024x1024',
-      quality: 'hd',
-      response_format: 'b64_json',
+      quality: 'high',
     });
 
     const b64 = result.data?.[0]?.b64_json || null;
