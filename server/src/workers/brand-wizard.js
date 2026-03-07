@@ -66,11 +66,35 @@ export function initBrandWizardWorker(io) {
             io,
             job,
           })) {
-            // Debug: log every SDK message type
-            jobLog.info(
-              { msgType: message.type, subtype: message.subtype || null, hasContent: !!message.message?.content },
-              'Agent SDK message received'
-            );
+            // Debug: log every SDK message type with tool details
+            const debugInfo = { msgType: message.type, subtype: message.subtype || null };
+            if (message.type === 'assistant' && message.message?.content) {
+              // Extract tool_use blocks from content
+              const content = message.message.content;
+              if (Array.isArray(content)) {
+                const toolUses = content.filter(b => b.type === 'tool_use').map(b => b.name);
+                const textBlocks = content.filter(b => b.type === 'text').map(b => b.text?.slice(0, 200));
+                if (toolUses.length) debugInfo.toolCalls = toolUses;
+                if (textBlocks.length) debugInfo.textPreview = textBlocks;
+              } else if (typeof content === 'string') {
+                debugInfo.textPreview = content.slice(0, 300);
+              }
+            }
+            if (message.type === 'user' && message.message?.content) {
+              const content = message.message.content;
+              if (Array.isArray(content)) {
+                const toolResults = content.filter(b => b.type === 'tool_result').map(b => ({
+                  id: b.tool_use_id,
+                  preview: typeof b.content === 'string' ? b.content.slice(0, 200) : JSON.stringify(b.content)?.slice(0, 200),
+                }));
+                if (toolResults.length) debugInfo.toolResults = toolResults;
+              }
+            }
+            if (message.type === 'result') {
+              debugInfo.result = typeof message.result === 'string' ? message.result.slice(0, 500) : JSON.stringify(message.result)?.slice(0, 500);
+              debugInfo.cost = message.total_cost_usd;
+            }
+            jobLog.info(debugInfo, 'Agent SDK message');
 
             // SDKAssistantMessage — stream agent text to client
             if (message.type === 'assistant') {
