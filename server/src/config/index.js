@@ -89,6 +89,10 @@ const env = cleanEnv(process.env, {
     devDefault: 'placeholder',
     desc: 'FAL.ai API key (FLUX Pro via fal.run)',
   }),
+  RECRAFT_API_KEY: str({
+    devDefault: '',
+    desc: 'Recraft API key for direct V4 Vector logo generation (preferred over FAL.ai)',
+  }),
   IDEOGRAM_API_KEY: str({
     devDefault: 'placeholder',
     desc: 'Ideogram API key (Ideogram v3)',
