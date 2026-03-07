@@ -75,7 +75,7 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = [], brandProducts = 
     id: a.id,
     url: a.url || '',
     thumbnailUrl: a.thumbnail_url || a.url || '',
-    status: a.metadata?.status || 'generated',
+    status: a.is_selected ? 'selected' : 'generated',
     prompt: a.metadata?.prompt || undefined,
     model: a.metadata?.model || undefined,
   }));
