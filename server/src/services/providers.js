@@ -101,17 +101,27 @@ export function getGoogleAIClient() {
 // ── Direct API Clients (no SDK -- fetch-based) ──────────────────
 
 /**
- * Helper: convert hex color string to RGB array for Recraft API.
+ * Helper: convert hex color string to RGB object.
+ * FAL.ai expects {r, g, b} objects; direct Recraft expects [r, g, b] arrays.
  * @param {string} hex - e.g. '#2D3436' or '2D3436'
- * @returns {number[]} - [r, g, b]
+ * @returns {{ r: number, g: number, b: number }}
  */
 function hexToRgb(hex) {
   const h = hex.replace(/^#/, '');
-  return [
-    parseInt(h.substring(0, 2), 16) || 0,
-    parseInt(h.substring(2, 4), 16) || 0,
-    parseInt(h.substring(4, 6), 16) || 0,
-  ];
+  return {
+    r: parseInt(h.substring(0, 2), 16) || 0,
+    g: parseInt(h.substring(2, 4), 16) || 0,
+    b: parseInt(h.substring(4, 6), 16) || 0,
+  };
+}
+
+/**
+ * Convert {r, g, b} object to [r, g, b] array for direct Recraft API.
+ * @param {{ r: number, g: number, b: number }} rgb
+ * @returns {number[]}
+ */
+function rgbToArray(rgb) {
+  return [rgb.r, rgb.g, rgb.b];
 }
 
 /**
@@ -335,9 +345,8 @@ export const recraftClient = {
         model: 'recraftv4_vector',
         size: '1024x1024',
         n: 1,
-        colors: rgbColors?.map((rgb) => ({ rgb })),
-        background_color: rgbBg ? { rgb: rgbBg } : undefined,
-        // hexToRgb returns [r,g,b] arrays — Recraft expects {rgb: [r,g,b]}
+        colors: rgbColors?.map((c) => ({ rgb: rgbToArray(c) })),
+        background_color: rgbBg ? { rgb: rgbToArray(rgbBg) } : undefined,
       });
 
       const image = data.data?.[0];

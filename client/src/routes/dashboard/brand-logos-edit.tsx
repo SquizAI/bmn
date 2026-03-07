@@ -91,18 +91,21 @@ export default function BrandLogosEditPage() {
     async (logoId: string) => {
       if (!brandId) return;
 
-      const newSelected = new Set(selectedIds);
-      if (newSelected.has(logoId)) {
-        newSelected.delete(logoId);
-      } else {
-        newSelected.add(logoId);
-      }
-      setSelectedIds(newSelected);
+      // Radio behavior: clicking the already-selected logo deselects it,
+      // clicking a different logo selects it (server deselects others)
+      const wasSelected = selectedIds.has(logoId);
+      const newStatus = wasSelected ? 'generated' : 'selected';
 
-      // Persist selection to the API
+      // Optimistic update
+      if (wasSelected) {
+        setSelectedIds(new Set());
+      } else {
+        setSelectedIds(new Set([logoId]));
+      }
+
       try {
         await apiClient.patch(`/api/v1/brands/${brandId}/logos/${logoId}`, {
-          status: newSelected.has(logoId) ? 'selected' : 'generated',
+          status: newStatus,
         });
         await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.brand(brandId) });
       } catch (err) {

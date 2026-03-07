@@ -537,7 +537,7 @@ export async function generateLogos(req, res, next) {
       brandVision,
       archetype,
       industry: industry.slice(0, 200),
-      count: (req.body.variations?.length > 0 ? req.body.variations.length : null) || req.body.count || 4,
+      count: (req.body.variations?.length > 0 ? req.body.variations.length : null) || req.body.count || 1,
       variations: (Array.isArray(req.body.variations) && req.body.variations.length > 0) ? req.body.variations : undefined,
       isRefinement: !!req.body.refinementNotes,
       refinementNotes: req.body.refinementNotes || undefined,
