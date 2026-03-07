@@ -66,6 +66,12 @@ export function initBrandWizardWorker(io) {
             io,
             job,
           })) {
+            // Debug: log every SDK message type
+            jobLog.info(
+              { msgType: message.type, subtype: message.subtype || null, hasContent: !!message.message?.content },
+              'Agent SDK message received'
+            );
+
             // SDKAssistantMessage — stream agent text to client
             if (message.type === 'assistant') {
               io.of('/wizard').to(jobRoom).to(room).emit('agent:message', {
