@@ -4,12 +4,12 @@ import { z } from 'zod';
 
 /**
  * Attempt to load Google AI SDK. If not installed yet, provide a stub fallback.
- * This allows the agent system to boot even if @google/generativeai is not yet
+ * This allows the agent system to boot even if @google/generative-ai is not yet
  * in the dependency tree.
  */
 let genAI = null;
 try {
-  const { GoogleGenerativeAI } = await import('@google/generativeai');
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
   genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 } catch {
   // SDK not installed yet -- stub will be used in execute()

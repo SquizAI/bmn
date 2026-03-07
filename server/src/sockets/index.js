@@ -435,7 +435,7 @@ export function createSocketServer(httpServer) {
                 }
               }
             } else if (msg.type === 'result' && msg.subtype === 'success') {
-              tokensUsed = msg.total_usage?.output_tokens || 0;
+              tokensUsed = msg.usage?.output_tokens || 0;
 
               // Check if any tools modified brand data
               if (activeBrand?.id) {

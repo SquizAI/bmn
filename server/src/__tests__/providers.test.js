@@ -28,7 +28,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 vi.mock('openai', () => {
   throw new Error('Not installed');
 });
-vi.mock('@google/generativeai', () => {
+vi.mock('@google/generative-ai', () => {
   throw new Error('Not installed');
 });
 

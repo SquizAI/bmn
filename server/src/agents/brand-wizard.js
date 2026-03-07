@@ -12,7 +12,7 @@
 
 import { buildAgentHooks } from './agent-config.js';
 import { BRAND_WIZARD_SYSTEM_PROMPT } from './prompts/brand-wizard-prompt.js';
-import { getAgentDefinitions } from '../skills/_shared/tool-registry.js';
+import { getAgentDefinitions, getSkillMcpTools } from '../skills/_shared/tool-registry.js';
 import { createParentToolsServer, PARENT_TOOL_NAMES } from './tools/mcp-server.js';
 import { sessionManager } from './session-manager.js';
 import { logger } from '../lib/logger.js';
@@ -63,17 +63,21 @@ export async function* runBrandWizard({
 
   const room = `brand:${brandId}`;
 
-  // 1. Create the in-process MCP server with parent tools
-  const parentToolsServer = createParentToolsServer();
-
-  // 2. Get step-specific subagent definitions
+  // 1. Get step-specific skill tools and subagent definitions
+  const { tools: skillTools, toolNames: skillToolNames } = getSkillMcpTools(step);
   const agents = getAgentDefinitions(step);
+
+  // 2. Create the in-process MCP server with parent + skill tools
+  const parentToolsServer = createParentToolsServer(skillTools);
 
   // 3. Build lifecycle hooks
   const hooks = buildAgentHooks({ io, room, userId, brandId, job });
 
   // 4. Build the step-specific user prompt
   const userPrompt = buildStepPrompt(step, input, { userId, brandId });
+
+  // 5. Combine all tool names for allowedTools
+  const allToolNames = [...PARENT_TOOL_NAMES, ...skillToolNames];
 
   logger.info(
     {
@@ -82,12 +86,13 @@ export async function* runBrandWizard({
       step,
       sessionId: sessionId || 'new',
       agentCount: Object.keys(agents).length,
-      toolCount: PARENT_TOOL_NAMES.length,
+      toolCount: allToolNames.length,
+      skillTools: skillToolNames,
     },
     'Starting Brand Wizard agent'
   );
 
-  // 5. Run the agent via SDK query()
+  // 6. Run the agent via SDK query()
   const query = sdkQuery({
     prompt: userPrompt,
     options: {
@@ -102,8 +107,8 @@ export async function* runBrandWizard({
         'bmn-parent-tools': parentToolsServer,
       },
 
-      // Auto-allow our custom tools without prompting
-      allowedTools: PARENT_TOOL_NAMES.map((name) => `mcp__bmn-parent-tools__${name}`),
+      // Auto-allow all tools (parent + skill) without prompting
+      allowedTools: allToolNames.map((name) => `mcp__bmn-parent-tools__${name}`),
 
       // Subagent definitions (skill modules)
       agents,
@@ -136,7 +141,7 @@ export async function* runBrandWizard({
     },
   });
 
-  // 6. Stream messages back to the worker
+  // 7. Stream messages back to the worker
   for await (const message of query) {
     yield message;
 

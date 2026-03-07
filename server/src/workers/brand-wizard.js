@@ -12,9 +12,6 @@ import { logger } from '../lib/logger.js';
  * This is the main orchestration worker. It spawns the parent Brand Wizard Agent
  * which in turn invokes subagents (skills) via the Task tool.
  *
- * NOTE: Agent SDK calls are stubbed until the SDK is installed and the agent
- * system is implemented (Phase 1 Week 3 -- 04-AGENT-SYSTEM.md).
- *
  * @param {import('socket.io').Server} io
  * @returns {Worker}
  */
@@ -100,35 +97,20 @@ export function initBrandWizardWorker(io) {
             }
           }
         } catch (sdkError) {
-          // SDK not available -- simulate progress for pipeline testing
-          jobLog.warn({ err: sdkError.message }, 'Agent SDK not available, running stub simulation');
+          jobLog.error({ err: sdkError.message, stack: sdkError.stack }, 'Agent SDK execution failed');
 
-          const stages = [
-            { progress: 20, message: `Analyzing ${step} input...` },
-            { progress: 40, message: `Processing ${step} data...` },
-            { progress: 60, message: `Generating ${step} results...` },
-            { progress: 80, message: `Finalizing ${step}...` },
-          ];
+          // Emit error to client so they see what happened
+          io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+            jobId: job.id,
+            brandId,
+            step,
+            status: 'error',
+            progress: 0,
+            message: 'Brand wizard agent failed. Retrying...',
+            timestamp: Date.now(),
+          });
 
-          for (const stage of stages) {
-            io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
-              jobId: job.id,
-              brandId,
-              step,
-              status: 'processing',
-              progress: stage.progress,
-              message: stage.message,
-              timestamp: Date.now(),
-            });
-            await job.updateProgress(stage.progress);
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-
-          finalResult = {
-            result: { step, status: 'stub', message: `Stub result for ${step}` },
-            cost: 0,
-            sessionId: null,
-          };
+          throw sdkError; // Let BullMQ handle retry
         }
 
         // Update database with result

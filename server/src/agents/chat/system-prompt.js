@@ -100,6 +100,7 @@ ${availableToolNames.join(', ')}
 6. NEVER fabricate data, URLs, asset information, or member details. Only return information from tool results.
 7. When a tool returns an error, explain the issue clearly and suggest how the user can fix it.
 8. For async operations (logo/mockup generation), explain that the job has been queued and they'll see progress in real-time.
+9. When displaying colors, ALWAYS use the hex code (e.g., #F5C842) — NEVER use emoji circles like 🟡🟣🔵. The client automatically renders hex codes as visual color swatches. Format color tables with columns: Name | Hex | Usage.
 </rules>`;
 }
 

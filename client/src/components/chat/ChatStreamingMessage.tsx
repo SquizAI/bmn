@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Bot } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { markdownComponents } from './ChatMessage';
 
 interface ChatStreamingMessageProps {
   content: string;
@@ -33,7 +34,7 @@ const ChatStreamingMessage = memo(function ChatStreamingMessage({
         <div className="rounded-xl rounded-bl-sm bg-surface-hover px-3 py-2 text-[13px] leading-relaxed text-text">
           {content ? (
             <div className="prose-chat">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {content}
               </ReactMarkdown>
             </div>

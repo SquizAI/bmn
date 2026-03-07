@@ -33,10 +33,10 @@ try {
 }
 
 try {
-  const mod = await import('@google/generativeai');
+  const mod = await import('@google/generative-ai');
   GoogleGenerativeAISDK = mod.GoogleGenerativeAI;
 } catch {
-  // @google/generativeai not installed yet
+  // @google/generative-ai not installed yet
 }
 
 // ── Singleton instances ──────────────────────────────────────────
@@ -47,7 +47,7 @@ let _anthropic = null;
 /** @type {import('openai').default | null} */
 let _openai = null;
 
-/** @type {import('@google/generativeai').GoogleGenerativeAI | null} */
+/** @type {import('@google/generative-ai').GoogleGenerativeAI | null} */
 let _genAI = null;
 
 /**
@@ -84,13 +84,13 @@ export function getOpenAIClient() {
 
 /**
  * Get the Google Generative AI client (singleton).
- * @returns {import('@google/generativeai').GoogleGenerativeAI}
+ * @returns {import('@google/generative-ai').GoogleGenerativeAI}
  */
 export function getGoogleAIClient() {
   if (!_genAI) {
     if (!GoogleGenerativeAISDK) {
       throw new Error(
-        'Google AI SDK (@google/generativeai) is not installed. Run: npm install @google/generativeai'
+        'Google AI SDK (@google/generative-ai) is not installed. Run: npm install @google/generative-ai'
       );
     }
     _genAI = new GoogleGenerativeAISDK(config.GOOGLE_API_KEY);

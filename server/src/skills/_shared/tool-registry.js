@@ -17,6 +17,15 @@ import { readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { logger } from '../../lib/logger.js';
 
+/** @type {typeof import('@anthropic-ai/claude-agent-sdk').tool | null} */
+let sdkTool = null;
+try {
+  const sdk = await import('@anthropic-ai/claude-agent-sdk');
+  sdkTool = sdk.tool;
+} catch {
+  // SDK not installed
+}
+
 /**
  * @typedef {Object} SkillConfig
  * @property {string} name - Unique skill identifier (directory name)
@@ -147,6 +156,59 @@ export function getAgentDefinitions(step) {
   }
 
   return agents;
+}
+
+/**
+ * Get SDK tool() objects for all skills relevant to a wizard step.
+ * These are registered in the parent MCP server so subagents can call them.
+ *
+ * Each skill handler returns a plain object. This function wraps them
+ * to return the MCP response format: { content: [{ type: 'text', text }] }.
+ *
+ * @param {string} step - The current wizard step
+ * @returns {{ tools: Array, toolNames: string[] }}
+ */
+export function getSkillMcpTools(step) {
+  if (!sdkTool) {
+    return { tools: [], toolNames: [] };
+  }
+
+  const relevantSkills = STEP_TO_SKILLS[step] || [];
+  const tools = [];
+  const toolNames = [];
+
+  for (const skillName of relevantSkills) {
+    const skill = registry.get(skillName);
+    if (!skill?.tools) continue;
+
+    for (const [toolName, toolDef] of Object.entries(skill.tools)) {
+      if (!toolDef.execute || !toolDef.inputSchema) continue;
+
+      const mcpTool = sdkTool(
+        toolName,
+        toolDef.description,
+        toolDef.inputSchema,
+        async (input) => {
+          try {
+            const result = await toolDef.execute(input);
+            return {
+              content: [{ type: 'text', text: JSON.stringify(result) }],
+            };
+          } catch (err) {
+            logger.error({ tool: toolName, err: err.message }, 'Skill tool execution error');
+            return {
+              content: [{ type: 'text', text: JSON.stringify({ success: false, error: err.message }) }],
+            };
+          }
+        },
+      );
+
+      tools.push(mcpTool);
+      toolNames.push(toolName);
+    }
+  }
+
+  return { tools, toolNames };
 }
 
 /**

@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
 import { Bot, User } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import type { ReactNode } from 'react';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant' | 'system';
@@ -17,6 +18,64 @@ function formatTime(date: Date): string {
     hour12: true,
   });
 }
+
+/** Regex matching hex color codes like #F5C842 or #1a1a4e */
+const HEX_RE = /#([0-9A-Fa-f]{6})\b/g;
+
+/** Replace hex codes in a string with inline color swatches + code */
+function renderWithSwatches(children: ReactNode): ReactNode {
+  if (typeof children !== 'string') return children;
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  HEX_RE.lastIndex = 0;
+  while ((match = HEX_RE.exec(children)) !== null) {
+    if (match.index > last) parts.push(children.slice(last, match.index));
+    const hex = match[0];
+    parts.push(
+      <span key={match.index} className="inline-flex items-center gap-1">
+        <span
+          className="inline-block h-3 w-3 rounded-full border border-white/20 shrink-0"
+          style={{ backgroundColor: hex }}
+        />
+        <code className="text-xs">{hex}</code>
+      </span>,
+    );
+    last = match.index + match[0].length;
+  }
+  if (last === 0) return children;
+  if (last < children.length) parts.push(children.slice(last));
+  return <>{parts}</>;
+}
+
+/** Process children recursively to inject color swatches */
+function processChildren(children: ReactNode): ReactNode {
+  if (typeof children === 'string') return renderWithSwatches(children);
+  if (Array.isArray(children)) return children.map((c, i) => <span key={i}>{processChildren(c)}</span>);
+  return children;
+}
+
+export const markdownComponents: Components = {
+  td: ({ children, ...props }) => <td {...props}>{processChildren(children)}</td>,
+  p: ({ children, ...props }) => <p {...props}>{processChildren(children)}</p>,
+  li: ({ children, ...props }) => <li {...props}>{processChildren(children)}</li>,
+  // Render standalone hex codes in backticks as swatches too
+  code: ({ children, className, ...props }) => {
+    const text = String(children).trim();
+    if (!className && /^#[0-9A-Fa-f]{6}$/.test(text)) {
+      return (
+        <span className="inline-flex items-center gap-1">
+          <span
+            className="inline-block h-3 w-3 rounded-full border border-white/20 shrink-0"
+            style={{ backgroundColor: text }}
+          />
+          <code {...props} className="text-xs">{text}</code>
+        </span>
+      );
+    }
+    return <code {...props} className={className}>{children}</code>;
+  },
+};
 
 function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
   if (role === 'system') {
@@ -67,7 +126,7 @@ function ChatMessage({ role, content, timestamp }: ChatMessageProps) {
             content
           ) : (
             <div className="prose-chat">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {content}
               </ReactMarkdown>
             </div>

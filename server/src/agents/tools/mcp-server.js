@@ -89,7 +89,7 @@ const validateInput = sdkTool(
   async ({ input, validationType, criteria }) => {
     let genAI = null;
     try {
-      const { GoogleGenerativeAI } = await import('@google/generativeai');
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
       genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     } catch {
       return { content: [{ type: 'text', text: JSON.stringify({ valid: true, message: 'Validation unavailable - Google AI SDK not configured' }) }] };
@@ -233,12 +233,12 @@ const sendEmail = sdkTool(
 
 /**
  * Create the in-process MCP server for all parent-agent direct tools.
- * Returns a McpSdkServerConfigWithInstance that can be passed to
- * options.mcpServers in the SDK query() call.
+ * Optionally includes skill-specific tools so subagents can call them.
  *
+ * @param {Array} [skillTools] - Additional SDK tool() objects from skill modules
  * @returns {import('@anthropic-ai/claude-agent-sdk').McpSdkServerConfigWithInstance}
  */
-export function createParentToolsServer() {
+export function createParentToolsServer(skillTools = []) {
   if (!createSdkMcpServer) {
     throw new Error('Anthropic Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk');
   }
@@ -254,6 +254,7 @@ export function createParentToolsServer() {
       deductCredit,
       queueCRMSync,
       sendEmail,
+      ...skillTools,
     ],
   });
 }
