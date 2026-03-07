@@ -263,16 +263,20 @@ describe('Admin Controller Integration', () => {
     it('should create a new product and return 201', async () => {
       const newProduct = {
         id: 'p-new',
+        sku: 'HOODIE-001',
         name: 'Premium Hoodie',
         category: 'apparel',
-        base_price: 25,
+        base_cost: 25,
+        retail_price: 49.99,
         is_active: true,
       };
 
       req.body = {
+        sku: 'HOODIE-001',
         name: 'Premium Hoodie',
         category: 'apparel',
-        base_price: 25,
+        base_cost: 25,
+        retail_price: 49.99,
       };
 
       mockSingle.mockResolvedValueOnce({ data: newProduct, error: null });
@@ -292,7 +296,7 @@ describe('Admin Controller Integration', () => {
     });
 
     it('should call next on database error', async () => {
-      req.body = { name: 'Fail Product', category: 'apparel' };
+      req.body = { sku: 'FAIL-001', name: 'Fail Product', category: 'apparel' };
       mockSingle.mockResolvedValueOnce({ data: null, error: { message: 'insert failed' } });
 
       const { createProduct } = await import('../../controllers/admin.js');
