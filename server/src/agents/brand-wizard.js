@@ -198,6 +198,12 @@ function buildStepPrompt(step, input, context) {
       Deduct credits after success.
       Save mockup assets via saveBrandData.`,
 
+    'mockup-review': `Generate product mockups for the brand's selected products.
+      Check credits via checkCredits (operationType: "mockup", quantity: number of products).
+      Use the mockup-renderer subagent via the Task tool to generate mockups.
+      Deduct credits after success.
+      Save mockup assets via saveBrandData.`,
+
     'bundle-composition': `Create product bundles from selected products.
       Use the mockup-renderer subagent via the Task tool for bundle composition images.
       Check and deduct credits for each bundle image.

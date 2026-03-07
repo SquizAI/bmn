@@ -110,6 +110,7 @@ const STEP_TO_SKILLS = {
   'logo-refinement': ['logo-creator'],
   'product-selection': ['product-recommender'],
   'mockup-generation': ['mockup-renderer'],
+  'mockup-review': ['mockup-renderer'],
   'bundle-composition': ['mockup-renderer'],
   'profit-projection': ['profit-calculator'],
   'completion': [],
