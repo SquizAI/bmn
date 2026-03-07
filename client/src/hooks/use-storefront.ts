@@ -95,6 +95,15 @@ export function useCreateStorefront() {
   });
 }
 
+export function useGenerateStorefront() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { brandId: string; template: 'bold' | 'story' | 'conversion' }) =>
+      apiClient.post('/api/v1/storefronts/generate', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.storefronts }),
+  });
+}
+
 export function useUpdateStorefront() {
   const qc = useQueryClient();
   return useMutation({

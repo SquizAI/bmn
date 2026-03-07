@@ -34,6 +34,15 @@ export const storefrontCreateSchema = z.object({
 });
 
 /**
+ * POST /api/v1/storefronts/generate
+ * AI-powered one-click storefront generation.
+ */
+export const storefrontGenerateSchema = z.object({
+  brandId: uuid('brand ID'),
+  template: z.enum(['bold', 'story', 'conversion']),
+});
+
+/**
  * PATCH /api/v1/storefronts/:storefrontId
  */
 export const storefrontUpdateSchema = z.object({

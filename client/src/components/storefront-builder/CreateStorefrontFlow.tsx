@@ -1,298 +1,364 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState, useEffect } from 'react';
 import { useBrands } from '@/hooks/use-brands';
-import { useStorefrontThemes, useCreateStorefront } from '@/hooks/use-storefront';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useGenerateStorefront } from '@/hooks/use-storefront';
 import { Card } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { Store, ArrowRight, Check, Loader2, Sparkles, Palette } from 'lucide-react';
+import {
+  Zap, BookOpen, TrendingUp, Sparkles, Loader2, Check, Store,
+  ArrowRight, ShieldCheck, BarChart3, MessageSquare,
+} from 'lucide-react';
 
-const createSchema = z.object({
-  brandId: z.string().uuid('Select a brand'),
-  slug: z.string()
-    .min(3, 'At least 3 characters')
-    .max(63, 'Max 63 characters')
-    .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, 'Lowercase letters, numbers, hyphens only'),
-  themeId: z.string().uuid('Select a theme'),
-});
+type TemplateId = 'bold' | 'story' | 'conversion';
 
-type CreateForm = z.infer<typeof createSchema>;
+interface Template {
+  id: TemplateId;
+  name: string;
+  tagline: string;
+  description: string;
+  icon: React.ElementType;
+  accentFrom: string;
+  accentTo: string;
+  sections: string[];
+  bestFor: string;
+}
 
-const STEPS = ['Brand', 'URL', 'Theme'];
+const TEMPLATES: Template[] = [
+  {
+    id: 'bold',
+    name: 'Bold & Direct',
+    tagline: 'Products speak louder than words',
+    description: 'Hero → Products → Social proof. Minimal copy, maximum impact. Gets straight to what you sell.',
+    icon: Zap,
+    accentFrom: '#D4A574',
+    accentTo: '#E8C9A0',
+    sections: ['Hero', 'Trust Bar', 'Products', 'Steps', 'Quality', 'Testimonials', 'FAQ', 'Contact'],
+    bestFor: 'Performance & Fitness Brands',
+  },
+  {
+    id: 'story',
+    name: 'Story-Driven',
+    tagline: 'Lead with your brand, sell with trust',
+    description: 'Brand narrative first, then products. Builds emotional connection before asking for the sale.',
+    icon: BookOpen,
+    accentFrom: '#7C9A6E',
+    accentTo: '#A3C293',
+    sections: ['Hero', 'Welcome', 'About', 'Bundles', 'Why Bundles', 'Testimonials', 'Quality', 'FAQ', 'Products', 'Contact'],
+    bestFor: 'Wellness & Lifestyle Brands',
+  },
+  {
+    id: 'conversion',
+    name: 'Conversion Machine',
+    tagline: 'Full funnel, maximum revenue',
+    description: 'Trust → Desire → Action. Every section engineered to move visitors toward checkout.',
+    icon: TrendingUp,
+    accentFrom: '#6B7FD7',
+    accentTo: '#9BA8E8',
+    sections: ['Hero', 'Trust Bar', 'Bundles', 'Steps', 'Stack Finder', 'Why Bundles', 'Quality', 'Testimonials', 'Products', 'FAQ', 'About', 'Contact'],
+    bestFor: 'DTC & E-Commerce Brands',
+  },
+];
+
+const GENERATING_STEPS = [
+  { label: 'Analyzing your brand identity...', icon: Sparkles },
+  { label: 'Generating page sections...', icon: Store },
+  { label: 'Writing product-aware copy...', icon: MessageSquare },
+  { label: 'Creating testimonials & FAQs...', icon: ShieldCheck },
+  { label: 'Publishing your storefront...', icon: BarChart3 },
+];
 
 export function CreateStorefrontFlow() {
   const { data: brands, isLoading: brandsLoading } = useBrands();
-  const { data: themes, isLoading: themesLoading } = useStorefrontThemes();
-  const createMutation = useCreateStorefront();
-  const [step, setStep] = useState(0);
+  const generateMutation = useGenerateStorefront();
 
-  const {
-    register, handleSubmit, setValue, watch, formState: { errors },
-  } = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
-    defaultValues: { brandId: '', slug: '', themeId: '' },
-  });
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateId | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingStep, setGeneratingStep] = useState(0);
+  const [isDone, setIsDone] = useState(false);
 
-  const selectedBrandId = watch('brandId');
-  const selectedThemeId = watch('themeId');
-  const slug = watch('slug');
+  // Auto-select brand if only one exists
+  const brand = brands?.items?.[0];
+  const hasBrand = !!brand;
 
-  const onSubmit = (data: CreateForm) => {
-    createMutation.mutate(data, {
-      onSuccess: () => window.location.reload(),
-    });
+  // Animate through generating steps
+  useEffect(() => {
+    if (!isGenerating) return;
+    const interval = setInterval(() => {
+      setGeneratingStep((prev) => {
+        if (prev >= GENERATING_STEPS.length - 1) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1200);
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  const handleGenerate = (templateId: TemplateId) => {
+    if (!brand) return;
+    setSelectedTemplate(templateId);
+    setIsGenerating(true);
+    setGeneratingStep(0);
+
+    generateMutation.mutate(
+      { brandId: brand.id, template: templateId },
+      {
+        onSuccess: () => {
+          setIsDone(true);
+          setTimeout(() => window.location.reload(), 1500);
+        },
+        onError: () => {
+          setIsGenerating(false);
+          setGeneratingStep(0);
+        },
+      },
+    );
   };
 
-  const handleBrandSelect = (brandId: string) => {
-    setValue('brandId', brandId);
-    const brand = brands?.items?.find((b) => b.id === brandId);
-    if (brand) {
-      const autoSlug = (brand.name as string)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 63);
-      setValue('slug', autoSlug);
-    }
-    setStep(1);
-  };
+  // Loading state
+  if (brandsLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
-  return (
-    <Card variant="elevated" className="max-w-2xl mx-auto p-0 overflow-hidden border-accent/10">
-      {/* Gradient accent bar */}
-      <div className="h-1 bg-linear-to-r from-accent/80 via-accent to-accent/60" />
+  // No brand created yet
+  if (!hasBrand) {
+    return (
+      <Card variant="elevated" className="max-w-lg mx-auto p-8 text-center border-accent/10">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 mb-4">
+          <Store className="h-8 w-8 text-accent" />
+        </div>
+        <h2 className="text-xl font-bold text-text mb-2">Create a Brand First</h2>
+        <p className="text-text-muted mb-6">
+          You need a brand before we can build your storefront. Start the Brand Wizard to get going.
+        </p>
+        <a href="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white font-semibold hover:bg-accent-hover transition-colors">
+          Go to Dashboard <ArrowRight className="h-4 w-4" />
+        </a>
+      </Card>
+    );
+  }
 
-      <div className="p-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-linear-to-br from-accent/20 to-accent/5 shadow-glow-accent mb-4">
-            <Store className="h-9 w-9 text-accent" />
-          </div>
-          <h2 className="text-2xl font-bold text-text">Create Your Store</h2>
-          <p className="text-text-muted mt-2">
-            Launch a branded supplement storefront in 3 easy steps.
+  // Generating state — full-screen animation
+  if (isGenerating) {
+    const selectedTpl = TEMPLATES.find((t) => t.id === selectedTemplate);
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-lg mx-auto text-center"
+      >
+        <Card variant="elevated" className="p-10 border-accent/10 overflow-hidden relative">
+          {/* Gradient accent bar */}
+          <div
+            className="absolute top-0 left-0 right-0 h-1"
+            style={{ background: `linear-gradient(to right, ${selectedTpl?.accentFrom}, ${selectedTpl?.accentTo})` }}
+          />
+
+          {/* Pulsing icon */}
+          <motion.div
+            className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-6"
+            style={{ background: `linear-gradient(135deg, ${selectedTpl?.accentFrom}30, ${selectedTpl?.accentTo}15)` }}
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            {isDone ? (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              >
+                <Check className="h-10 w-10 text-success" />
+              </motion.div>
+            ) : (
+              <Sparkles className="h-10 w-10 text-accent" />
+            )}
+          </motion.div>
+
+          <h2 className="text-2xl font-bold text-text mb-2">
+            {isDone ? 'Your Store is Live!' : 'Building Your Storefront'}
+          </h2>
+          <p className="text-text-muted mb-8">
+            {isDone
+              ? `${brand.name}'s store is published and ready for visitors.`
+              : `AI is generating a ${selectedTpl?.name} store for ${brand.name}...`
+            }
           </p>
-        </div>
 
-        {/* Step Indicators */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {STEPS.map((label, i) => (
-            <div key={label} className="flex items-center gap-2">
-              <motion.div
-                className={cn(
-                  'flex items-center justify-center text-sm font-medium transition-all duration-300',
-                  i < step
-                    ? 'w-10 h-10 rounded-xl bg-success ring-2 ring-success/20 text-white'
-                    : i === step
-                      ? 'w-10 h-10 rounded-xl bg-accent text-white shadow-lg shadow-accent/25'
-                      : 'w-10 h-10 rounded-xl bg-surface-elevated border border-border text-text-muted',
-                )}
-                animate={i === step ? { scale: [1, 1.05, 1] } : {}}
-                transition={{ duration: 0.3 }}
-              >
-                {i < step ? <Check className="h-4 w-4" /> : i + 1}
-              </motion.div>
-              <span className={cn(
-                'text-sm font-medium',
-                i <= step ? 'text-text' : 'text-text-muted',
-              )}>
-                {label}
-              </span>
-              {i < 2 && (
-                <div className={cn(
-                  'w-8 h-0.5 rounded-full mx-1 transition-colors',
-                  i < step ? 'bg-success' : 'bg-border',
-                )} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <AnimatePresence mode="wait">
-            {/* Step 1: Select Brand */}
-            {step === 0 && (
-              <motion.div
-                key="step-0"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-3"
-              >
-                <h3 className="font-semibold flex items-center gap-2 text-text">
-                  <Sparkles className="h-4 w-4 text-accent" /> Select Your Brand
-                </h3>
-                {brandsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
-                  </div>
-                ) : (
-                  <div className="grid gap-2">
-                    {(brands?.items || []).map((brand) => (
-                      <button
-                        key={brand.id}
-                        type="button"
-                        onClick={() => handleBrandSelect(brand.id)}
-                        className={cn(
-                          'w-full text-left p-5 rounded-xl border-2 transition-all duration-200',
-                          selectedBrandId === brand.id
-                            ? 'border-accent ring-2 ring-accent/20 bg-accent/5 shadow-glow-accent'
-                            : 'border-border/30 hover:border-accent/30 hover:shadow-md',
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-lg shadow-sm"
-                            style={{ backgroundColor: brand.primaryColor || '#D4A574' }}
-                          />
-                          <div>
-                            <p className="font-medium text-text">{brand.name}</p>
-                            <p className="text-sm text-text-muted capitalize">{brand.status}</p>
-                          </div>
-                          {selectedBrandId === brand.id && (
-                            <Check className="h-5 w-5 text-accent ml-auto" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* Step 2: Choose URL */}
-            {step === 1 && (
-              <motion.div
-                key="step-1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
-                <h3 className="font-semibold text-text">Choose Your Store URL</h3>
-                <div className="flex items-center gap-0 border border-border/50 rounded-xl overflow-hidden bg-surface">
-                  <span className="px-4 py-3 bg-surface-elevated text-sm text-text-muted border-r border-border/30">https://</span>
-                  <Input
-                    {...register('slug')}
-                    className="border-0 rounded-none focus:ring-0 bg-transparent"
-                    placeholder="your-brand"
-                  />
-                  <span className="px-4 py-3 bg-surface-elevated text-sm text-text-muted whitespace-nowrap border-l border-border/30">
-                    .brandmenow.store
-                  </span>
-                </div>
-                {errors.slug && (
-                  <p className="text-sm text-error">{errors.slug.message}</p>
-                )}
-                {slug && (
-                  <p className="text-sm text-text-muted">
-                    Your store will be at: <strong className="text-accent">https://{slug}.brandmenow.store</strong>
-                  </p>
-                )}
-                <div className="flex gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(0)}>Back</Button>
-                  <Button type="button" onClick={() => setStep(2)}>Continue</Button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 3: Pick Theme */}
-            {step === 2 && (
-              <motion.div
-                key="step-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-4"
-              >
-                <h3 className="font-semibold flex items-center gap-2 text-text">
-                  <Palette className="h-4 w-4 text-accent" /> Pick a Theme
-                </h3>
-                {themesLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    {(themes || []).map((theme: { id: string; name: string; slug: string; description: string | null; baseStyles: Record<string, unknown> }) => {
-                      const colors = (theme.baseStyles as { colorSuggestion?: { primary?: string; accent?: string } })?.colorSuggestion;
-                      const isActive = selectedThemeId === theme.id;
-                      return (
-                        <button
-                          key={theme.id}
-                          type="button"
-                          onClick={() => setValue('themeId', theme.id)}
-                          className={cn(
-                            'relative p-0 rounded-xl border-2 text-left transition-all duration-200 overflow-hidden',
-                            isActive
-                              ? 'border-accent ring-2 ring-accent/20 shadow-glow-accent'
-                              : 'border-border/30 hover:border-accent/30 hover:shadow-md',
-                          )}
-                        >
-                          {/* Gradient stripe preview */}
-                          <div
-                            className="h-15 w-full"
-                            style={{
-                              background: `linear-gradient(135deg, ${colors?.primary || '#333'}, ${colors?.accent || '#999'})`,
-                            }}
-                          />
-                          <div className="p-3">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm text-text">{theme.name}</p>
-                              {isActive && (
-                                <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-white" />
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-text-muted line-clamp-2 mt-1">{theme.description}</p>
-                            <div className="flex gap-1.5 mt-2">
-                              <div className="w-6 h-6 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: colors?.primary || '#333' }} />
-                              <div className="w-6 h-6 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: colors?.accent || '#999' }} />
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-                {errors.themeId && (
-                  <p className="text-sm text-error">{errors.themeId.message}</p>
-                )}
-                <div className="flex gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={() => setStep(1)}>Back</Button>
-                  <motion.button
-                    type="submit"
-                    disabled={createMutation.isPending}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className={cn(
-                      'flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold rounded-xl transition-all',
-                      'bg-linear-to-r from-accent to-accent-hover text-white shadow-lg shadow-accent/25',
-                      'hover:shadow-xl disabled:opacity-50 disabled:pointer-events-none',
-                    )}
-                  >
-                    {createMutation.isPending ? (
+          {/* Step progress */}
+          <div className="space-y-3 text-left max-w-sm mx-auto">
+            {GENERATING_STEPS.map((step, i) => {
+              const StepIcon = step.icon;
+              const isActive = i === generatingStep && !isDone;
+              const isComplete = i < generatingStep || isDone;
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={cn(
+                    'flex items-center gap-3 py-2 px-3 rounded-lg transition-all duration-300',
+                    isActive && 'bg-accent/5',
+                    isComplete && 'opacity-100',
+                    !isActive && !isComplete && 'opacity-40',
+                  )}
+                >
+                  <div className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 shrink-0',
+                    isComplete ? 'bg-success/15 text-success' : isActive ? 'bg-accent/15 text-accent' : 'bg-surface-elevated text-text-muted',
+                  )}>
+                    {isComplete ? (
+                      <Check className="h-4 w-4" />
+                    ) : isActive ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Store className="h-4 w-4" />
+                      <StepIcon className="h-4 w-4" />
                     )}
-                    Create My Store
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </form>
+                  </div>
+                  <span className={cn(
+                    'text-sm font-medium transition-colors',
+                    isComplete ? 'text-text' : isActive ? 'text-text' : 'text-text-muted',
+                  )}>
+                    {step.label}
+                  </span>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Error state */}
+          {generateMutation.isError && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 text-sm text-error"
+            >
+              Something went wrong. Please try again.
+            </motion.p>
+          )}
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // Main state — template picker
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="max-w-4xl mx-auto w-full px-4"
+    >
+      {/* Header */}
+      <div className="text-center mb-10">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-linear-to-br from-accent/20 to-accent/5 shadow-glow-accent mb-4"
+        >
+          <Sparkles className="h-8 w-8 text-accent" />
+        </motion.div>
+        <h1 className="text-3xl font-bold text-text mb-2">
+          Build Your Store in One Click
+        </h1>
+        <p className="text-text-muted text-lg max-w-xl mx-auto">
+          We'll use <strong className="text-text">{brand.name}</strong>'s brand identity, products, and colors to generate a complete storefront. Just pick a style.
+        </p>
       </div>
-    </Card>
+
+      {/* Template Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <AnimatePresence>
+          {TEMPLATES.map((tpl, i) => {
+            const Icon = tpl.icon;
+            return (
+              <motion.div
+                key={tpl.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.1 }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleGenerate(tpl.id)}
+                  disabled={isGenerating}
+                  className={cn(
+                    'w-full text-left rounded-2xl border-2 transition-all duration-200 overflow-hidden group',
+                    'border-border/30 hover:border-accent/40 hover:shadow-xl',
+                    'disabled:opacity-50 disabled:pointer-events-none',
+                  )}
+                >
+                  {/* Gradient header */}
+                  <div
+                    className="h-24 flex items-center justify-center relative"
+                    style={{ background: `linear-gradient(135deg, ${tpl.accentFrom}, ${tpl.accentTo})` }}
+                  >
+                    <Icon className="h-10 w-10 text-white/90 transition-transform duration-300 group-hover:scale-110" />
+                    {/* Section count badge */}
+                    <div className="absolute top-3 right-3 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                      {tpl.sections.length} sections
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-text mb-0.5">{tpl.name}</h3>
+                    <p className="text-sm text-accent font-medium mb-2">{tpl.tagline}</p>
+                    <p className="text-sm text-text-muted leading-relaxed mb-4">
+                      {tpl.description}
+                    </p>
+
+                    {/* Section pills */}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {tpl.sections.slice(0, 6).map((s) => (
+                        <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-surface-elevated text-text-muted font-medium">
+                          {s}
+                        </span>
+                      ))}
+                      {tpl.sections.length > 6 && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface-elevated text-text-muted font-medium">
+                          +{tpl.sections.length - 6} more
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Best for label */}
+                    <p className="text-[11px] uppercase tracking-wider text-text-muted font-semibold mb-3">
+                      Best for: {tpl.bestFor}
+                    </p>
+
+                    {/* CTA */}
+                    <div
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-all group-hover:shadow-lg"
+                      style={{ background: `linear-gradient(135deg, ${tpl.accentFrom}, ${tpl.accentTo})` }}
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Generate This Store
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                </button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Footer note */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-center text-sm text-text-muted mt-8"
+      >
+        You can customize everything after generation. Sections, copy, images — all editable.
+      </motion.p>
+    </motion.div>
   );
 }

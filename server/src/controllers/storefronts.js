@@ -123,6 +123,316 @@ function getDefaultFaqs(brandName) {
   ];
 }
 
+// ── Template Definitions ────────────────────────────────────────────────────
+
+/**
+ * Three distinct storefront templates optimized for different brand strategies.
+ * Each defines section order, which sections to include, and content generation style.
+ */
+const TEMPLATES = {
+  bold: {
+    name: 'Bold & Direct',
+    description: 'Product-forward with strong CTAs. Best for performance brands.',
+    sections: [
+      { type: 'hero', sort_order: 0 },
+      { type: 'trust-bar', sort_order: 1 },
+      { type: 'products', sort_order: 2 },
+      { type: 'steps', sort_order: 3 },
+      { type: 'quality', sort_order: 4 },
+      { type: 'testimonials', sort_order: 5 },
+      { type: 'faq', sort_order: 6 },
+      { type: 'contact', sort_order: 7 },
+    ],
+  },
+  story: {
+    name: 'Story-Driven',
+    description: 'Brand narrative first, then products. Best for wellness/lifestyle.',
+    sections: [
+      { type: 'hero', sort_order: 0 },
+      { type: 'welcome', sort_order: 1 },
+      { type: 'about', sort_order: 2 },
+      { type: 'bundle-grid', sort_order: 3 },
+      { type: 'why-bundles', sort_order: 4 },
+      { type: 'testimonials', sort_order: 5 },
+      { type: 'quality', sort_order: 6 },
+      { type: 'faq', sort_order: 7 },
+      { type: 'products', sort_order: 8 },
+      { type: 'contact', sort_order: 9 },
+    ],
+  },
+  conversion: {
+    name: 'Conversion Optimized',
+    description: 'Full sales funnel. Trust → desire → action. Best for DTC.',
+    sections: [
+      { type: 'hero', sort_order: 0 },
+      { type: 'trust-bar', sort_order: 1 },
+      { type: 'bundle-grid', sort_order: 2 },
+      { type: 'steps', sort_order: 3 },
+      { type: 'stack-finder', sort_order: 4 },
+      { type: 'why-bundles', sort_order: 5 },
+      { type: 'quality', sort_order: 6 },
+      { type: 'testimonials', sort_order: 7 },
+      { type: 'products', sort_order: 8 },
+      { type: 'faq', sort_order: 9 },
+      { type: 'about', sort_order: 10 },
+      { type: 'contact', sort_order: 11 },
+    ],
+  },
+};
+
+/**
+ * Generate template-aware section content that references actual brand data, products, and identity.
+ * @param {string} template - 'bold' | 'story' | 'conversion'
+ * @param {string} brandName
+ * @param {object} brandIdentity - { logoUrl, colors, fonts, tagline, mission }
+ * @param {Array} products - brand's linked products
+ * @returns {Record<string, object>}
+ */
+function generateTemplateContent(template, brandName, brandIdentity, products) {
+  const logo = brandIdentity?.logoUrl || '';
+  const tagline = brandIdentity?.tagline || '';
+  const mission = brandIdentity?.mission || '';
+
+  // Derive product-specific copy
+  const productNames = products.slice(0, 5).map((p) => p.name);
+  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+  const hasMultipleProducts = products.length > 1;
+  const productListPhrase = productNames.length > 0
+    ? productNames.slice(0, 3).join(', ')
+    : 'premium supplements';
+  const categoryPhrase = categories.length > 0
+    ? categories.slice(0, 3).join(', ')
+    : 'health & wellness';
+
+  // Template-specific hero headlines
+  const heroContent = {
+    bold: {
+      headline: tagline || `Results. Not Promises.`,
+      subheadline: `${brandName} delivers ${categoryPhrase} products designed for people who take performance seriously.`,
+      ctaText: 'Shop Now',
+      ctaUrl: '#products',
+      backgroundImageUrl: '',
+      overlayOpacity: 0.5,
+    },
+    story: {
+      headline: tagline || `Welcome to ${brandName}`,
+      subheadline: mission || `We believe great health starts with intention — every formula designed to help you feel your best, naturally.`,
+      ctaText: 'Explore Our Story',
+      ctaUrl: '#about',
+      backgroundImageUrl: '',
+      overlayOpacity: 0.4,
+    },
+    conversion: {
+      headline: tagline || `Smarter Supplements. Real Results.`,
+      subheadline: `Strategic ${categoryPhrase} bundles designed to work together — perfectly timed and scientifically backed.`,
+      ctaText: 'Shop All Bundles',
+      ctaUrl: '#bundles',
+      backgroundImageUrl: '',
+      overlayOpacity: 0.45,
+    },
+  };
+
+  // Template-specific about content
+  const aboutContent = {
+    bold: {
+      title: `About ${brandName}`,
+      subtitle: 'Built for Results',
+      body: mission || `${brandName} was built for people who don't settle. Every product we create is backed by science, tested by real athletes, and formulated without shortcuts. We're here to make premium performance accessible — not complicated.`,
+      imageUrl: logo,
+      ctaText: 'Shop Products',
+      ctaUrl: '#products',
+    },
+    story: {
+      title: `Our Story`,
+      subtitle: `The ${brandName} Journey`,
+      body: mission || `At ${brandName}, we started with a simple belief: your body deserves better than what's on most shelves. We bridge the gap between natural wellness and modern science — formulating products that work with your body, not against it. Every ingredient is responsibly sourced, every batch third-party tested, because transparency isn't optional — it's who we are.`,
+      imageUrl: logo,
+      ctaText: 'See Our Products',
+      ctaUrl: '#products',
+    },
+    conversion: {
+      title: `Why ${brandName}?`,
+      subtitle: 'From Nature to Nutrition — With Intention',
+      body: mission || `${brandName} bridges the gap between natural wellness and modern performance. We believe supplements should work with your body — not against it. Every formula is crafted in the USA, third-party tested, and made with responsibly sourced ingredients. ${hasMultipleProducts ? `From ${productListPhrase} — everything is designed to work together.` : ''}`,
+      imageUrl: logo,
+      ctaText: 'Start Shopping',
+      ctaUrl: '#bundles',
+    },
+  };
+
+  // Template-specific welcome content
+  const welcomeContent = {
+    bold: {
+      title: `Premium ${categoryPhrase.charAt(0).toUpperCase() + categoryPhrase.slice(1)}`,
+      body: `No fillers. No hype. Just ${brandName} products formulated with clinically studied ingredients and third-party testing on every batch. ${hasMultipleProducts ? `Browse our lineup including ${productListPhrase}.` : ''}`,
+      imageUrl: logo,
+    },
+    story: {
+      title: `Welcome to ${brandName}`,
+      body: `We believe supplementation should be simple, not overwhelming. That's why we created strategic product lines — ${hasMultipleProducts ? `including ${productListPhrase} — ` : ''}formulated to work together synergistically, timed for your daily routine, and priced to actually make sense.\n\nNo more guessing what to take or when. Just real ingredients, real science, and real results you can feel.`,
+      imageUrl: logo,
+    },
+    conversion: {
+      title: `Welcome to ${brandName}`,
+      body: `Strategic ${categoryPhrase} products designed to work together — perfectly timed and scientifically backed. ${hasMultipleProducts ? `Our lineup includes ${productListPhrase} and more.` : ''} No confusion, just results.`,
+      imageUrl: logo,
+    },
+  };
+
+  // Template-specific steps
+  const stepsContent = {
+    bold: {
+      title: 'Three Steps. Zero Guesswork.',
+      subtitle: 'Choose. Take. Dominate.',
+      steps: [
+        { title: 'Pick Your Goal', description: `Choose the ${brandName} product that matches your objective — energy, performance, recovery, or daily wellness.` },
+        { title: 'Follow the Protocol', description: 'Each product comes with clear timing and dosage instructions. Simple and effective.' },
+        { title: 'See the Results', description: 'Clinically studied ingredients mean you\'ll notice the difference — not just hope for it.' },
+      ],
+    },
+    story: {
+      title: 'How It Works',
+      subtitle: 'Simple Wellness, Done Right',
+      steps: [
+        { title: 'Discover Your Needs', description: `Explore ${brandName}'s products and find the ones that align with your wellness goals.` },
+        { title: 'Build Your Routine', description: 'Each product integrates seamlessly into your daily life with clear, thoughtful timing guidelines.' },
+        { title: 'Feel the Difference', description: 'Real ingredients, real formulations — results you can actually feel, week after week.' },
+      ],
+    },
+    conversion: {
+      title: 'Three Simple Steps to Better Health',
+      subtitle: 'Choose. Follow. Feel.',
+      steps: [
+        { title: 'Choose Your Goal', description: `Pick the ${brandName} bundle that matches where you're at — ${categories.slice(0, 3).join(', ') || 'energy, fitness, or wellness'}.` },
+        { title: 'Follow the Timing', description: 'Each bundle comes with a simple daily protocol. No confusion, just results.' },
+        { title: 'Feel the Difference', description: 'Products designed to work together = bigger impact than taking them alone.' },
+      ],
+    },
+  };
+
+  // Build complete content map using the template-specific variants
+  return {
+    'hero': heroContent[template],
+    'trust-bar': {
+      items: [
+        { icon: 'shield-check', text: 'Third-Party Tested' },
+        { icon: 'flag', text: 'Made in the USA' },
+        { icon: 'badge-check', text: 'GMP Certified' },
+        ...(products.length > 10 ? [{ icon: 'package', text: `${products.length}+ Products` }] : []),
+      ],
+    },
+    'welcome': welcomeContent[template],
+    'bundle-grid': {
+      title: template === 'bold' ? 'Our Products' : 'Our Supplement Bundles',
+      maxItems: template === 'bold' ? 8 : 5,
+      layout: 'grid',
+    },
+    'steps': stepsContent[template],
+    'stack-finder': {
+      title: 'Find Your Perfect Stack',
+      stacks: categories.slice(0, 4).map((cat) => ({
+        name: cat,
+        description: `${brandName}'s ${cat.toLowerCase()} products, designed for synergy.`,
+        imageUrl: '',
+        benefits: [`Premium ${cat.toLowerCase()} support`, 'Third-party tested', 'Made in the USA'],
+      })),
+    },
+    'why-bundles': {
+      title: template === 'bold' ? 'Why Choose Us?' : 'Why Choose Bundles Over Individual Supplements?',
+      reasons: [
+        { icon: 'puzzle', title: 'Designed to Work Together', description: 'Products formulated for synergy. Combined effects are greater than taking them separately.' },
+        { icon: 'piggy-bank', title: 'Save 15-20%', description: 'Better value than buying individual products. More impact for less money.' },
+        { icon: 'clock', title: 'Simple Daily Routine', description: 'No guessing when to take what. Each product includes clear timing instructions.' },
+      ],
+    },
+    'quality': {
+      title: 'Quality You Can Trust',
+      body: `Every ${brandName} product is third-party tested for purity and potency, manufactured in GMP-certified facilities, and made in the USA. We don't cut corners — because your health deserves better.`,
+      imageUrl: '',
+      badges: ['Third-Party Tested', 'GMP Certified', 'Made in USA', 'Science-Backed'],
+    },
+    'testimonials': {
+      title: template === 'bold' ? 'What People Are Saying' : 'Real People. Real Results.',
+    },
+    'faq': {
+      title: 'Frequently Asked Questions',
+      subtitle: template === 'bold' ? 'Quick answers.' : 'Got questions? We\'ve got answers.',
+    },
+    'about': aboutContent[template],
+    'contact': {
+      title: 'Get in Touch',
+      subtitle: `Have questions about ${brandName}? We'd love to hear from you.`,
+      showPhone: false,
+      showEmail: true,
+    },
+    'products': {
+      title: template === 'bold' ? 'All Products' : 'Shop All Products',
+      categoryFilter: '',
+      layout: 'grid',
+      maxItems: 50,
+    },
+  };
+}
+
+/**
+ * Generate product-aware testimonials that reference actual brand and product data.
+ * @param {string} brandName
+ * @param {Array} products
+ * @param {string} template
+ * @returns {Array<{quote: string, author_name: string, author_title: string}>}
+ */
+function generateTestimonials(brandName, products, template) {
+  const productName = products[0]?.name || 'supplement bundle';
+  const productName2 = products[1]?.name || 'daily stack';
+  const category = products[0]?.category || 'wellness';
+
+  const testimonialSets = {
+    bold: [
+      { quote: `${brandName} delivers. The ${productName} had me feeling the difference within the first week. No gimmicks, just real results.`, author_name: 'Jake M.', author_title: 'Verified Buyer' },
+      { quote: `Best ${category.toLowerCase()} products I've ever used. My performance has been on another level since switching to ${brandName}.`, author_name: 'Sarah K.', author_title: 'Fitness Enthusiast' },
+      { quote: `Clean ingredients, real results, fast shipping. ${brandName} has earned a lifetime customer.`, author_name: 'Marcus T.', author_title: 'Verified Buyer' },
+      { quote: `I've tried dozens of brands. ${brandName} is the only one I keep coming back to. The quality speaks for itself.`, author_name: 'Emily R.', author_title: 'Health Coach' },
+    ],
+    story: [
+      { quote: `Finding ${brandName} changed my entire approach to wellness. The ${productName} fits perfectly into my morning routine.`, author_name: 'Rachel A.', author_title: 'Yoga Instructor' },
+      { quote: `What I love about ${brandName} is the transparency. You can tell real thought went into every formula. The ${productName2} is my daily essential.`, author_name: 'Michael S.', author_title: 'Verified Buyer' },
+      { quote: `I was skeptical, but after a month with ${brandName} I'm a complete convert. My energy levels are consistent all day.`, author_name: 'Priya N.', author_title: 'Nutritionist' },
+      { quote: `Finally — a brand that cares about ingredients as much as I do. ${brandName} is now the only brand I recommend to my clients.`, author_name: 'David L.', author_title: 'Personal Trainer' },
+    ],
+    conversion: [
+      { quote: `The ${productName} stack is a game changer. I actually have energy all day without the crash. ${brandName} nailed this.`, author_name: 'Chris W.', author_title: 'Verified Buyer' },
+      { quote: `Best value I've found for premium ${category.toLowerCase()} products. The bundles save me over 20% compared to buying separately.`, author_name: 'Amanda B.', author_title: 'Verified Buyer' },
+      { quote: `Finally sleeping through the night. The ${productName2} changed everything for my recovery.`, author_name: 'Josh P.', author_title: 'CrossFit Athlete' },
+      { quote: `Ordered on a whim, now I'm subscribed. ${brandName}'s quality is unmatched and the simple protocols actually work.`, author_name: 'Lisa C.', author_title: 'Verified Buyer' },
+    ],
+  };
+
+  return testimonialSets[template] || testimonialSets.conversion;
+}
+
+/**
+ * Generate brand-specific FAQs that reference actual product data.
+ * @param {string} brandName
+ * @param {Array} products
+ * @param {string} template
+ * @returns {Array<{question: string, answer: string}>}
+ */
+function generateBrandFaqs(brandName, products, template) {
+  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
+  const categoryList = categories.slice(0, 3).join(', ') || 'health & wellness';
+  const productCount = products.length;
+
+  return [
+    { question: `What is ${brandName}?`, answer: `${brandName} is a premium ${categoryList} brand focused on bridging the gap between natural nutrition and modern performance. ${productCount > 0 ? `We offer ${productCount} products across ${categories.length || 1} categories.` : ''}` },
+    { question: 'Where are your products made?', answer: `All ${brandName} products are formulated and manufactured in the USA, using responsibly sourced ingredients and produced in GMP-certified, third-party-tested facilities.` },
+    { question: 'Are your supplements third-party tested?', answer: 'Yes. Every batch is independently tested to verify ingredient integrity, purity, and quality. We publish test results for full transparency.' },
+    { question: 'How long will it take to see results?', answer: 'Consistency is key — most customers begin to notice benefits within 2-4 weeks of daily use. Individual results may vary based on lifestyle and goals.' },
+    { question: 'Do you offer bundles or discounts?', answer: `Yes! ${brandName} bundles are designed to work together synergistically and save you 15-20% compared to buying individual products. Check out our bundle section for the best value.` },
+    { question: 'Are your products suitable for both men and women?', answer: `Absolutely. ${brandName}'s product line supports a wide range of goals for men and women alike.` },
+    { question: 'What is your return policy?', answer: `We stand behind every ${brandName} product with a satisfaction guarantee. If you're not happy with your purchase, contact us within 30 days for a full refund — no questions asked.` },
+  ];
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
@@ -362,6 +672,200 @@ export async function createStorefront(req, res, next) {
     return res.status(201).json({
       success: true,
       data: toStorefrontResponse(storefront),
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+/**
+ * POST /api/v1/storefronts/generate
+ * AI-powered one-click storefront generation.
+ * Fetches brand data + products, picks optimal theme, generates all content, auto-publishes.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
+export async function generateStorefront(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { brandId, template } = req.body;
+
+    // 1. Verify brand belongs to user
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id, name, wizard_state')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found or access denied' });
+    }
+
+    // 2. Check brand doesn't already have a storefront
+    const { data: existingStore } = await supabaseAdmin
+      .from('storefronts')
+      .select('id')
+      .eq('brand_id', brandId)
+      .single();
+
+    if (existingStore) {
+      return res.status(409).json({ success: false, error: 'Brand already has a storefront' });
+    }
+
+    // 3. Auto-generate slug from brand name
+    let slug = brand.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 63);
+
+    // Ensure slug is at least 3 chars
+    if (slug.length < 3) slug = `store-${slug}`;
+
+    // Ensure uniqueness by appending random suffix if taken
+    const { data: slugCheck } = await supabaseAdmin
+      .from('storefronts').select('id').eq('slug', slug).single();
+    if (slugCheck) {
+      slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+    }
+
+    // 4. Pick best matching theme (or first active)
+    const { data: themes } = await supabaseAdmin
+      .from('storefront_themes')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at');
+
+    // Match template to theme heuristically
+    let selectedTheme = themes?.[0] || null;
+    if (themes?.length > 1) {
+      const themeSlugMap = { bold: 'bold-performance', story: 'clean-wellness', conversion: 'premium-gold' };
+      const preferred = themes.find((t) => t.slug === themeSlugMap[template]);
+      if (preferred) selectedTheme = preferred;
+    }
+
+    // 5. Extract brand identity
+    const ws = brand.wizard_state || {};
+    const identityState = ws['brand-identity'];
+    const selectedDir = identityState?.directions?.find(
+      (d) => d.id === identityState?.selectedDirectionId,
+    ) || identityState?.directions?.[0] || null;
+
+    const brandIdentity = {
+      logoUrl: selectedDir?.logoUrl || '',
+      colors: selectedDir?.colorPalette || [],
+      fonts: selectedDir?.fonts || {},
+      tagline: selectedDir?.tagline || ws['social-analysis']?.taglineSuggestions?.[0] || '',
+      mission: selectedDir?.mission || ws['brand-identity']?.missionStatement || '',
+    };
+
+    // Get logo from brand assets
+    const { data: logoAsset } = await supabaseAdmin
+      .from('brand_assets')
+      .select('url')
+      .eq('brand_id', brandId)
+      .eq('asset_type', 'logo')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (logoAsset?.url) {
+      brandIdentity.logoUrl = logoAsset.url;
+    }
+
+    // 6. Fetch brand's linked products
+    const { data: brandProducts } = await supabaseAdmin
+      .from('brand_products')
+      .select('product_id, products (id, name, category, description, retail_price, image_url)')
+      .eq('brand_id', brandId);
+
+    const products = (brandProducts || [])
+      .map((bp) => bp.products)
+      .filter(Boolean);
+
+    // 7. Create storefront row
+    const { data: storefront, error: createErr } = await supabaseAdmin
+      .from('storefronts')
+      .insert({
+        brand_id: brandId,
+        user_id: userId,
+        slug,
+        theme_id: selectedTheme?.id || null,
+        status: 'published',
+        published_at: new Date().toISOString(),
+        settings: { generatedTemplate: template },
+      })
+      .select('*')
+      .single();
+
+    if (createErr) throw createErr;
+
+    // 8. Generate template-specific section content
+    const templateDef = TEMPLATES[template];
+    const contentMap = generateTemplateContent(template, brand.name, brandIdentity, products);
+
+    const sections = templateDef.sections.map((def) => ({
+      storefront_id: storefront.id,
+      section_type: def.type,
+      title: null,
+      content: contentMap[def.type] || {},
+      sort_order: def.sort_order,
+      is_visible: true,
+      settings: {},
+    }));
+
+    if (sections.length > 0) {
+      const { error: sectErr } = await supabaseAdmin
+        .from('storefront_sections')
+        .insert(sections);
+      if (sectErr) logger.warn({ err: sectErr }, 'Failed to create generated sections');
+    }
+
+    // 9. Generate product-aware testimonials
+    const testimonials = generateTestimonials(brand.name, products, template).map((t, i) => ({
+      storefront_id: storefront.id,
+      quote: t.quote,
+      author_name: t.author_name,
+      author_title: t.author_title,
+      sort_order: i,
+      is_visible: true,
+    }));
+
+    const { error: testErr } = await supabaseAdmin
+      .from('storefront_testimonials')
+      .insert(testimonials);
+    if (testErr) logger.warn({ err: testErr }, 'Failed to create generated testimonials');
+
+    // 10. Generate brand-specific FAQs
+    const faqs = generateBrandFaqs(brand.name, products, template).map((f, i) => ({
+      storefront_id: storefront.id,
+      question: f.question,
+      answer: f.answer,
+      sort_order: i,
+      is_visible: true,
+    }));
+
+    const { error: faqErr } = await supabaseAdmin
+      .from('storefront_faqs')
+      .insert(faqs);
+    if (faqErr) logger.warn({ err: faqErr }, 'Failed to create generated FAQs');
+
+    logger.info(
+      { storefrontId: storefront.id, brandId, slug, template },
+      'Storefront generated and auto-published',
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...toStorefrontResponse(storefront),
+        template,
+        sectionCount: sections.length,
+        testimonialCount: testimonials.length,
+        faqCount: faqs.length,
+      },
     });
   } catch (err) {
     return next(err);

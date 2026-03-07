@@ -7,6 +7,7 @@ import { validate } from '../middleware/validate.js';
 import { requireFeature } from '../middleware/require-tier.js';
 import {
   storefrontCreateSchema,
+  storefrontGenerateSchema,
   storefrontUpdateSchema,
   storefrontIdParamsSchema,
   sectionCreateSchema,
@@ -37,6 +38,13 @@ storefrontRoutes.post(
 
 // GET /api/v1/storefronts -- List user's storefronts
 storefrontRoutes.get('/', storefrontController.listStorefronts);
+
+// POST /api/v1/storefronts/generate -- AI-powered one-click storefront generation
+storefrontRoutes.post(
+  '/generate',
+  validate({ body: storefrontGenerateSchema }),
+  storefrontController.generateStorefront,
+);
 
 // GET /api/v1/storefronts/themes -- List available themes (must be before :storefrontId)
 storefrontRoutes.get('/themes', storefrontController.listThemes);

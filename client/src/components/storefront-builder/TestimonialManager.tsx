@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { motion } from 'motion/react';
-import { cn } from '@/lib/utils';
 import { staggerContainerVariants, fadeSlideUpVariants } from '@/lib/animations';
 import { Plus, Pencil, Trash2, MessageSquareQuote, Loader2, X } from 'lucide-react';
 

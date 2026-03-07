@@ -4,7 +4,6 @@ import { useStorefrontStore } from '@/stores/storefront-store';
 import { StorefrontBuilder } from '@/components/storefront-builder/StorefrontBuilder';
 import { CreateStorefrontFlow } from '@/components/storefront-builder/CreateStorefrontFlow';
 import { motion } from 'motion/react';
-import { Store } from 'lucide-react';
 
 export default function StorefrontPage() {
   const { data: storefronts, isLoading } = useStorefronts();
@@ -79,11 +78,11 @@ export default function StorefrontPage() {
     );
   }
 
-  // No storefronts -- show creation flow
+  // No storefronts -- show agentic generation flow
   if (!storefronts?.length) {
     return (
       <motion.div
-        className="min-h-[calc(100vh-var(--bmn-header-height))] flex items-center justify-center"
+        className="min-h-[calc(100vh-var(--bmn-header-height))] flex items-center justify-center py-12"
         style={{
           backgroundImage: 'radial-gradient(circle at center, var(--bmn-color-surface-elevated) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
