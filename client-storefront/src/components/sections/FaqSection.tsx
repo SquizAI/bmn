@@ -17,7 +17,7 @@ export function FaqSection({ section, faqs }: Props) {
   return (
     <section id="faq" className="store-section bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
+        <div className="reveal text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-bold mb-3" style={{ color: 'var(--color-primary)' }}>
             {c.title || section.title || 'Frequently Asked Questions'}
           </h2>
@@ -25,27 +25,38 @@ export function FaqSection({ section, faqs }: Props) {
         </div>
 
         <div className="space-y-3">
-          {faqs.map((faq) => {
+          {faqs.map((faq, i) => {
             const isOpen = openId === faq.id;
             return (
-              <div key={faq.id} className="bg-white rounded-xl overflow-hidden shadow-sm">
+              <div
+                key={faq.id}
+                className={cn(
+                  `reveal reveal-delay-${Math.min(i, 3)} bg-white rounded-xl overflow-hidden transition-shadow duration-300`,
+                  isOpen ? 'shadow-md' : 'shadow-sm',
+                )}
+              >
                 <button
                   className="w-full flex items-center justify-between p-5 text-left"
                   onClick={() => setOpenId(isOpen ? null : faq.id)}
                   aria-expanded={isOpen}
                 >
                   <span className="font-medium pr-4">{faq.question}</span>
-                  <ChevronDown
+                  <div
                     className={cn(
-                      'h-5 w-5 shrink-0 transition-transform duration-200',
-                      isOpen && 'rotate-180',
+                      'w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-300',
+                      isOpen ? 'rotate-180' : '',
                     )}
-                    style={{ color: 'var(--color-primary)' }}
-                  />
+                    style={{ backgroundColor: isOpen ? 'var(--color-primary)' : 'var(--color-primary-light)' }}
+                  >
+                    <ChevronDown
+                      className="h-4 w-4 transition-colors"
+                      style={{ color: isOpen ? 'white' : 'var(--color-primary)' }}
+                    />
+                  </div>
                 </button>
                 <div
                   className={cn(
-                    'overflow-hidden transition-all duration-300',
+                    'overflow-hidden transition-all duration-300 ease-out',
                     isOpen ? 'max-h-96 pb-5' : 'max-h-0',
                   )}
                 >

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { StoreData, Product, StoreSection } from '@/lib/api';
 
 // Section renderers
@@ -25,12 +26,29 @@ interface Props {
 
 export function HomePage({ store, products, filterByCategory }: Props) {
   const { sections, testimonials, faqs } = store;
-
-  // Extract slug for contact form
   const slug = store.storefront.slug;
-
-  // Sort sections by sortOrder
   const sorted = [...sections].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  // Scroll-reveal IntersectionObserver
+  useEffect(() => {
+    const elements = document.querySelectorAll('.reveal');
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [sorted.length]);
 
   return (
     <>

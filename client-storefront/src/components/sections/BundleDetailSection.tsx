@@ -26,29 +26,31 @@ export function BundleDetailSection({ section, products }: Props) {
   return (
     <section className="store-section">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 items-center ${isRight ? 'md:direction-rtl' : ''}`}>
-          {/* Image */}
-          <div className={`store-card aspect-square ${isRight ? 'md:order-2' : ''}`}>
-            {product.images?.[0] && (
-              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+          {/* Image -- first on mobile for visual impact */}
+          <div className={`reveal ${isRight ? 'md:order-2' : ''}`}>
+            <div className="store-card aspect-square rounded-2xl overflow-hidden">
+              {product.images?.[0] && (
+                <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+              )}
+            </div>
           </div>
 
           {/* Content */}
-          <div className={isRight ? 'md:order-1' : ''}>
+          <div className={`reveal reveal-delay-1 ${isRight ? 'md:order-1' : ''}`}>
             {c.tagline && (
-              <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--color-accent)' }}>
+              <p className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-accent)' }}>
                 {c.tagline}
               </p>
             )}
             <h3 className="text-2xl md:text-3xl font-bold mb-4">
               {c.title || product.name}
             </h3>
-            <p className="text-gray-600 mb-4 leading-relaxed">
+            <p className="text-gray-600 mb-6 leading-relaxed">
               {c.description || product.description}
             </p>
-            <div className="flex items-center gap-4 mb-6">
-              <span className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
+            <div className="flex items-center gap-4 mb-8">
+              <span className="text-3xl font-bold" style={{ color: 'var(--color-primary)' }}>
                 {formatPrice(product.priceCents)}
               </span>
               {product.compareAtCents && product.compareAtCents > product.priceCents && (
@@ -57,7 +59,7 @@ export function BundleDetailSection({ section, products }: Props) {
                 </span>
               )}
             </div>
-            <button onClick={() => addItem(product)} className="btn-primary">
+            <button onClick={() => addItem(product)} className="btn-primary text-lg px-8">
               {c.ctaText || 'Add to Cart'}
             </button>
           </div>

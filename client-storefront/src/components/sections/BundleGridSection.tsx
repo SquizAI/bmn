@@ -13,7 +13,6 @@ export function BundleGridSection({ section, products }: Props) {
     layout?: 'grid' | 'scroll';
   };
 
-  // Filter for bundles or show all products if no bundles
   const bundles = products.filter((p) =>
     p.category?.toLowerCase().includes('bundle') || p.name.toLowerCase().includes('bundle'),
   );
@@ -25,22 +24,27 @@ export function BundleGridSection({ section, products }: Props) {
   return (
     <section id="bundles" className="store-section">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10" style={{ color: 'var(--color-primary)' }}>
-          {c.title || section.title || 'Supplement Bundles'}
-        </h2>
+        <div className="reveal text-center">
+          <h2 className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--color-primary)' }}>
+            {c.title || section.title || 'Supplement Bundles'}
+          </h2>
+          <span className="section-title-underline center" />
+        </div>
 
         {c.layout === 'scroll' ? (
-          <div className="flex gap-6 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+          <div className="scroll-horizontal -mx-4 px-4">
             {items.map((product) => (
-              <div key={product.id} className="min-w-[280px] snap-start">
+              <div key={product.id} className="min-w-70 reveal">
                 <ProductCard product={product} />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {items.map((product, i) => (
+              <div key={product.id} className={`reveal reveal-delay-${Math.min(i, 3)}`}>
+                <ProductCard product={product} />
+              </div>
             ))}
           </div>
         )}

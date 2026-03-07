@@ -7,7 +7,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Quote, Loader2, X } from 'lucide-react';
+import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
+import { staggerContainerVariants, fadeSlideUpVariants } from '@/lib/animations';
+import { Plus, Pencil, Trash2, MessageSquareQuote, Loader2, X } from 'lucide-react';
 
 export function TestimonialManager() {
   const { storefront, testimonials } = useStorefrontStore();
@@ -25,13 +28,22 @@ export function TestimonialManager() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-semibold">Testimonials</h2>
-          <p className="text-sm text-muted-foreground">
-            Add customer quotes to build trust on your storefront.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="bg-accent-light p-2.5 rounded-xl">
+            <MessageSquareQuote className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-text">Testimonials</h2>
+            <p className="text-sm text-text-muted">
+              Add customer quotes to build trust on your storefront.
+            </p>
+          </div>
         </div>
-        <Button size="sm" onClick={() => setIsAdding(true)}>
+        <Button
+          size="sm"
+          onClick={() => setIsAdding(true)}
+          className="bg-accent text-white hover:bg-accent-hover"
+        >
           <Plus className="h-4 w-4 mr-1" /> Add Testimonial
         </Button>
       </div>
@@ -47,38 +59,59 @@ export function TestimonialManager() {
       )}
 
       {/* List */}
-      <div className="space-y-3 mt-4">
+      <motion.div
+        className="space-y-3 mt-4"
+        variants={staggerContainerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {testimonials.map((t) => (
-          <Card key={t.id} className="p-4">
-            <div className="flex gap-3">
-              <Quote className="h-5 w-5 text-primary shrink-0 mt-1" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm italic">"{t.quote}"</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  — {t.authorName}{t.authorTitle ? `, ${t.authorTitle}` : ''}
-                </p>
+          <motion.div key={t.id} variants={fadeSlideUpVariants}>
+            <Card variant="interactive" className="p-5">
+              <div className="flex gap-4">
+                {/* Decorative quote */}
+                <span className="text-4xl font-serif text-accent/20 leading-none shrink-0 select-none">"</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm italic text-text-secondary leading-relaxed">"{t.quote}"</p>
+                  <div className="mt-3 pt-3 border-t border-border/20">
+                    <p className="text-xs font-medium text-text">
+                      {t.authorName}
+                    </p>
+                    {t.authorTitle && (
+                      <p className="text-xs text-text-muted">{t.authorTitle}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditing(t)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="sm" className="h-8 w-8 p-0 text-error hover:text-error"
+                    onClick={() => handleDelete(t)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-start gap-1 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditing(t)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive"
-                  onClick={() => handleDelete(t)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
         ))}
         {testimonials.length === 0 && !isAdding && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No testimonials yet. Add your first one above.
-          </p>
+          <div className="text-center py-12">
+            <MessageSquareQuote className="h-12 w-12 mx-auto text-accent/20 mb-4" />
+            <p className="text-sm text-text-muted mb-3">No testimonials yet.</p>
+            <Button
+              size="sm"
+              onClick={() => setIsAdding(true)}
+              className="bg-accent text-white hover:bg-accent-hover"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Your First Testimonial
+            </Button>
+          </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -119,10 +152,10 @@ function TestimonialForm({
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Card className="p-4 border-primary/30 bg-primary/5">
+    <Card className="p-4 border-accent/30 bg-accent/5">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">
+          <h3 className="text-sm font-semibold text-text">
             {testimonial ? 'Edit Testimonial' : 'New Testimonial'}
           </h3>
           <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onCancel}>
@@ -134,23 +167,28 @@ function TestimonialForm({
             {...register('quote', { required: 'Quote is required' })}
             placeholder="What did your customer say?"
             rows={3}
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className="w-full bg-surface border border-border/50 rounded-lg px-4 py-3 text-sm placeholder:text-text-muted hover:border-border-hover focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/20 resize-none transition-colors"
           />
-          {errors.quote && <p className="text-xs text-destructive mt-1">{errors.quote.message}</p>}
+          {errors.quote && <p className="text-xs text-error mt-1">{errors.quote.message}</p>}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Input
               {...register('authorName', { required: 'Name required' })}
               placeholder="Author name"
+              className="bg-surface border-border/50"
             />
-            {errors.authorName && <p className="text-xs text-destructive mt-1">{errors.authorName.message}</p>}
+            {errors.authorName && <p className="text-xs text-error mt-1">{errors.authorName.message}</p>}
           </div>
-          <Input {...register('authorTitle')} placeholder="e.g., Age 34 or Fitness Coach" />
+          <Input
+            {...register('authorTitle')}
+            placeholder="e.g., Age 34 or Fitness Coach"
+            className="bg-surface border-border/50"
+          />
         </div>
         <div className="flex gap-2 justify-end">
           <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-          <Button type="submit" size="sm" disabled={isPending}>
+          <Button type="submit" size="sm" disabled={isPending} className="bg-accent text-white hover:bg-accent-hover">
             {isPending && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
             {testimonial ? 'Update' : 'Add'}
           </Button>

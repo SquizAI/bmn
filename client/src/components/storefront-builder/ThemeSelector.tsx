@@ -1,5 +1,7 @@
 import { useStorefrontStore } from '@/stores/storefront-store';
 import { useStorefrontThemes, useUpdateStorefront } from '@/hooks/use-storefront';
+import { motion } from 'motion/react';
+import { cn } from '@/lib/utils';
 import { Check, Palette } from 'lucide-react';
 
 export function ThemeSelector() {
@@ -17,13 +19,13 @@ export function ThemeSelector() {
 
   return (
     <div>
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
-        <Palette className="h-4 w-4" /> Theme
+      <h3 className="font-semibold mb-3 flex items-center gap-2 text-text">
+        <Palette className="h-4 w-4 text-accent" /> Theme
       </h3>
       {isLoading ? (
         <div className="grid grid-cols-3 gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-lg bg-muted animate-pulse" />
+            <div key={i} className="h-24 rounded-xl bg-surface-elevated animate-pulse" />
           ))}
         </div>
       ) : (
@@ -32,25 +34,38 @@ export function ThemeSelector() {
             const isActive = theme.id === storefront.themeId;
             const colors = (theme.baseStyles as { colorSuggestion?: { primary?: string; accent?: string } })?.colorSuggestion;
             return (
-              <button
+              <motion.button
                 key={theme.id}
                 onClick={() => handleSelect(theme.id)}
-                className={`
-                  relative p-3 rounded-lg border-2 text-left transition-all
-                  ${isActive ? 'border-primary ring-2 ring-primary/20' : 'border-muted hover:border-primary/30'}
-                `}
-              >
-                {isActive && (
-                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                    <Check className="h-3 w-3 text-primary-foreground" />
-                  </div>
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  'relative p-0 rounded-xl border-2 text-left transition-all overflow-hidden',
+                  isActive
+                    ? 'border-accent ring-2 ring-accent/20 shadow-glow-accent'
+                    : 'border-border/30 hover:border-accent/30 hover:shadow-sm',
                 )}
-                <div className="flex gap-1.5 mb-2">
-                  <div className="w-5 h-5 rounded" style={{ backgroundColor: colors?.primary || '#333' }} />
-                  <div className="w-5 h-5 rounded" style={{ backgroundColor: colors?.accent || '#999' }} />
+              >
+                {/* Gradient preview stripe */}
+                <div
+                  className="h-15 w-full"
+                  style={{
+                    background: `linear-gradient(135deg, ${colors?.primary || '#333'}, ${colors?.accent || '#999'})`,
+                  }}
+                />
+                <div className="p-3">
+                  {isActive && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-accent flex items-center justify-center shadow-sm">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                  <div className="flex gap-1.5 mb-1.5">
+                    <div className="w-6 h-6 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: colors?.primary || '#333' }} />
+                    <div className="w-6 h-6 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: colors?.accent || '#999' }} />
+                  </div>
+                  <p className="text-xs font-medium text-text">{theme.name}</p>
                 </div>
-                <p className="text-xs font-medium">{theme.name}</p>
-              </button>
+              </motion.button>
             );
           })}
         </div>

@@ -35,7 +35,6 @@ export function CartDrawer({ products }: Props) {
     setIsCheckingOut(true);
     try {
       const sessionId = localStorage.getItem('bmn-store-session') || '';
-      // Extract slug from current hostname or path
       const slug = window.location.pathname.match(/^\/store\/([^/]+)/)?.[1]
         || window.location.hostname.split('.')[0]
         || 'demo';
@@ -63,7 +62,11 @@ export function CartDrawer({ products }: Props) {
           <h2 className="font-bold text-lg flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" /> Cart ({cartLines.length})
           </h2>
-          <button onClick={closeCart} className="p-2 hover:bg-gray-100 rounded-lg" aria-label="Close cart">
+          <button
+            onClick={closeCart}
+            className="p-2.5 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Close cart"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -72,9 +75,10 @@ export function CartDrawer({ products }: Props) {
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {cartLines.length === 0 ? (
             <div className="text-center py-16">
-              <ShoppingBag className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500">Your cart is empty</p>
-              <button onClick={closeCart} className="btn-secondary mt-4">
+              <ShoppingBag className="h-16 w-16 mx-auto text-gray-200 mb-4" />
+              <p className="text-gray-500 font-medium">Your cart is empty</p>
+              <p className="text-sm text-gray-400 mt-1">Add some products to get started</p>
+              <button onClick={closeCart} className="btn-secondary mt-6">
                 Continue Shopping
               </button>
             </div>
@@ -83,7 +87,7 @@ export function CartDrawer({ products }: Props) {
               {cartLines.map((line) => (
                 <div key={line.productId} className="flex gap-4 py-3 border-b border-gray-50">
                   {/* Thumbnail */}
-                  <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                  <div className="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden shrink-0">
                     {line.product?.images?.[0] && (
                       <img
                         src={line.product.images[0]}
@@ -103,7 +107,7 @@ export function CartDrawer({ products }: Props) {
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => updateQuantity(line.productId, line.quantity - 1)}
-                        className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded"
+                        className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                         disabled={line.quantity <= 1}
                       >
                         <Minus className="h-3 w-3" />
@@ -111,13 +115,13 @@ export function CartDrawer({ products }: Props) {
                       <span className="text-sm font-semibold w-6 text-center">{line.quantity}</span>
                       <button
                         onClick={() => updateQuantity(line.productId, line.quantity + 1)}
-                        className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded"
+                        className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                       >
                         <Plus className="h-3 w-3" />
                       </button>
                       <button
                         onClick={() => removeItem(line.productId)}
-                        className="ml-auto p-1 text-gray-400 hover:text-red-500"
+                        className="ml-auto p-2 text-gray-400 hover:text-red-500 transition-colors"
                         aria-label="Remove"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -137,9 +141,9 @@ export function CartDrawer({ products }: Props) {
           )}
         </div>
 
-        {/* Footer / Checkout */}
+        {/* Footer / Checkout -- sticky */}
         {cartLines.length > 0 && (
-          <div className="border-t border-gray-100 px-6 py-4 space-y-4">
+          <div className="border-t border-gray-100 px-6 py-4 space-y-4 safe-bottom">
             <div className="flex items-center justify-between">
               <span className="font-medium">Subtotal</span>
               <span className="text-xl font-bold" style={{ color: 'var(--color-primary)' }}>

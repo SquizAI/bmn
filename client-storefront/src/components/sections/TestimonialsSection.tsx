@@ -14,17 +14,28 @@ export function TestimonialsSection({ section, testimonials }: Props) {
   return (
     <section id="testimonials" className="store-section">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10" style={{ color: 'var(--color-primary)' }}>
-          {c.title || section.title || 'Real People, Real Results'}
-        </h2>
+        <div className="reveal text-center">
+          <h2 className="text-3xl md:text-4xl font-bold" style={{ color: 'var(--color-primary)' }}>
+            {c.title || section.title || 'Real People, Real Results'}
+          </h2>
+          <span className="section-title-underline center" />
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {testimonials.map((t) => (
-            <div key={t.id} className="bg-gray-50 rounded-2xl p-6">
+        {/* Horizontal scroll on mobile, grid on desktop */}
+        <div className="scroll-horizontal md:grid! md:grid-cols-2 lg:grid-cols-4 md:gap-6 -mx-4 px-4 md:mx-0 md:px-0">
+          {testimonials.map((t, i) => (
+            <div
+              key={t.id}
+              className={`reveal reveal-delay-${Math.min(i, 3)} min-w-70 md:min-w-0 bg-gray-50 rounded-2xl p-6 shrink-0`}
+            >
               {/* Stars */}
               <div className="flex gap-1 mb-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                {Array.from({ length: 5 }).map((_, j) => (
+                  <Star
+                    key={j}
+                    className="h-4 w-4"
+                    style={{ fill: 'var(--color-accent)', color: 'var(--color-accent)' }}
+                  />
                 ))}
               </div>
 
@@ -34,7 +45,7 @@ export function TestimonialsSection({ section, testimonials }: Props) {
               </blockquote>
 
               {/* Author */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
                 {t.authorImageUrl ? (
                   <img src={t.authorImageUrl} alt={t.authorName} className="w-10 h-10 rounded-full object-cover" />
                 ) : (
