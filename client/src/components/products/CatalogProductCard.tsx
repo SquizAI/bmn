@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Lock, Eye } from 'lucide-react';
+import { Lock, Eye, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn, formatCurrency, capitalize } from '@/lib/utils';
 import type { Product } from '@/hooks/use-products';
@@ -23,9 +23,10 @@ const CATEGORY_EMOJI: Record<string, string> = {
 interface CatalogProductCardProps {
   product: Product;
   onViewDetail: (product: Product) => void;
+  onAddToBrand?: (product: Product) => void;
 }
 
-export function CatalogProductCard({ product, onViewDetail }: CatalogProductCardProps) {
+export function CatalogProductCard({ product, onViewDetail, onAddToBrand }: CatalogProductCardProps) {
   const imageUrl = product.image_url ?? product.imageUrl;
   const retailPrice = product.retail_price ?? product.suggestedRetail ?? 0;
   const baseCost = product.base_cost ?? product.basePrice ?? 0;
@@ -111,11 +112,20 @@ export function CatalogProductCard({ product, onViewDetail }: CatalogProductCard
             <span className="text-sm font-bold text-text">
               {formatCurrency(retailPrice)}
             </span>
-            {baseCost > 0 && (
+            {!isLocked && onAddToBrand ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onAddToBrand(product); }}
+                className="flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </button>
+            ) : baseCost > 0 ? (
               <span className="text-xs text-text-muted">
                 Cost: {formatCurrency(baseCost)}
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Tier pill */}

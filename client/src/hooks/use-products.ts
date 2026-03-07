@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { QUERY_KEYS } from '@/lib/constants';
 import type { RecommendedProduct } from '@/components/products/ProductRecommendationCard';
@@ -183,5 +183,33 @@ export function useGenerateRecommendations() {
         `/api/v1/wizard/${brandId}/recommend-products`,
         { ...(regenerate && { regenerate }), ...(preferences && { preferences }) },
       ),
+  });
+}
+
+/**
+ * Add a product to a brand (from the catalog page).
+ */
+export function useAddProductToBrand() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ brandId, productId }: { brandId: string; productId: string }) =>
+      apiClient.post(`/api/v1/brands/${brandId}/products`, { productId }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.brand(vars.brandId) });
+    },
+  });
+}
+
+/**
+ * Remove a product from a brand.
+ */
+export function useRemoveProductFromBrand() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ brandId, productId }: { brandId: string; productId: string }) =>
+      apiClient.delete(`/api/v1/brands/${brandId}/products/${productId}`),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.brand(vars.brandId) });
+    },
   });
 }

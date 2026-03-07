@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -12,9 +12,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
 import { cn, capitalize } from '@/lib/utils';
-import { useBrowseProducts, useProductCategories } from '@/hooks/use-products';
+import { useBrowseProducts, useProductCategories, useAddProductToBrand } from '@/hooks/use-products';
 import { useProductTiers, type ProductTier } from '@/hooks/use-admin-product-tiers';
 import { useAuthStore } from '@/stores/auth-store';
+import { useBrands } from '@/hooks/use-brands';
+import { useBrandStore } from '@/stores/brand-store';
+import { useUIStore } from '@/stores/ui-store';
 import { CatalogProductCard } from '@/components/products/CatalogProductCard';
 import { CatalogDetailModal } from '@/components/products/CatalogDetailModal';
 import type { Product } from '@/hooks/use-products';
@@ -118,6 +121,34 @@ export default function ProductCatalogPage() {
   const profile = useAuthStore((s) => s.profile);
   const userSubTier = profile?.subscription_tier ?? 'free';
   const userTierLevel = SUB_ORDER[userSubTier] ?? 0;
+
+  // Brand data for "Add to Brand" functionality
+  const { data: brands } = useBrands();
+  const activeBrand = useBrandStore((s) => s.activeBrand);
+  const addProduct = useAddProductToBrand();
+  const addToast = useUIStore((s) => s.addToast);
+
+  const handleAddToBrand = useCallback((product: Product) => {
+    // Use active brand if set, otherwise first brand
+    const brandId = activeBrand?.id || brands?.items?.[0]?.id;
+    if (!brandId) {
+      addToast({ type: 'warning', title: 'Create a brand first before adding products' });
+      return;
+    }
+    const productId = product.id || product.sku;
+    addProduct.mutate(
+      { brandId, productId },
+      {
+        onSuccess: () => addToast({ type: 'success', title: `${product.name} added to brand` }),
+        onError: (err) => {
+          const msg = err instanceof Error && err.message.includes('already')
+            ? 'Product already added to this brand'
+            : 'Failed to add product';
+          addToast({ type: 'error', title: msg });
+        },
+      },
+    );
+  }, [activeBrand, brands, addProduct, addToast]);
 
   // Data
   const { data: productsData, isLoading } = useBrowseProducts({
@@ -320,6 +351,7 @@ export default function ProductCatalogPage() {
                 key={product.sku}
                 product={product}
                 onViewDetail={setSelectedProduct}
+                onAddToBrand={handleAddToBrand}
               />
             ))}
           </AnimatePresence>

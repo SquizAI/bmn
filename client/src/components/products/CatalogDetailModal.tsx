@@ -9,10 +9,15 @@ import {
   Leaf,
   Lock,
   ArrowRight,
+  Plus,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency, capitalize } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
+import { useBrands } from '@/hooks/use-brands';
+import { useAddProductToBrand } from '@/hooks/use-products';
+import { useUIStore } from '@/stores/ui-store';
 import type { Product } from '@/hooks/use-products';
 
 interface CatalogDetailModalProps {
@@ -26,6 +31,10 @@ export function CatalogDetailModal({
   isOpen,
   onClose,
 }: CatalogDetailModalProps) {
+  const { data: brands } = useBrands();
+  const addProduct = useAddProductToBrand();
+  const addToast = useUIStore((s) => s.addToast);
+
   if (!product) return null;
 
   const imageUrl = product.image_url ?? product.imageUrl;
@@ -35,6 +44,23 @@ export function CatalogDetailModal({
   const isLocked = product.accessible === false;
   const tier = product.tier;
   const categoryLabel = capitalize(product.category.replace(/_/g, ' '));
+  const hasBrands = (brands?.items?.length ?? 0) > 0;
+  const productId = product.id || product.sku;
+
+  const handleAddToBrand = (brandId: string) => {
+    addProduct.mutate(
+      { brandId, productId },
+      {
+        onSuccess: () => addToast({ type: 'success', title: `${product.name} added to brand` }),
+        onError: (err) => {
+          const msg = err instanceof Error && err.message.includes('already')
+            ? 'Product already added to this brand'
+            : 'Failed to add product';
+          addToast({ type: 'error', title: msg });
+        },
+      },
+    );
+  };
 
   return (
     <AnimatePresence>
@@ -209,6 +235,23 @@ export function CatalogDetailModal({
                 <Button variant="secondary" fullWidth size="lg" leftIcon={<Lock className="h-4 w-4" />}>
                   Upgrade to {tier ? capitalize(tier.min_subscription_tier ?? 'starter') : 'Unlock'}
                 </Button>
+              ) : hasBrands ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-text-muted uppercase tracking-wide">Add to Brand</p>
+                  {brands!.items!.map((brand) => (
+                    <Button
+                      key={brand.id}
+                      variant="outline"
+                      fullWidth
+                      size="lg"
+                      onClick={() => handleAddToBrand(brand.id)}
+                      loading={addProduct.isPending}
+                      leftIcon={addProduct.isSuccess ? <Check className="h-4 w-4 text-success" /> : <Plus className="h-4 w-4" />}
+                    >
+                      Add to {brand.name}
+                    </Button>
+                  ))}
+                </div>
               ) : (
                 <Link to={ROUTES.WIZARD}>
                   <Button fullWidth size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getCurrentSocket } from '@/lib/socket';
+import { getSocket, getCurrentSocket } from '@/lib/socket';
 import { apiClient } from '@/lib/api';
 import { SOCKET_EVENTS, QUERY_KEYS } from '@/lib/constants';
 
@@ -105,17 +105,16 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
       return;
     }
 
-    const socket = getCurrentSocket();
-    if (!socket) return;
+    let cancelled = false;
+    let attachedSocket: import('socket.io-client').Socket | null = null;
 
-    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
     setStatus('pending');
     setMessage('Starting...');
-    lastSocketEventRef.current = Date.now();
+    // Immediately enable polling as fallback while socket connects
+    setShouldPoll(true);
 
     const markSocketActivity = () => {
       lastSocketEventRef.current = Date.now();
-      // Socket is delivering events -- disable polling fallback
       setShouldPoll(false);
     };
 
@@ -151,22 +150,25 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
       setMessage(data.error || 'Generation failed');
     };
 
-    // BullMQ worker events (primary -- what brand-wizard worker emits)
-    socket.on(SOCKET_EVENTS.JOB_PROGRESS, onProgress);
-    socket.on(SOCKET_EVENTS.JOB_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.JOB_FAILED, onError);
+    function attachListeners(socket: import('socket.io-client').Socket) {
+      attachedSocket = socket;
+      socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
+      lastSocketEventRef.current = Date.now();
+      // Socket is ready -- disable polling if events are flowing
+      setShouldPoll(false);
 
-    // Generic generation events (alternate pipeline)
-    socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
-    socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
+      socket.on(SOCKET_EVENTS.JOB_PROGRESS, onProgress);
+      socket.on(SOCKET_EVENTS.JOB_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.JOB_FAILED, onError);
+      socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
+      socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
+      socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
+    }
 
-    // Agent SDK events
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
-    socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
-
-    return () => {
+    function detachListeners(socket: import('socket.io-client').Socket) {
       socket.off(SOCKET_EVENTS.JOB_PROGRESS, onProgress);
       socket.off(SOCKET_EVENTS.JOB_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.JOB_FAILED, onError);
@@ -177,6 +179,29 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
       socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
+    }
+
+    // Try sync first (fast path if socket already connected)
+    const existingSocket = getCurrentSocket();
+    if (existingSocket?.connected) {
+      attachListeners(existingSocket);
+    } else {
+      // Async path: await socket connection, attach when ready
+      getSocket()
+        .then((socket) => {
+          if (cancelled || isTerminalRef.current) return;
+          attachListeners(socket);
+        })
+        .catch(() => {
+          // Socket failed to connect -- polling fallback is already active
+        });
+    }
+
+    return () => {
+      cancelled = true;
+      if (attachedSocket) {
+        detachListeners(attachedSocket);
+      }
     };
   }, [jobId, reset]);
 
