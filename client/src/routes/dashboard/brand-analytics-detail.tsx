@@ -71,7 +71,21 @@ export default function BrandAnalyticsDetailPage() {
 
   const [period, setPeriod] = useState<PeriodKey>('monthly');
 
-  const projections = brand?.projections ?? [];
+  // Use wizard projections if available, otherwise derive from linked products
+  const wizardProjections = brand?.projections ?? [];
+  const linkedProducts = brand?.products ?? [];
+  const projections = wizardProjections.length > 0
+    ? wizardProjections
+    : linkedProducts.map((p) => ({
+        productSku: p.productSku,
+        productName: p.productName,
+        costPrice: p.costPrice,
+        retailPrice: p.retailPrice,
+        margin: p.margin,
+        projectedMonthlySales: p.quantity * 10,
+        monthlyRevenue: p.retailPrice * p.quantity * 10,
+        monthlyProfit: (p.retailPrice - p.costPrice) * p.quantity * 10,
+      }));
 
   // Calculate summary stats based on period
   const periodMultiplier = period === 'annual' ? 12 : period === 'quarterly' ? 3 : 1;

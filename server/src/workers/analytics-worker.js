@@ -281,7 +281,7 @@ export function initAnalyticsWorker(io) {
         const { data: activeBrands, error: brandsError } = await supabaseAdmin
           .from('brands')
           .select('id, user_id')
-          .is('deleted_at', null);
+          .neq('status', 'deleted');
 
         if (brandsError) {
           jobLog.error({ brandsError }, 'Failed to fetch active brands for recalculation');

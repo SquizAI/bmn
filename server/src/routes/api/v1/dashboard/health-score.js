@@ -23,7 +23,7 @@ healthScoreRoutes.get('/', async (req, res, next) => {
         .from('brands')
         .select('id')
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .limit(1);
       targetBrandId = brands?.[0]?.id;
     }

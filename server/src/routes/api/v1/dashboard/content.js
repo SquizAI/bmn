@@ -28,7 +28,7 @@ contentRoutes.get('/', async (req, res, next) => {
         .from('brands')
         .select('id')
         .eq('user_id', userId)
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
       brandFilter = (brands || []).map((b) => b.id);
     }
 

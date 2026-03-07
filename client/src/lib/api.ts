@@ -60,6 +60,11 @@ async function request<T = unknown>(path: string, options: RequestOptions = {}):
     throw new ApiClientError(message, response.status, data?.code);
   }
 
+  // Check for API-level error responses (200 with success: false)
+  if (isJson && data.success === false) {
+    throw new ApiClientError(data.error || 'Request failed', response.status, data.code);
+  }
+
   // Unwrap standard API response format: { success: true, data: ... }
   return isJson && data.success !== undefined ? data.data : data;
 }

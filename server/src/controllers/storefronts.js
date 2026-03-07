@@ -155,7 +155,7 @@ function toStorefrontResponse(row) {
     themeId: row.theme_id,
     status: row.status,
     settings: row.settings,
-    whiteLabelSettings: row.white_label_settings || {},
+    whiteLabelSettings: row.settings?.white_label || {},
     publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

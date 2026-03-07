@@ -49,6 +49,20 @@ export interface BrandProjection {
   monthlyProfit: number;
 }
 
+export interface BrandProduct {
+  productId: string;
+  productSku: string;
+  productName: string;
+  category: string;
+  imageUrl: string;
+  costPrice: number;
+  retailPrice: number;
+  margin: number;
+  quantity: number;
+  notes: string;
+  selectedAt: string;
+}
+
 export interface BrandDetail {
   id: string;
   name: string;
@@ -58,6 +72,7 @@ export interface BrandDetail {
   logos: LogoAsset[];
   mockups: MockupAsset[];
   projections: BrandProjection[];
+  products: BrandProduct[];
   createdAt: string;
   updatedAt: string;
 }

@@ -20,7 +20,7 @@ restockAlertRoutes.get('/', async (req, res, next) => {
       .from('brands')
       .select('id')
       .eq('user_id', userId)
-      .is('deleted_at', null);
+      .neq('status', 'deleted');
 
     const brandIds = (brands || []).map((b) => b.id);
 
@@ -86,7 +86,7 @@ restockAlertRoutes.get('/', async (req, res, next) => {
         .from('products')
         .select('id, name, sku, category, brand_id')
         .in('brand_id', brandIds)
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
 
       if (!error && data) {
         catalogProducts = data;

@@ -181,7 +181,7 @@ brandEvolutionRoutes.get(
           .select('id, name, created_at, identity, archetype')
           .eq('id', brandId)
           .eq('user_id', userId)
-          .is('deleted_at', null)
+          .neq('status', 'deleted')
           .single();
         brand = data;
       } else {
@@ -189,7 +189,7 @@ brandEvolutionRoutes.get(
           .from('brands')
           .select('id, name, created_at, identity, archetype')
           .eq('user_id', userId)
-          .is('deleted_at', null)
+          .neq('status', 'deleted')
           .order('created_at', { ascending: false })
           .limit(1);
         brand = data?.[0] || null;
@@ -243,7 +243,7 @@ brandEvolutionRoutes.get(
           .from('products')
           .select('id, category')
           .eq('brand_id', brand.id)
-          .is('deleted_at', null);
+          .neq('status', 'deleted');
 
         if (products) {
           productCount = products.length;

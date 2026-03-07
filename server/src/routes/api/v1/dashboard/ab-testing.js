@@ -38,7 +38,7 @@ abTestingRoutes.get('/', async (req, res, next) => {
       .from('brands')
       .select('id')
       .eq('user_id', userId)
-      .is('deleted_at', null);
+      .neq('status', 'deleted');
 
     const brandIds = (brands || []).map((b) => b.id);
 
@@ -122,7 +122,7 @@ abTestingRoutes.post(
         .from('brands')
         .select('id')
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .limit(1);
 
       if (!brands || brands.length === 0) {

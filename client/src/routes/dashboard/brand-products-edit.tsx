@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { useBrandDetail, type BrandProjection } from '@/hooks/use-brand-detail';
+import { useBrandDetail, type BrandProduct } from '@/hooks/use-brand-detail';
 import { useUIStore } from '@/stores/ui-store';
 import { apiClient } from '@/lib/api';
 import { ROUTES, QUERY_KEYS } from '@/lib/constants';
@@ -21,7 +21,7 @@ import { formatCurrency } from '@/lib/utils';
 // ------ Product Card ------
 
 interface ProductCardProps {
-  product: BrandProjection;
+  product: BrandProduct;
   onRemove: (sku: string) => void;
   removing: boolean;
 }
@@ -35,9 +35,13 @@ function ProductCard({ product, onRemove, removing }: ProductCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="flex items-center gap-4 rounded-lg border border-border bg-surface p-4 transition-colors hover:border-border-hover"
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-light">
-        <Package className="h-6 w-6 text-primary" />
-      </div>
+      {product.imageUrl ? (
+        <img src={product.imageUrl} alt={product.productName} className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+      ) : (
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary-light">
+          <Package className="h-6 w-6 text-primary" />
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-text truncate">{product.productName}</p>
@@ -75,20 +79,21 @@ function ProductCard({ product, onRemove, removing }: ProductCardProps) {
 
 // ------ Summary Stats ------
 
-function ProductSummary({ projections }: { projections: BrandProjection[] }) {
-  const totalMonthlyRevenue = projections.reduce((sum, p) => sum + p.monthlyRevenue, 0);
-  const totalMonthlyProfit = projections.reduce((sum, p) => sum + p.monthlyProfit, 0);
+function ProductSummary({ products }: { products: BrandProduct[] }) {
+  const totalRetailValue = products.reduce((sum, p) => sum + p.retailPrice * p.quantity, 0);
+  const totalCostValue = products.reduce((sum, p) => sum + p.costPrice * p.quantity, 0);
+  const totalProfit = totalRetailValue - totalCostValue;
   const avgMargin =
-    projections.length > 0
-      ? projections.reduce((sum, p) => sum + p.margin, 0) / projections.length
+    products.length > 0
+      ? products.reduce((sum, p) => sum + p.margin, 0) / products.length
       : 0;
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       {[
-        { label: 'Products', value: String(projections.length) },
-        { label: 'Est. Monthly Revenue', value: formatCurrency(totalMonthlyRevenue) },
-        { label: 'Est. Monthly Profit', value: formatCurrency(totalMonthlyProfit) },
+        { label: 'Products', value: String(products.length) },
+        { label: 'Total Retail Value', value: formatCurrency(totalRetailValue) },
+        { label: 'Total Profit', value: formatCurrency(totalProfit) },
         { label: 'Avg Margin', value: `${Math.round(avgMargin * 100)}%` },
       ].map((stat) => (
         <div key={stat.label} className="rounded-lg bg-surface-hover p-3 text-center">
@@ -110,7 +115,8 @@ export default function BrandProductsEditPage() {
 
   const [removingSku, setRemovingSku] = useState<string | null>(null);
 
-  const projections = brand?.projections ?? [];
+  // Prefer linked products (from brand_products table), fall back to wizard projections
+  const products = brand?.products ?? [];
 
   const handleRemoveProduct = useCallback(
     async (sku: string) => {
@@ -172,7 +178,7 @@ export default function BrandProductsEditPage() {
             <div className="flex items-center gap-2 mt-1">
               <Package className="h-4 w-4 text-primary" />
               <span className="text-sm text-text-secondary">
-                Product Selection ({projections.length} products)
+                Product Selection ({products.length} products)
               </span>
             </div>
           </div>
@@ -190,10 +196,10 @@ export default function BrandProductsEditPage() {
       </div>
 
       {/* Summary Stats */}
-      {projections.length > 0 && <ProductSummary projections={projections} />}
+      {products.length > 0 && <ProductSummary products={products} />}
 
       {/* Product List */}
-      {projections.length > 0 ? (
+      {products.length > 0 ? (
         <Card variant="outlined" padding="lg">
           <div className="flex items-center gap-2 mb-4">
             <CardTitle>Brand Products</CardTitle>
@@ -201,7 +207,7 @@ export default function BrandProductsEditPage() {
 
           <div className="flex flex-col gap-3">
             <AnimatePresence mode="popLayout">
-              {projections.map((product) => (
+              {products.map((product) => (
                 <ProductCard
                   key={product.productSku}
                   product={product}

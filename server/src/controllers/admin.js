@@ -138,16 +138,23 @@ export async function listAllBrands(req, res, next) {
  */
 export async function createProduct(req, res, next) {
   try {
-    const { name, description, category, base_price, mockup_template_url, metadata, tier_id } = req.body;
+    const { sku, name, description, category, base_cost, retail_price, mockup_template_url, mockup_instructions, metadata, tier_id } = req.body;
+
+    if (!sku || !name || !category) {
+      return res.status(400).json({ success: false, error: 'sku, name, and category are required' });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('products')
       .insert({
+        sku,
         name,
         description: description || null,
         category,
-        base_price: base_price || 0,
+        base_cost: base_cost || 0,
+        retail_price: retail_price || 0,
         mockup_template_url: mockup_template_url || null,
+        mockup_instructions: mockup_instructions || '',
         metadata: metadata || null,
         tier_id: tier_id || null,
         is_active: true,

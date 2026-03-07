@@ -36,7 +36,7 @@ customerRoutes.get(
           .from('brands')
           .select('id')
           .eq('user_id', userId)
-          .is('deleted_at', null);
+          .neq('status', 'deleted');
         brandFilter = (brands || []).map((b) => b.id);
       }
 

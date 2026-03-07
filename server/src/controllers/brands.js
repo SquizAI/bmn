@@ -27,8 +27,8 @@ function toBrandSummary(row, thumbnailUrl = null) {
     status: row.status,
     wizardStep: row.wizard_step || 'onboarding',
     thumbnailUrl: thumbnailUrl || null,
-    archetype: selectedDir?.archetype || null,
-    primaryColor: selectedDir?.colorPalette?.[0]?.hex || null,
+    archetype: selectedDir?.archetype || row.archetype || null,
+    primaryColor: selectedDir?.colorPalette?.[0]?.hex || row.color_palette?.[0]?.hex || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -42,7 +42,7 @@ function toBrandSummary(row, thumbnailUrl = null) {
  * @param {object[]} mockupAssets - brand_assets rows with asset_type='mockup'
  * @returns {object} BrandDetail matching client TypeScript interface
  */
-function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
+function toBrandDetail(row, logoAssets = [], mockupAssets = [], brandProducts = []) {
   const ws = row.wizard_state || {};
   const identityState = ws['brand-identity'];
   const productsState = ws['product-recommendations'];
@@ -52,24 +52,23 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
     (d) => d.id === identityState?.selectedDirectionId
   ) || identityState?.directions?.[0] || null;
 
-  let identity = null;
-  if (selectedDir) {
-    identity = {
-      vision: selectedDir.vision || identityState?.vision || '',
-      archetype: selectedDir.archetype || '',
-      values: selectedDir.values || [],
-      targetAudience: selectedDir.targetAudience || '',
-      colorPalette: (selectedDir.colorPalette || []).map((c) => ({
-        hex: c.hex || c.color || '',
-        name: c.name || '',
-        role: c.role || 'accent',
-      })),
-      fonts: {
-        primary: selectedDir.fonts?.primary || selectedDir.typography?.primary || 'Inter',
-        secondary: selectedDir.fonts?.secondary || selectedDir.typography?.secondary || 'Space Grotesk',
-      },
-    };
-  }
+  // Build identity from wizard_state directions first, then fall back to brand columns
+  const rawColorPalette = selectedDir?.colorPalette || row.color_palette || [];
+  const identity = {
+    vision: selectedDir?.vision || identityState?.vision || row.vision || '',
+    archetype: selectedDir?.archetype || row.archetype || '',
+    values: selectedDir?.values || row.brand_values || [],
+    targetAudience: selectedDir?.targetAudience || row.target_audience || '',
+    colorPalette: rawColorPalette.map((c) => ({
+      hex: c.hex || c.color || '',
+      name: c.name || '',
+      role: c.role || 'accent',
+    })),
+    fonts: {
+      primary: selectedDir?.fonts?.primary || selectedDir?.typography?.primary || row.fonts?.primary || 'Inter',
+      secondary: selectedDir?.fonts?.secondary || selectedDir?.typography?.secondary || row.fonts?.secondary || 'Space Grotesk',
+    },
+  };
 
   // Map logo assets to LogoAsset shape
   const logos = logoAssets.map((a) => ({
@@ -90,7 +89,7 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
     status: a.metadata?.status || 'pending',
   }));
 
-  // Extract projections from product recommendations
+  // Extract projections from product recommendations (wizard state)
   const productList = Array.isArray(productsState?.products) ? productsState.products : [];
   const projections = productList
     .map((p) => ({
@@ -104,6 +103,27 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
       monthlyProfit: p.monthlyProfit || p.monthly_profit || 0,
     }));
 
+  // Map linked brand_products (from junction table, joined with products)
+  const products = (brandProducts || []).map((bp) => {
+    const p = bp.products || {};
+    const cost = Number(p.base_cost) || 0;
+    const retail = Number(bp.custom_retail_price) || Number(p.retail_price) || 0;
+    const margin = retail > 0 ? (retail - cost) / retail : 0;
+    return {
+      productId: bp.product_id,
+      productSku: p.sku || '',
+      productName: p.name || '',
+      category: p.category || '',
+      imageUrl: p.image_url || '',
+      costPrice: cost,
+      retailPrice: retail,
+      margin,
+      quantity: bp.quantity || 1,
+      notes: bp.notes || '',
+      selectedAt: bp.selected_at,
+    };
+  });
+
   return {
     id: row.id,
     name: row.name,
@@ -113,6 +133,7 @@ function toBrandDetail(row, logoAssets = [], mockupAssets = []) {
     logos,
     mockups,
     projections,
+    products,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -196,7 +217,7 @@ export async function createBrand(req, res, next) {
       .from('brands')
       .insert({
         user_id: userId,
-        org_id: req.profile.org_id,
+        org_id: req.profile?.org_id || null,
         name,
         description: description || null,
         status: 'draft',
@@ -265,9 +286,16 @@ export async function getBrand(req, res, next) {
     const logoAssets = (assets || []).filter((a) => a.asset_type === 'logo');
     const mockupAssets = (assets || []).filter((a) => a.asset_type === 'mockup');
 
+    // Fetch linked products from brand_products junction table
+    const { data: brandProducts } = await supabaseAdmin
+      .from('brand_products')
+      .select('product_id, quantity, custom_retail_price, notes, selected_at, products (sku, name, category, base_cost, retail_price, image_url)')
+      .eq('brand_id', brandId)
+      .order('selected_at', { ascending: true });
+
     return res.json({
       success: true,
-      data: toBrandDetail(brand, logoAssets, mockupAssets),
+      data: toBrandDetail(brand, logoAssets, mockupAssets, brandProducts || []),
     });
   } catch (err) {
     return next(err);

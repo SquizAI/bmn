@@ -35,7 +35,7 @@ publicApiRoutes.get(
           count: 'exact',
         })
         .eq('user_id', userId)
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
 
       if (status) {
         query = query.eq('status', status);
@@ -124,7 +124,7 @@ publicApiRoutes.get(
         .select('*')
         .eq('id', id)
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .single();
 
       if (error || !brand) {
@@ -163,7 +163,7 @@ publicApiRoutes.post(
         .select('id, name, status')
         .eq('id', id)
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .single();
 
       if (brandError || !brand) {
@@ -226,7 +226,7 @@ publicApiRoutes.post(
         .select('id, name, status')
         .eq('id', id)
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .single();
 
       if (brandError || !brand) {
@@ -289,7 +289,7 @@ publicApiRoutes.get(
         .select('id')
         .eq('id', id)
         .eq('user_id', userId)
-        .is('deleted_at', null)
+        .neq('status', 'deleted')
         .single();
 
       if (brandError || !brand) {
@@ -338,7 +338,7 @@ publicApiRoutes.get(
         .from('brands')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
 
       // Fetch active brand count
       const { count: activeBrandCount } = await supabaseAdmin
@@ -346,14 +346,14 @@ publicApiRoutes.get(
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('status', 'active')
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
 
       // Fetch total orders
       const { data: brands } = await supabaseAdmin
         .from('brands')
         .select('id')
         .eq('user_id', userId)
-        .is('deleted_at', null);
+        .neq('status', 'deleted');
 
       const brandIds = (brands || []).map((b) => b.id);
 

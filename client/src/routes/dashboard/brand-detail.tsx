@@ -85,6 +85,7 @@ export default function BrandDetailPage() {
   const logos = brand.logos ?? [];
   const mockups = brand.mockups ?? [];
   const projections = brand.projections ?? [];
+  const products = brand.products ?? [];
 
   // Map logos to gallery images
   const logoImages: GalleryImage[] = logos.map((logo, i) => ({
@@ -103,10 +104,13 @@ export default function BrandDetailPage() {
     label: mockup.productName,
   }));
 
-  // Revenue chart data from projections
-  const revenueChartData: RevenueBarData[] = projections.slice(0, 6).map((p) => ({
-    label: p.productName.length > 12 ? p.productName.slice(0, 12) + '...' : p.productName,
-    value: p.monthlyRevenue,
+  // Revenue chart data from projections or linked products
+  const chartSource = projections.length > 0
+    ? projections.slice(0, 6).map((p) => ({ name: p.productName, value: p.monthlyRevenue }))
+    : products.slice(0, 6).map((p) => ({ name: p.productName, value: p.retailPrice * p.quantity }));
+  const revenueChartData: RevenueBarData[] = chartSource.map((p) => ({
+    label: p.name.length > 12 ? p.name.slice(0, 12) + '...' : p.name,
+    value: p.value,
   }));
 
   return (
@@ -298,12 +302,12 @@ export default function BrandDetailPage() {
         </Card>
       )}
 
-      {/* Profit Projections */}
-      {projections.length > 0 && (
+      {/* Profit Projections / Products */}
+      {(projections.length > 0 || products.length > 0) && (
         <Card variant="outlined" padding="lg">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-success" />
-            <CardTitle>Profit Projections</CardTitle>
+            <CardTitle>{projections.length > 0 ? 'Profit Projections' : 'Products'}</CardTitle>
           </div>
 
           {revenueChartData.length > 0 && (
@@ -317,26 +321,40 @@ export default function BrandDetailPage() {
                   <th className="pb-2 font-semibold text-text-muted">Product</th>
                   <th className="pb-2 font-semibold text-text-muted">Cost</th>
                   <th className="pb-2 font-semibold text-text-muted">Retail</th>
-                  <th className="pb-2 font-semibold text-text-muted">Monthly Sales</th>
-                  <th className="pb-2 font-semibold text-text-muted">Monthly Revenue</th>
-                  <th className="pb-2 font-semibold text-text-muted">Monthly Profit</th>
+                  <th className="pb-2 font-semibold text-text-muted">Margin</th>
+                  {projections.length > 0 && (
+                    <>
+                      <th className="pb-2 font-semibold text-text-muted">Monthly Sales</th>
+                      <th className="pb-2 font-semibold text-text-muted">Monthly Revenue</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {projections.map((p) => (
-                  <tr key={p.productSku} className="border-b border-border/50">
-                    <td className="py-2 font-medium text-text">{p.productName}</td>
-                    <td className="py-2 text-text-secondary">{formatCurrency(p.costPrice)}</td>
-                    <td className="py-2 text-text-secondary">{formatCurrency(p.retailPrice)}</td>
-                    <td className="py-2 text-text-secondary">{p.projectedMonthlySales}</td>
-                    <td className="py-2 font-medium text-primary">
-                      {formatCurrency(p.monthlyRevenue)}
-                    </td>
-                    <td className="py-2 font-bold text-success">
-                      {formatCurrency(p.monthlyProfit)}
-                    </td>
-                  </tr>
-                ))}
+                {projections.length > 0
+                  ? projections.map((p) => (
+                      <tr key={p.productSku} className="border-b border-border/50">
+                        <td className="py-2 font-medium text-text">{p.productName}</td>
+                        <td className="py-2 text-text-secondary">{formatCurrency(p.costPrice)}</td>
+                        <td className="py-2 text-text-secondary">{formatCurrency(p.retailPrice)}</td>
+                        <td className="py-2 font-medium text-success">{Math.round(p.margin * 100)}%</td>
+                        <td className="py-2 text-text-secondary">{p.projectedMonthlySales}</td>
+                        <td className="py-2 font-medium text-primary">{formatCurrency(p.monthlyRevenue)}</td>
+                      </tr>
+                    ))
+                  : products.map((p) => (
+                      <tr key={p.productSku} className="border-b border-border/50">
+                        <td className="py-2 font-medium text-text">
+                          <div className="flex items-center gap-2">
+                            {p.imageUrl && <img src={p.imageUrl} alt="" className="h-8 w-8 rounded object-cover" />}
+                            {p.productName}
+                          </div>
+                        </td>
+                        <td className="py-2 text-text-secondary">{formatCurrency(p.costPrice)}</td>
+                        <td className="py-2 text-text-secondary">{formatCurrency(p.retailPrice)}</td>
+                        <td className="py-2 font-medium text-success">{Math.round(p.margin * 100)}%</td>
+                      </tr>
+                    ))}
               </tbody>
             </table>
           </div>
