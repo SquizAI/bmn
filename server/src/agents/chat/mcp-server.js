@@ -318,9 +318,16 @@ function createBrandModifyTools(context) {
       const { authorized } = await verifyBrandAccess(brandId, userId, effectiveRole, orgId);
       if (!authorized) return toolResult({ error: 'Brand not found or access denied' });
 
+      // Look up product SKU for consistent dual-column writes
+      const { data: product } = await supabaseAdmin
+        .from('products')
+        .select('sku')
+        .eq('id', productId)
+        .single();
+
       const { error } = await supabaseAdmin
         .from('brand_products')
-        .insert({ brand_id: brandId, product_id: productId, config: {} });
+        .insert({ brand_id: brandId, product_id: productId, product_sku: product?.sku || null, config: {} });
 
       if (error) {
         if (error.code === '23505') return toolResult({ error: 'Product already added to this brand' });

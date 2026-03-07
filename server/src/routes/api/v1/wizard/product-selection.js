@@ -40,10 +40,10 @@ productSelectionRouter.put(
         return res.status(404).json({ success: false, error: 'Brand not found' });
       }
 
-      // Verify all SKUs exist
+      // Verify all SKUs exist and fetch product IDs for consistency
       const { data: products, error: productError } = await supabaseAdmin
         .from('products')
-        .select('sku')
+        .select('id, sku')
         .in('sku', productSkus)
         .eq('is_active', true);
 
@@ -66,9 +66,13 @@ productSelectionRouter.put(
         .delete()
         .eq('brand_id', brandId);
 
-      // Insert new selections
+      // Build SKU -> product ID map for consistent dual-column writes
+      const skuToId = new Map(products.map((p) => [p.sku, p.id]));
+
+      // Insert new selections with both product_id and product_sku
       const rows = productSkus.map((sku) => ({
         brand_id: brandId,
+        product_id: skuToId.get(sku) || null,
         product_sku: sku,
         user_id: userId,
       }));

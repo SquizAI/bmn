@@ -20,6 +20,7 @@ import {
 import { analyzeCompetitors as runCompetitorAnalysis } from '../services/competitor.js';
 import { scrapeWebsite } from '../services/website-scraper.js';
 import { generateDossierPdf } from '../services/pdf-generator.js';
+import { dispatchJob } from '../queues/dispatch.js';
 
 /**
  * POST /api/v1/wizard/start
@@ -299,21 +300,36 @@ export async function saveStepData(req, res, next) {
     }
 
     // Social proof: increment selected_count for each chosen product
-    if (step === 'product-selection' && data?.selectedProducts?.length) {
-      for (const productId of data.selectedProducts) {
+    if (step === 'product-selection' && data?.productSkus?.length) {
+      for (const productSku of data.productSkus) {
+        // Look up product ID from SKU for the RPC call
+        const { data: product, error: lookupErr } = await supabaseAdmin
+          .from('products')
+          .select('id')
+          .eq('sku', productSku)
+          .single();
+
+        if (lookupErr || !product) {
+          logger.warn(
+            { productSku, error: lookupErr?.message },
+            'Could not find product by SKU for selected_count increment (non-blocking)',
+          );
+          continue;
+        }
+
         const { error: rpcError } = await supabaseAdmin.rpc(
           'increment_product_selected_count',
-          { p_product_id: productId },
+          { p_product_id: product.id },
         );
         if (rpcError) {
           logger.warn(
-            { productId, error: rpcError.message },
+            { productSku, productId: product.id, error: rpcError.message },
             'Failed to increment product selected_count (non-blocking)',
           );
         }
       }
       logger.info(
-        { brandId, productCount: data.selectedProducts.length },
+        { brandId, productCount: data.productSkus.length },
         'Incremented selected_count for chosen products',
       );
     }
@@ -1424,6 +1440,25 @@ IMPORTANT:
     const bundles = parsed.bundles || [];
     const revenueProjection = parsed.revenueProjection || null;
 
+    // Enrich recommendations with catalog images from the products table
+    const skus = products.map((r) => r.sku).filter(Boolean);
+    if (skus.length > 0) {
+      const { data: catalogProducts } = await supabaseAdmin
+        .from('products')
+        .select('sku, image_url')
+        .in('sku', skus);
+
+      const imageMap = Object.fromEntries(
+        (catalogProducts || []).map((p) => [p.sku, p.image_url]),
+      );
+
+      for (const rec of products) {
+        if (!rec.imageUrl && imageMap[rec.sku]) {
+          rec.imageUrl = imageMap[rec.sku];
+        }
+      }
+    }
+
     // Cache in wizard_state
     const updatedState = {
       ...(brand.wizard_state || {}),
@@ -1475,134 +1510,126 @@ export async function generateMockups(req, res, next) {
     const userId = req.user.id;
     const { brandId } = req.params;
 
-    const { data: brand, error } = await supabaseAdmin
+    // Verify brand ownership
+    const { data: brand, error: brandError } = await supabaseAdmin
       .from('brands')
-      .select('id, name, wizard_state')
+      .select('id, user_id')
       .eq('id', brandId)
       .eq('user_id', userId)
       .single();
 
-    if (error || !brand) {
+    if (brandError || !brand) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Return cached mockups if they exist and no regeneration was requested
-    const existingMockups = brand.wizard_state?.['mockup-generation']?.mockups;
-    if (existingMockups && existingMockups.length > 0 && !req.body?.regenerate) {
-      logger.info({ brandId, userId }, 'Returning cached mockup descriptions');
-      return res.json({
-        success: true,
-        data: {
-          cached: true,
-          brandId,
-          step: 'mockup-generation',
-          mockups: existingMockups,
-        },
+    // Accept optional productSkus from body to filter which products get mockups
+    const requestedSkus = req.body?.productSkus || [];
+
+    // Get selected products for this brand from brand_products table
+    const { data: selections, error: selError } = await supabaseAdmin
+      .from('brand_products')
+      .select('product_sku, product_id')
+      .eq('brand_id', brandId);
+
+    if (selError || !selections || selections.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No products selected. Select products before generating mockups.',
       });
     }
 
-    // Gather brand context
-    const brandIdentity = brand.wizard_state?.['brand-identity'] || {};
-    const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
-    const productRecs = brand.wizard_state?.['product-recommendations'] || {};
-    const selectedProducts = brand.wizard_state?.['product-selection']?.selectedProductIds || [];
-    const allProducts = productRecs.products || [];
+    // Filter by requested SKUs if provided
+    const filteredSelections = requestedSkus.length > 0
+      ? selections.filter((s) => requestedSkus.includes(s.product_sku))
+      : selections;
 
-    // Use selected products, or fallback to top 4 products
-    const productsToMock = selectedProducts.length > 0
-      ? allProducts.filter((p) => selectedProducts.includes(p.id))
-      : allProducts.slice(0, 4);
+    // Resolve full product data from products table
+    const productSkus = filteredSelections.map((s) => s.product_sku).filter(Boolean);
+    const productIds = filteredSelections.map((s) => s.product_id).filter(Boolean);
 
-    const selectedDirection = brandIdentity.directions?.find(
-      (d) => d.id === brandIdentity.selectedDirectionId
-    ) || brandIdentity.directions?.[0] || {};
-
-    const taskPrompt = `You are a product designer creating detailed mockup specifications for a creator brand. Generate photorealistic mockup descriptions for each product.
-
-<brand_context>
-Brand Name: ${brand.name || 'Creator Brand'}
-Brand Vision: ${selectedDirection.vision || 'Modern creator brand'}
-Archetype: ${selectedDirection.archetype?.name || 'The Creator'}
-Colors: ${socialAnalysis.aesthetic?.naturalPalette?.join(', ') || '#000000, #FFFFFF, #B8956A'}
-Niche: ${socialAnalysis.niche?.primaryNiche?.name || 'Lifestyle'}
-</brand_context>
-
-<products_to_mockup>
-${productsToMock.map((p, i) => `${i + 1}. ${p.name} (${p.category}) - ${p.description || ''}`).join('\n')}
-</products_to_mockup>
-
-For each product, generate a detailed mockup specification. Return as JSON:
-{
-  "mockups": [
-    {
-      "productId": "string (matching product id)",
-      "productName": "string",
-      "imagePrompt": "string (detailed GPT Image 1.5 prompt for photorealistic product mockup showing the brand logo/name on the product, specific colors, setting, lighting, camera angle)",
-      "backgroundColor": "#hex (solid background color for the mockup)",
-      "placementDescription": "string (where the logo/text appears on the product)",
-      "scene": "studio|lifestyle|flatlay|closeup",
-      "status": "pending"
+    let products = [];
+    if (productIds.length > 0) {
+      const { data } = await supabaseAdmin
+        .from('products')
+        .select('id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description')
+        .in('id', productIds)
+        .is('deleted_at', null);
+      if (data) products = data;
     }
-  ]
-}
+    // Fallback: resolve by SKU if product_id didn't yield results
+    if (products.length === 0 && productSkus.length > 0) {
+      const { data } = await supabaseAdmin
+        .from('products')
+        .select('id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description')
+        .in('sku', productSkus)
+        .is('deleted_at', null);
+      if (data) products = data;
+    }
 
-IMPORTANT:
-- Each imagePrompt should be 2-3 sentences describing a photorealistic product shot
-- Include the brand name "${brand.name || 'Brand'}" in the design
-- Use the brand's color palette
-- Vary the scene types across products for visual interest`;
+    if (products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Selected products could not be found. Please re-select products.',
+      });
+    }
 
-    logger.info({ brandId, userId, productCount: productsToMock.length }, 'Calling Claude for mockup specifications');
+    // Fetch selected logo from brand_assets
+    const { data: brandAssets } = await supabaseAdmin
+      .from('brand_assets')
+      .select('url, metadata')
+      .eq('brand_id', brandId)
+      .eq('asset_type', 'logo')
+      .eq('is_selected', true)
+      .limit(1);
 
-    const aiResult = await routeModel('brand-vision', {
-      prompt: taskPrompt,
-      maxTokens: 4096,
-      temperature: 0.7,
-      jsonMode: true,
+    // Fetch brand identity
+    const { data: brandRecord } = await supabaseAdmin
+      .from('brands')
+      .select('name, identity')
+      .eq('id', brandId)
+      .single();
+
+    const selectedLogo = brandAssets?.[0] || null;
+    const brandIdentity = brandRecord?.identity || {};
+    const brandName = brandRecord?.name || 'Brand';
+
+    // Dispatch mockup generation via BullMQ
+    const result = await dispatchJob('brand-wizard', {
+      userId,
+      brandId,
+      step: 'mockup-review',
+      input: {
+        brandId,
+        userId,
+        products: products.map((p) => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          category: p.category,
+          base_cost: p.base_cost,
+          retail_price: p.retail_price,
+          image_url: p.image_url,
+          mockup_instructions: p.mockup_instructions,
+        })),
+        selectedLogo: selectedLogo ? {
+          url: selectedLogo.url,
+          variationType: selectedLogo.metadata?.variation_type || 'primary',
+          prompt: selectedLogo.metadata?.prompt || '',
+        } : { url: '', variationType: 'primary', prompt: '' },
+        brandIdentity: {
+          brandName,
+          archetype: brandIdentity.archetype || '',
+          colorPalette: brandIdentity.colorPalette || brandIdentity.color_palette || {},
+        },
+      },
+      creditCost: products.length,
     });
 
-    // Parse the AI response
-    let parsed;
-    try {
-      let jsonText = aiResult.text.trim();
-      const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) jsonText = jsonMatch[1].trim();
-      parsed = JSON.parse(jsonText);
-    } catch (parseErr) {
-      logger.error({ brandId, error: parseErr.message, rawText: aiResult.text.slice(0, 500) }, 'Failed to parse mockup AI response');
-      return res.status(500).json({ success: false, error: 'Failed to parse AI-generated mockups' });
-    }
-
-    const mockups = parsed.mockups || [];
-
-    // Cache in wizard_state
-    const updatedState = {
-      ...(brand.wizard_state || {}),
-      'mockup-generation': {
-        mockups,
-        generatedAt: new Date().toISOString(),
-        model: aiResult.model,
-      },
-    };
-
-    await supabaseAdmin
-      .from('brands')
-      .update({
-        wizard_state: updatedState,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', brandId);
-
-    logger.info({ brandId, userId, model: aiResult.model, mockupCount: mockups.length }, 'Mockup specifications generated');
+    logger.info({ jobId: result.jobId, brandId, userId, productCount: products.length }, 'Mockup generation job dispatched via BullMQ');
 
     return res.json({
       success: true,
-      data: {
-        brandId,
-        step: 'mockup-generation',
-        mockups,
-        model: aiResult.model,
-      },
+      data: { jobId: result.jobId, queueName: result.queueName },
     });
   } catch (err) {
     return next(err);

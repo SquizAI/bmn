@@ -104,10 +104,10 @@ brandRoutes.post('/:brandId/products', async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Verify product exists
+    // Verify product exists and fetch SKU for consistency
     const { data: product, error: prodErr } = await supabaseAdmin
       .from('products')
-      .select('id')
+      .select('id, sku')
       .eq('id', productId)
       .is('deleted_at', null)
       .single();
@@ -118,7 +118,7 @@ brandRoutes.post('/:brandId/products', async (req, res, next) => {
 
     const { error: insertErr } = await supabaseAdmin
       .from('brand_products')
-      .insert({ brand_id: brandId, product_id: productId, config: {} });
+      .insert({ brand_id: brandId, product_id: productId, product_sku: product.sku || null, config: {} });
 
     if (insertErr) {
       if (insertErr.code === '23505') {

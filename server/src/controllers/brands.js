@@ -710,24 +710,56 @@ export async function generateMockups(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Load brand's products
+    // Load brand's products via brand_products junction table (join with products for full data)
     const { data: brandProducts } = await supabaseAdmin
       .from('brand_products')
-      .select('product_id, products(id, sku, name, category, image_url, mockup_template_url, metadata)')
+      .select('product_sku, product_id, products(id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description)')
       .eq('brand_id', brandId);
 
-    const products = (brandProducts || [])
-      .map(bp => bp.products)
+    let products = (brandProducts || [])
+      .map((bp) => bp.products)
       .filter(Boolean)
-      .map(p => ({
+      .map((p) => ({
         id: p.id,
         sku: p.sku,
         name: p.name,
         category: p.category,
-        imageUrl: p.image_url,
-        mockupTemplateUrl: p.mockup_template_url,
-        mockupInstructions: p.metadata?.mockup_instructions || '',
+        base_cost: p.base_cost,
+        retail_price: p.retail_price,
+        image_url: p.image_url,
+        mockup_instructions: p.mockup_instructions,
       }));
+
+    // Fallback: resolve by product_sku if product_id join yielded no results
+    if (products.length === 0) {
+      const productSkus = (brandProducts || []).map((bp) => bp.product_sku).filter(Boolean);
+      if (productSkus.length > 0) {
+        const { data } = await supabaseAdmin
+          .from('products')
+          .select('id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description')
+          .in('sku', productSkus)
+          .is('deleted_at', null);
+        if (data) {
+          products = data.map((p) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            category: p.category,
+            base_cost: p.base_cost,
+            retail_price: p.retail_price,
+            image_url: p.image_url,
+            mockup_instructions: p.mockup_instructions,
+          }));
+        }
+      }
+    }
+
+    if (products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No products found for this brand. Add products before generating mockups.',
+      });
+    }
 
     // Load selected logo
     const { data: logos } = await supabaseAdmin
@@ -740,29 +772,28 @@ export async function generateMockups(req, res, next) {
 
     const selectedLogo = logos?.[0] ? {
       url: logos[0].url,
-      prompt: logos[0].generation_prompt,
+      prompt: logos[0].generation_prompt || logos[0].metadata?.prompt || '',
       variationType: logos[0].metadata?.variation_type || 'primary',
-    } : null;
+    } : { url: '', variationType: 'primary', prompt: '' };
 
     // Extract brand identity from wizard_state
     const ws = brand.wizard_state || {};
     const identity = ws['brand-identity'] || {};
     const directions = identity.directions || [];
-    const selectedDir = directions.find(d => d.id === identity.selectedDirectionId) || directions[0] || {};
+    const selectedDir = directions.find((d) => d.id === identity.selectedDirectionId) || directions[0] || {};
     const colorPalette = (selectedDir.colorPalette || identity.colorPalette || [])
-      .map(c => typeof c === 'string' ? c : c.hex)
+      .map((c) => typeof c === 'string' ? c : c.hex)
       .filter(Boolean);
 
     const input = {
-      ...req.body,
+      brandId,
+      userId,
       products,
       selectedLogo,
       brandIdentity: {
         brandName: brand.name,
         archetype: selectedDir.archetype || identity.archetype || '',
         colorPalette,
-        vision: selectedDir.vision || identity.vision || '',
-        logoStyle: selectedDir.logoStyle || identity.logoStyle || '',
       },
     };
 
@@ -771,7 +802,7 @@ export async function generateMockups(req, res, next) {
       brandId,
       step: 'mockup-review',
       input,
-      creditCost: req.body.creditCost || products.length || 1,
+      creditCost: products.length,
     });
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Mockup generation job dispatched');
