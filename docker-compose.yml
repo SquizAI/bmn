@@ -48,6 +48,11 @@ services:
       redis:
         condition: service_healthy
     command: ["node", "--watch", "src/index.js"]
+    networks:
+      default:
+      bmn-internal:
+        aliases:
+          - server
     restart: unless-stopped
 
   # Client is typically run via `npm run dev` outside Docker for HMR,
@@ -64,6 +69,14 @@ services:
     depends_on:
       - server
     restart: unless-stopped
+
+networks:
+  default:
+  bmn-internal:
+    # Shared with Caddy reverse proxy (docker-compose.caddy.yml)
+    # This ensures Caddy can resolve 'server' after container rebuilds
+    name: bmn_bmn-internal
+    external: true
 
 volumes:
   bmn-redis-data:
