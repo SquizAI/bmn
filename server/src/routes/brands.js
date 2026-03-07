@@ -89,8 +89,17 @@ brandRoutes.patch('/:brandId/logos/:logoId', async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
-    // Update is_selected on the brand_assets record
     const isSelected = status === 'selected';
+
+    // Only one logo can be selected at a time — deselect all others first
+    if (isSelected) {
+      await supabaseAdmin
+        .from('brand_assets')
+        .update({ is_selected: false })
+        .eq('brand_id', brandId)
+        .eq('asset_type', 'logo')
+        .neq('id', logoId);
+    }
 
     const { error: updateErr } = await supabaseAdmin
       .from('brand_assets')
@@ -115,6 +124,47 @@ brandRoutes.post(
   validate({ params: brandIdParamsSchema }),
   brandController.uploadLogo
 );
+
+// PATCH /api/v1/brands/:brandId/mockups/:mockupId -- Update mockup status (approve/reject)
+brandRoutes.patch('/:brandId/mockups/:mockupId', async (req, res, next) => {
+  try {
+    const { brandId, mockupId } = req.params;
+    const userId = req.user?.id || req.auth?.userId;
+    const { status } = req.body;
+
+    if (!status || !['approved', 'rejected', 'generated'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be "approved", "rejected", or "generated"' });
+    }
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    const isSelected = status === 'approved';
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('brand_assets')
+      .update({ is_selected: isSelected, status })
+      .eq('id', mockupId)
+      .eq('brand_id', brandId)
+      .eq('asset_type', 'mockup');
+
+    if (updateErr) throw updateErr;
+
+    return res.json({ success: true, data: { mockupId, status, isSelected } });
+  } catch (err) {
+    return next(err);
+  }
+});
 
 // POST /api/v1/brands/:brandId/generate/mockups -- Queue mockup generation
 brandRoutes.post(
