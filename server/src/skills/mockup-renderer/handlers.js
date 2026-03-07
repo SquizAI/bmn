@@ -37,20 +37,6 @@ async function getOpenAIClient() {
   }
 }
 
-/**
- * Get the Google Generative AI client (lazy, nullable for stub mode).
- * @returns {Promise<import('@google/generative-ai').GoogleGenerativeAI | null>}
- */
-async function getGoogleAIClient() {
-  try {
-    const { GoogleGenerativeAI } = await import('@google/generative-ai');
-    return new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-  } catch {
-    logger.warn('@google/generative-ai not installed -- composeBundleImage will return stubs');
-    return null;
-  }
-}
-
 // ── Inline upload helper ─────────────────────────────────────────
 
 /**

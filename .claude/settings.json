@@ -57,7 +57,15 @@
       "Bash(pgrep -f \"chrome-devtools-mcp\")",
       "Bash(pgrep -f \"chrome.*chrome-profile\")",
       "Bash(ssh-keygen -R api.prznl.com)",
-      "Bash(ssh-keygen -R prznl.com)"
+      "Bash(ssh-keygen -R prznl.com)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(grep -A 30 '\"\"exports\"\"')",
+      "Read(//var/folders/14/pdv7yjt962b3d5nwk3kx799r0000gn/T/chrome-devtools-mcp-oi7fO3/**)",
+      "Read(//private/var/folders/14/pdv7yjt962b3d5nwk3kx799r0000gn/T/chrome-devtools-mcp-oi7fO3/**)",
+      "Bash(grep -E '\"\"openai\"\"|\"\"ideogram\"\"|\"\"fal\"\"|\"\"firecrawl\"\"')",
+      "mcp__ref-tools-mcp__ref_read_url",
+      "Bash(npm view @google/generativeai version)"
     ],
     "additionalDirectories": [
       "/Users/mattysquarzoni/.cache/chrome-devtools-mcp/chrome-profile"
