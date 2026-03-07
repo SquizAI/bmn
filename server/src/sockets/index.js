@@ -186,6 +186,33 @@ export function createSocketServer(httpServer) {
 
     attachRateLimiter(socket);
 
+    // Join/leave job rooms for job-specific progress tracking
+    socket.on('join:job', (jobId) => {
+      if (typeof jobId === 'string' && jobId.length > 0) {
+        socket.join(`job:${jobId}`);
+        logger.debug({ socketId: socket.id, userId, jobId }, 'Joined job room (default ns)');
+      }
+    });
+
+    socket.on('leave:job', (jobId) => {
+      if (typeof jobId === 'string' && jobId.length > 0) {
+        socket.leave(`job:${jobId}`);
+      }
+    });
+
+    // Join/leave brand rooms for brand-specific events
+    socket.on('join:brand', (brandId) => {
+      if (typeof brandId === 'string' && brandId.length > 0) {
+        socket.join(`brand:${brandId}`);
+      }
+    });
+
+    socket.on('leave:brand', (brandId) => {
+      if (typeof brandId === 'string' && brandId.length > 0) {
+        socket.leave(`brand:${brandId}`);
+      }
+    });
+
     socket.on('disconnect', (reason) => {
       connectionCounts.default--;
       logger.info({

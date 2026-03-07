@@ -82,24 +82,61 @@ export function initImageUploadWorker(_io) {
         // Step 3: Update brand_assets record with permanent URL
         jobLog.debug({ publicUrl }, 'Updating brand_assets with permanent URL');
 
-        // Find the brand_asset record that has this upload job's ID in metadata
-        const { error: updateError } = await supabaseAdmin
-          .from('brand_assets')
-          .update({
-            url: publicUrl,
-            metadata: {
-              ...metadata,
-              storage_path: storagePath,
-              original_url: sourceUrl,
-              upload_completed: true,
-              uploaded_at: new Date().toISOString(),
-            },
-          })
-          .eq('brand_id', brandId)
-          .eq('url', sourceUrl);
+        // Try matching by upload_job_id in metadata (most reliable),
+        // then fall back to matching by temporary source URL.
+        let updated = false;
 
-        if (updateError) {
-          jobLog.warn({ err: updateError }, 'Failed to update brand_assets record (may not exist yet)');
+        // Primary: match by upload_job_id or png_upload_job_id in brand_assets.metadata
+        for (const metaKey of ['upload_job_id', 'png_upload_job_id']) {
+          const { error: metaError, count: metaCount } = await supabaseAdmin
+            .from('brand_assets')
+            .update({
+              url: publicUrl,
+              metadata: {
+                ...metadata,
+                storage_path: storagePath,
+                original_url: sourceUrl,
+                upload_completed: true,
+                uploaded_at: new Date().toISOString(),
+              },
+            }, { count: 'exact' })
+            .eq('brand_id', brandId)
+            .eq(`metadata->>${metaKey}`, job.id);
+
+          if (!metaError && metaCount > 0) {
+            updated = true;
+            jobLog.debug({ matchMethod: metaKey }, 'Updated brand_assets via metadata match');
+            break;
+          }
+        }
+
+        // Fallback: match by source URL (for assets saved without upload_job_id)
+        if (!updated) {
+          const { error: urlError, count: urlCount } = await supabaseAdmin
+            .from('brand_assets')
+            .update({
+              url: publicUrl,
+              metadata: {
+                ...metadata,
+                storage_path: storagePath,
+                original_url: sourceUrl,
+                upload_completed: true,
+                uploaded_at: new Date().toISOString(),
+              },
+            }, { count: 'exact' })
+            .eq('brand_id', brandId)
+            .eq('url', sourceUrl);
+
+          if (urlError) {
+            jobLog.warn({ err: urlError }, 'Failed to update brand_assets record');
+          } else if (urlCount > 0) {
+            updated = true;
+            jobLog.debug({ matchMethod: 'source_url' }, 'Updated brand_assets via URL match');
+          }
+        }
+
+        if (!updated) {
+          jobLog.warn('No brand_assets record matched for URL replacement (asset may not exist yet)');
         }
 
         await job.updateProgress(100);
