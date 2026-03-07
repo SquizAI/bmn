@@ -697,10 +697,10 @@ export async function generateMockups(req, res, next) {
     const userId = req.user.id;
     const { brandId } = req.params;
 
-    // Verify brand ownership
+    // Verify brand ownership and load brand data
     const { data: brand, error: brandErr } = await supabaseAdmin
       .from('brands')
-      .select('id')
+      .select('id, name, wizard_state')
       .eq('id', brandId)
       .eq('user_id', userId)
       .neq('status', 'deleted')
@@ -710,12 +710,68 @@ export async function generateMockups(req, res, next) {
       return res.status(404).json({ success: false, error: 'Brand not found' });
     }
 
+    // Load brand's products
+    const { data: brandProducts } = await supabaseAdmin
+      .from('brand_products')
+      .select('product_id, products(id, sku, name, category, image_url, mockup_template_url, metadata)')
+      .eq('brand_id', brandId);
+
+    const products = (brandProducts || [])
+      .map(bp => bp.products)
+      .filter(Boolean)
+      .map(p => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        category: p.category,
+        imageUrl: p.image_url,
+        mockupTemplateUrl: p.mockup_template_url,
+        mockupInstructions: p.metadata?.mockup_instructions || '',
+      }));
+
+    // Load selected logo
+    const { data: logos } = await supabaseAdmin
+      .from('brand_assets')
+      .select('id, url, metadata, generation_prompt')
+      .eq('brand_id', brandId)
+      .eq('asset_type', 'logo')
+      .eq('is_selected', true)
+      .limit(1);
+
+    const selectedLogo = logos?.[0] ? {
+      url: logos[0].url,
+      prompt: logos[0].generation_prompt,
+      variationType: logos[0].metadata?.variation_type || 'primary',
+    } : null;
+
+    // Extract brand identity from wizard_state
+    const ws = brand.wizard_state || {};
+    const identity = ws['brand-identity'] || {};
+    const directions = identity.directions || [];
+    const selectedDir = directions.find(d => d.id === identity.selectedDirectionId) || directions[0] || {};
+    const colorPalette = (selectedDir.colorPalette || identity.colorPalette || [])
+      .map(c => typeof c === 'string' ? c : c.hex)
+      .filter(Boolean);
+
+    const input = {
+      ...req.body,
+      products,
+      selectedLogo,
+      brandIdentity: {
+        brandName: brand.name,
+        archetype: selectedDir.archetype || identity.archetype || '',
+        colorPalette,
+        vision: selectedDir.vision || identity.vision || '',
+        logoStyle: selectedDir.logoStyle || identity.logoStyle || '',
+      },
+    };
+
     const result = await dispatchJob('brand-wizard', {
       userId,
       brandId,
       step: 'mockup-review',
-      input: req.body,
-      creditCost: req.body.creditCost || 1,
+      input,
+      creditCost: req.body.creditCost || products.length || 1,
     });
 
     logger.info({ jobId: result.jobId, brandId, userId }, 'Mockup generation job dispatched');
