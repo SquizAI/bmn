@@ -218,6 +218,12 @@ function toIdeogramAspectRatio(ratio) {
 export async function generateTextOnProduct({ prompt, brandText, productSku, productName, aspectRatio, styleType }) {
   logger.info({ productSku, brandText, styleType }, 'Generating text-on-product via Ideogram v3');
 
+  // Skip Ideogram if no API key is configured
+  if (!process.env.IDEOGRAM_API_KEY) {
+    logger.info({ productSku }, 'No Ideogram API key — using Gemini/GPT fallback');
+    return await fallbackToGPTImage(prompt, productSku);
+  }
+
   try {
     const response = await withRetry(
       () => fetch('https://api.ideogram.ai/generate', {
@@ -241,9 +247,6 @@ export async function generateTextOnProduct({ prompt, brandText, productSku, pro
     if (!response.ok) {
       const errBody = await response.text();
       logger.error({ status: response.status, body: errBody }, 'Ideogram API failed');
-
-      // Fall back to GPT Image 1.5 per PRD error handling spec
-      logger.info({ productSku }, 'Falling back to GPT Image 1.5 for text-on-product');
       return await fallbackToGPTImage(prompt, productSku);
     }
 
@@ -251,7 +254,7 @@ export async function generateTextOnProduct({ prompt, brandText, productSku, pro
     const imageUrl = data.data?.[0]?.url || null;
 
     if (!imageUrl) {
-      logger.warn({ productSku }, 'No image URL in Ideogram response, falling back to GPT Image 1.5');
+      logger.warn({ productSku }, 'No image URL in Ideogram response');
       return await fallbackToGPTImage(prompt, productSku);
     }
 
@@ -263,9 +266,6 @@ export async function generateTextOnProduct({ prompt, brandText, productSku, pro
     };
   } catch (err) {
     logger.error({ err, productSku }, 'Ideogram v3 generation failed after retries');
-
-    // Fall back to GPT Image 1.5 per PRD spec
-    logger.info({ productSku }, 'Falling back to GPT Image 1.5 for text-on-product');
     return await fallbackToGPTImage(prompt, productSku);
   }
 }
@@ -278,27 +278,37 @@ export async function generateTextOnProduct({ prompt, brandText, productSku, pro
  * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
  */
 async function fallbackToGPTImage(prompt, productSku) {
-  // Try Gemini 3.1 Flash Image first (fast, high-volume)
-  const genAI = await getGoogleAIClient();
-  if (genAI) {
+  // Try Gemini 3.1 Flash Image first via REST API (fast, high-volume)
+  if (process.env.GOOGLE_API_KEY) {
     try {
       logger.info({ productSku }, 'Trying Gemini 3.1 Flash Image fallback');
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-3.1-flash-image-preview',
-        generationConfig: { responseMimeType: 'image/png' },
-      });
-      const result = await model.generateContent(prompt);
-      const imagePart = result.response.candidates?.[0]?.content?.parts?.find(
-        (part) => part.inlineData?.mimeType?.startsWith('image/'),
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+          }),
+        },
       );
-      if (imagePart?.inlineData?.data) {
-        const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
-        const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
-        return { success: true, imageUrl, model: 'gemini-3.1-flash-image', error: null };
+      if (geminiRes.ok) {
+        const geminiData = await geminiRes.json();
+        const parts = geminiData.candidates?.[0]?.content?.parts || [];
+        const imagePart = parts.find((p) => p.inlineData?.mimeType?.startsWith('image/'));
+        if (imagePart?.inlineData?.data) {
+          const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+          const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
+          return { success: true, imageUrl, model: 'gemini-3.1-flash-image', error: null };
+        }
+        logger.warn({ productSku }, 'Gemini returned no image, falling through to GPT Image 1.5');
+      } else {
+        const errBody = await geminiRes.text();
+        logger.warn({ status: geminiRes.status, body: errBody.slice(0, 200), productSku }, 'Gemini REST API failed');
       }
-      logger.warn({ productSku }, 'Gemini returned no image, falling through to GPT Image 1.5');
     } catch (err) {
-      logger.warn({ err: err.message, productSku }, 'Gemini 3.1 Flash Image fallback failed');
+      logger.warn({ err: err.message, productSku }, 'Gemini fallback failed');
     }
   }
 
@@ -348,25 +358,14 @@ async function fallbackToGPTImage(prompt, productSku) {
 export async function composeBundleImage({ prompt, bundleName, productDescriptions, referenceImageUrls }) {
   logger.info({ bundleName, productCount: productDescriptions.length }, 'Composing bundle image via Gemini 3 Pro Image');
 
-  const genAI = await getGoogleAIClient();
-  if (!genAI) {
-    // Fall back to GPT Image 1.5 for bundle
-    logger.info({ bundleName }, 'Google AI SDK not available, falling back to GPT Image 1.5 for bundle');
+  if (!process.env.GOOGLE_API_KEY) {
+    logger.info({ bundleName }, 'No Google API key, falling back to GPT Image 1.5 for bundle');
     return await fallbackBundleToGPTImage(prompt, bundleName, productDescriptions);
   }
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-3-pro-image-preview',
-      generationConfig: { responseMimeType: 'image/png' },
-    });
-
-    // Build multimodal content with reference images
-    const contentParts = [
-      { text: prompt },
-    ];
-
-    // Include up to 6 reference images for better composition
+    // Build multimodal content parts with reference images
+    const contentParts = [{ text: prompt }];
     for (const url of referenceImageUrls.slice(0, 6)) {
       try {
         const imgResponse = await fetch(url);
@@ -384,16 +383,31 @@ export async function composeBundleImage({ prompt, bundleName, productDescriptio
       }
     }
 
-    const result = await withRetry(
-      () => model.generateContent(contentParts),
-      { maxRetries: 2 }, // PRD: retry twice for Gemini bundles
+    // Use Gemini 3 Pro Image via REST API (supports responseModalities: IMAGE)
+    const geminiRes = await withRetry(
+      () => fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: contentParts }],
+            generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+          }),
+        },
+      ),
+      { maxRetries: 2 },
     );
 
-    // Extract generated image from response
-    const response = result.response;
-    const imagePart = response.candidates?.[0]?.content?.parts?.find(
-      (part) => part.inlineData?.mimeType?.startsWith('image/'),
-    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      logger.error({ status: geminiRes.status, body: errBody.slice(0, 200), bundleName }, 'Gemini Pro Image API failed');
+      return await fallbackBundleToGPTImage(prompt, bundleName, productDescriptions);
+    }
+
+    const geminiData = await geminiRes.json();
+    const parts = geminiData.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p) => p.inlineData?.mimeType?.startsWith('image/'));
 
     if (!imagePart) {
       logger.warn({ bundleName }, 'No image in Gemini response, falling back to GPT Image 1.5');
