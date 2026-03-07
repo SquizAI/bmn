@@ -187,7 +187,14 @@ async function falQueueRequest(modelId, body) {
     Authorization: `Key ${config.FAL_API_KEY}`,
   };
 
-  // Step 1: Submit to queue
+  // FAL Queue API requires the full modelId (with subpath) for submit,
+  // but only the base model (namespace/model) for status/result checks.
+  // e.g. 'fal-ai/recraft/v4/text-to-vector' → base = 'fal-ai/recraft'
+  // See: https://docs.fal.ai/model-apis/model-endpoints/queue#queue-endpoints
+  const parts = modelId.split('/');
+  const baseModelId = parts.slice(0, 2).join('/');
+
+  // Step 1: Submit to queue (uses full modelId with subpath)
   const submitRes = await fetch(`${FAL_QUEUE_BASE}/${modelId}`, {
     method: 'POST',
     headers,
@@ -204,14 +211,14 @@ async function falQueueRequest(modelId, body) {
     throw new Error('FAL queue submit returned no request_id');
   }
 
-  // Step 2: Poll status until COMPLETED
+  // Step 2: Poll status until COMPLETED (uses base modelId only)
   const deadline = Date.now() + FAL_MAX_WAIT_MS;
 
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, FAL_POLL_INTERVAL_MS));
 
     const statusRes = await fetch(
-      `${FAL_QUEUE_BASE}/${modelId}/requests/${request_id}/status`,
+      `${FAL_QUEUE_BASE}/${baseModelId}/requests/${request_id}/status`,
       { headers },
     );
 
@@ -222,9 +229,9 @@ async function falQueueRequest(modelId, body) {
     const status = await statusRes.json();
 
     if (status.status === 'COMPLETED') {
-      // Step 3: Fetch result
+      // Step 3: Fetch result (uses base modelId only)
       const resultRes = await fetch(
-        `${FAL_QUEUE_BASE}/${modelId}/requests/${request_id}`,
+        `${FAL_QUEUE_BASE}/${baseModelId}/requests/${request_id}`,
         { headers },
       );
 
