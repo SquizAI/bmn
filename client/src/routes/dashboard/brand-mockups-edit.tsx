@@ -8,6 +8,7 @@ import {
   Sparkles,
   Check,
   X,
+  ShoppingBag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -114,6 +115,7 @@ export default function BrandMockupsEditPage() {
   }
 
   const mockups = brand?.mockups ?? [];
+  const products = brand?.products ?? [];
 
   const mockupImages: GalleryImage[] = mockups.map((mockup) => ({
     id: mockup.id,
@@ -239,6 +241,55 @@ export default function BrandMockupsEditPage() {
         <ProgressBar progress={genProgress.progress} message={genProgress.message} />
       )}
 
+      {/* Products that will be mocked up */}
+      {products.length > 0 && mockupImages.length === 0 && (
+        <Card variant="outlined" padding="lg">
+          <div className="flex items-center gap-2 mb-3">
+            <ShoppingBag className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm">Products to Mock Up ({products.length})</CardTitle>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {products.map((p) => (
+              <div key={p.productSku} className="flex items-center gap-3 rounded-lg border border-border/50 bg-surface-hover/50 p-2.5">
+                {p.imageUrl ? (
+                  <img src={p.imageUrl} alt={p.productName} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-light">
+                    <Package className="h-5 w-5 text-primary" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-text truncate">{p.productName}</p>
+                  <p className="text-xs text-text-muted">{p.category}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* No products linked — point to catalog */}
+      {products.length === 0 && mockupImages.length === 0 && !generating && (
+        <Card variant="outlined" padding="lg">
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/10">
+              <ShoppingBag className="h-7 w-7 text-warning" />
+            </div>
+            <div className="text-center">
+              <p className="text-base font-medium text-text">No products selected</p>
+              <p className="text-sm text-text-secondary mt-1">
+                Add products to this brand before generating mockups
+              </p>
+            </div>
+            <Link to={ROUTES.DASHBOARD_PRODUCTS}>
+              <Button variant="outline" leftIcon={<ShoppingBag className="h-4 w-4" />}>
+                Browse Product Catalog
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      )}
+
       {/* Summary */}
       {mockupImages.length > 0 && <MockupSummary mockups={mockupImages} />}
 
@@ -259,7 +310,7 @@ export default function BrandMockupsEditPage() {
             onReject={handleReject}
           />
         </Card>
-      ) : (
+      ) : products.length > 0 ? (
         <Card variant="outlined" padding="lg">
           <div className="flex flex-col items-center gap-4 py-12">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-hover">
@@ -268,7 +319,7 @@ export default function BrandMockupsEditPage() {
             <div className="text-center">
               <p className="text-lg font-medium text-text">No mockups yet</p>
               <p className="text-sm text-text-secondary mt-1">
-                Generate product mockups with your brand logos applied
+                Generate mockups for your {products.length} selected product{products.length !== 1 ? 's' : ''} with your brand logos applied
               </p>
             </div>
             <Button
@@ -280,7 +331,7 @@ export default function BrandMockupsEditPage() {
             </Button>
           </div>
         </Card>
-      )}
+      ) : null}
     </motion.div>
   );
 }

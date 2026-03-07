@@ -193,12 +193,17 @@ function buildStepPrompt(step, input, context) {
       Save selected product SKUs via saveBrandData.`,
 
     'mockup-generation': `Generate product mockups for all selected products.
+      The input contains resolved product data (products array), selectedLogo, and brandIdentity.
+      Pass this data directly to the mockup-renderer subagent.
       Check credits via checkCredits (operationType: "mockup", quantity: number of products).
       Use the mockup-renderer subagent via the Task tool.
       Deduct credits after success.
       Save mockup assets via saveBrandData.`,
 
     'mockup-review': `Generate product mockups for the brand's selected products.
+      The input contains resolved product data (products array with name, category, sku, mockup_instructions),
+      the selected logo (selectedLogo with url, variationType, prompt), and brand identity (brandIdentity with
+      brandName, archetype, colorPalette). Pass this data directly to the mockup-renderer subagent.
       Check credits via checkCredits (operationType: "mockup", quantity: number of products).
       Use the mockup-renderer subagent via the Task tool to generate mockups.
       Deduct credits after success.
