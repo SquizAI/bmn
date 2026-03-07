@@ -1340,10 +1340,37 @@ export async function recommendProducts(req, res, next) {
       });
     }
 
+    // Fetch the real product catalog
+    const { data: catalogData, error: catalogError } = await supabaseAdmin
+      .from('products')
+      .select('sku, name, category, subcategory, description, base_cost, retail_price, image_url, ingredients, materials, certifications')
+      .eq('is_active', true)
+      .order('category')
+      .order('name');
+
+    if (catalogError || !catalogData || catalogData.length === 0) {
+      return res.status(500).json({ success: false, error: 'Product catalog unavailable' });
+    }
+
+    // Build a lookup map for enrichment after AI scoring
+    const catalogMap = Object.fromEntries(catalogData.map((p) => [p.sku, p]));
+
+    // Build catalog summary for the AI prompt
+    const catalogSummary = catalogData.map((p) => ({
+      sku: p.sku,
+      name: p.name,
+      category: p.category,
+      subcategory: p.subcategory || null,
+      description: p.description,
+      baseCost: parseFloat(p.base_cost) || 0,
+      suggestedRetail: parseFloat(p.retail_price) || 0,
+      ingredients: p.ingredients || null,
+      materials: p.materials || null,
+    }));
+
     // Build context from wizard state
     const brandIdentity = brand.wizard_state?.['brand-identity'] || {};
     const socialAnalysis = brand.wizard_state?.['social-analysis'] || {};
-    const _brandNames = brand.wizard_state?.['brand-names'] || {};
     const selectedDirection = brandIdentity.directions?.find(
       (d) => d.id === brandIdentity.selectedDirectionId
     ) || brandIdentity.directions?.[0] || {};
@@ -1360,7 +1387,9 @@ export async function recommendProducts(req, res, next) {
     if (socialAnalysis.audience?.primaryInterests?.length > 0) contextParts.push(`Audience Interests: ${socialAnalysis.audience.primaryInterests.join(', ')}`);
     if (socialAnalysis.profile?.totalFollowers) contextParts.push(`Followers: ${socialAnalysis.profile.totalFollowers}`);
 
-    const taskPrompt = `You are a product strategist for a creator brand. Based on the brand context below, recommend 8-12 physical products that this creator should sell.
+    const followerCount = socialAnalysis.profile?.totalFollowers || 1000;
+
+    const taskPrompt = `You are an expert product strategist for a creator brand. Based on the brand context and the REAL product catalog below, select and rank 8-12 products that best fit this creator.
 
 <brand_context>
 ${contextParts.length > 0 ? contextParts.join('\n') : 'A personal creator brand looking for product recommendations.'}
@@ -1368,23 +1397,45 @@ ${contextParts.length > 0 ? contextParts.join('\n') : 'A personal creator brand 
 
 ${req.body?.preferences ? `<user_preferences>\n${JSON.stringify(req.body.preferences, null, 2)}\n</user_preferences>\n` : ''}
 
+<product_catalog>
+${JSON.stringify(catalogSummary, null, 2)}
+</product_catalog>
+
+IMPORTANT: You MUST select products from the catalog above using their exact SKU values. Do NOT invent new products.
+
+For each selected product, score it on these dimensions:
+- nicheMatchScore (0.0-1.0): How well does this product category align with the creator's niche?
+- audienceFitScore (0.0-1.0): How likely is this creator's audience to buy this?
+- marginPercent: Calculate as ((suggestedRetail - baseCost) / suggestedRetail * 100), rounded to the nearest integer
+
+For revenue estimation, use these assumptions:
+- Follower count: ${followerCount}
+- Conservative conversion rate: 0.005, Moderate: 0.015, Aggressive: 0.03
+- Units per month = followers * conversionRate * nicheMatchScore
+- Monthly revenue = units * suggestedRetail
+- Monthly profit = units * (suggestedRetail - baseCost)
+
 Return a JSON object with this exact structure:
 {
   "products": [
     {
-      "id": "string (unique slug like 'premium-hoodie')",
-      "name": "string (product name)",
-      "category": "apparel|accessories|drinkware|stationery|home|tech|wellness|art",
-      "description": "string (compelling 1-2 sentence description)",
-      "basePrice": number (wholesale cost),
-      "suggestedRetailPrice": number,
-      "marginPercent": number (0-100),
-      "printAreas": ["front", "back", "sleeve"],
-      "mockupPrompt": "string (GPT Image 1.5 prompt for generating a photorealistic product mockup with brand logo)",
-      "popularity": number (1-10 score, how likely this creator's audience would buy),
-      "reasoning": "string (why this product fits this brand)",
-      "tags": ["string tags"],
-      "tier": "essential|premium|luxury"
+      "sku": "EXACT_SKU_FROM_CATALOG",
+      "name": "product name from catalog",
+      "category": "category from catalog",
+      "subcategory": "subcategory from catalog or null",
+      "baseCost": number,
+      "suggestedRetail": number,
+      "marginPercent": number,
+      "nicheMatchScore": number (0.0-1.0),
+      "audienceFitScore": number (0.0-1.0),
+      "reasoning": "2-3 sentence 'Why this product fits' explanation",
+      "revenue": {
+        "tiers": [
+          { "label": "conservative", "unitsPerMonth": number, "monthlyRevenue": number, "monthlyProfit": number, "annualRevenue": number, "annualProfit": number },
+          { "label": "moderate", "unitsPerMonth": number, "monthlyRevenue": number, "monthlyProfit": number, "annualRevenue": number, "annualProfit": number },
+          { "label": "aggressive", "unitsPerMonth": number, "monthlyRevenue": number, "monthlyProfit": number, "annualRevenue": number, "annualProfit": number }
+        ]
+      }
     }
   ],
   "bundles": [
@@ -1392,30 +1443,19 @@ Return a JSON object with this exact structure:
       "id": "string (unique slug)",
       "name": "string (bundle name)",
       "description": "string",
-      "productIds": ["string array of product ids from above"],
+      "productSkus": ["SKU1", "SKU2"],
       "discountPercent": number (5-25),
       "bundlePrice": number,
       "reasoning": "string"
     }
   ],
   "revenueProjection": {
-    "estimatedMonthlyRevenue": {"low": number, "mid": number, "high": number},
-    "estimatedAnnualRevenue": {"low": number, "mid": number, "high": number},
-    "conversionRate": number (0-1 decimal),
-    "avgOrderValue": number,
-    "methodology": "string explaining how the projection was calculated"
+    "estimatedMonthlyRevenue": { "conservative": number, "moderate": number, "aggressive": number },
+    "methodology": "string explaining calculation"
   }
-}
+}`;
 
-IMPORTANT:
-- Products must be realistic print-on-demand or branded merch items
-- Prices should be market-rate for the quality tier
-- Include a mix of price points (some accessible, some premium)
-- Bundles should combine 2-4 complementary products
-- Revenue projections should be based on the creator's follower count and typical creator conversion rates
-- Every product needs a detailed mockupPrompt optimized for GPT Image 1.5 that would create a great product image`;
-
-    logger.info({ brandId, userId }, 'Calling Claude for product recommendations');
+    logger.info({ brandId, userId, catalogSize: catalogData.length }, 'Calling Claude for product recommendations (catalog-based)');
 
     const aiResult = await routeModel('brand-vision', {
       prompt: taskPrompt,
@@ -1436,28 +1476,62 @@ IMPORTANT:
       return res.status(500).json({ success: false, error: 'Failed to parse AI-generated product recommendations' });
     }
 
-    const products = parsed.products || [];
+    // Enrich AI recommendations with real catalog data (imageUrl, exact pricing)
+    const rawProducts = parsed.products || [];
+    const products = rawProducts.map((rec, index) => {
+      const catalogProduct = catalogMap[rec.sku];
+      return {
+        ...rec,
+        // Ensure imageUrl comes from catalog
+        imageUrl: catalogProduct?.image_url || null,
+        // Ensure pricing matches catalog (AI may approximate)
+        baseCost: catalogProduct ? parseFloat(catalogProduct.base_cost) || rec.baseCost : rec.baseCost,
+        suggestedRetail: catalogProduct ? parseFloat(catalogProduct.retail_price) || rec.suggestedRetail : rec.suggestedRetail,
+        subcategory: catalogProduct?.subcategory || rec.subcategory || null,
+        // Add composite score and rank (same formula as synthesizeRecommendations)
+        compositeScore: 0,
+        confidenceScore: 0,
+        rank: index + 1,
+      };
+    }).filter((rec) => catalogMap[rec.sku]); // Remove any products not in catalog
+
+    // Calculate composite scores and re-rank
+    const maxModerateRevenue = Math.max(
+      1,
+      ...products.map((p) => {
+        const moderateTier = p.revenue?.tiers?.find((t) => t.label === 'moderate');
+        return moderateTier?.monthlyRevenue || 0;
+      })
+    );
+
+    for (const product of products) {
+      const moderateTier = product.revenue?.tiers?.find((t) => t.label === 'moderate');
+      const normalizedRevenue = (moderateTier?.monthlyRevenue || 0) / maxModerateRevenue;
+      const normalizedMargin = Math.min(1.0, (product.marginPercent || 0) / 100);
+
+      product.compositeScore = Math.round(
+        ((product.nicheMatchScore || 0) * 0.4 +
+          normalizedRevenue * 0.3 +
+          normalizedMargin * 0.2 +
+          (product.audienceFitScore || 0) * 0.1) * 100
+      ) / 100;
+
+      product.confidenceScore = Math.round(
+        Math.min(100, Math.max(10,
+          (product.nicheMatchScore || 0) * 40 +
+          (product.audienceFitScore || 0) * 25 +
+          normalizedRevenue * 20 +
+          normalizedMargin * 15
+        ))
+      );
+    }
+
+    // Sort by composite score descending and assign final ranks
+    products.sort((a, b) => b.compositeScore - a.compositeScore);
+    products.forEach((p, i) => { p.rank = i + 1; });
+
     const bundles = parsed.bundles || [];
     const revenueProjection = parsed.revenueProjection || null;
-
-    // Enrich recommendations with catalog images from the products table
-    const skus = products.map((r) => r.sku).filter(Boolean);
-    if (skus.length > 0) {
-      const { data: catalogProducts } = await supabaseAdmin
-        .from('products')
-        .select('sku, image_url')
-        .in('sku', skus);
-
-      const imageMap = Object.fromEntries(
-        (catalogProducts || []).map((p) => [p.sku, p.image_url]),
-      );
-
-      for (const rec of products) {
-        if (!rec.imageUrl && imageMap[rec.sku]) {
-          rec.imageUrl = imageMap[rec.sku];
-        }
-      }
-    }
 
     // Cache in wizard_state
     const updatedState = {
@@ -1553,7 +1627,7 @@ export async function generateMockups(req, res, next) {
         .from('products')
         .select('id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description')
         .in('id', productIds)
-        .is('deleted_at', null);
+        .eq('is_active', true);
       if (data) products = data;
     }
     // Fallback: resolve by SKU if product_id didn't yield results
@@ -1562,7 +1636,7 @@ export async function generateMockups(req, res, next) {
         .from('products')
         .select('id, sku, name, category, base_cost, retail_price, image_url, mockup_instructions, description')
         .in('sku', productSkus)
-        .is('deleted_at', null);
+        .eq('is_active', true);
       if (data) products = data;
     }
 

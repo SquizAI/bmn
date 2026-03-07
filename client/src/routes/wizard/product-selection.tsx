@@ -510,7 +510,7 @@ export default function ProductSelectionPage() {
                 const commissionRate = 25; // Default commission rate for TruvaNutra
                 const commissionAmount = product.suggestedRetail * (commissionRate / 100);
                 return (
-                  <motion.div key={product.sku} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                  <motion.div key={product.sku} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <Card
                       variant="interactive"
                       padding="none"

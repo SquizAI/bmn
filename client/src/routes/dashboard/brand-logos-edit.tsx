@@ -146,24 +146,23 @@ export default function BrandLogosEditPage() {
 
       setUploading(true);
       try {
-        const formData = new FormData();
-        formData.append('file', file);
+        // 1. Upload file to Supabase Storage
+        const ext = file.name.split('.').pop() || 'png';
+        const storagePath = `brands/${brandId}/logos/upload-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('brand-assets')
+          .upload(storagePath, file, { contentType: file.type, upsert: false });
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL || ''}/api/v1/brands/${brandId}/logos/upload`,
-          {
-            method: 'POST',
-            body: formData,
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-          },
-        );
+        if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
+        const { data: urlData } = supabase.storage.from('brand-assets').getPublicUrl(storagePath);
+        const publicUrl = urlData.publicUrl;
+
+        // 2. Register the uploaded logo with the server
+        await apiClient.post(`/api/v1/brands/${brandId}/upload-logo`, {
+          url: publicUrl,
+          fileName: file.name,
+        });
 
         await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.brand(brandId) });
         addToast({ type: 'success', title: 'Logo uploaded successfully' });
@@ -172,7 +171,6 @@ export default function BrandLogosEditPage() {
         addToast({ type: 'error', title: msg });
       } finally {
         setUploading(false);
-        // Reset the input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }

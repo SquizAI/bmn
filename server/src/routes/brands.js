@@ -65,6 +65,57 @@ brandRoutes.post(
   brandController.uploadLogo
 );
 
+// PATCH /api/v1/brands/:brandId/logos/:logoId -- Update logo selection status
+brandRoutes.patch('/:brandId/logos/:logoId', async (req, res, next) => {
+  try {
+    const { brandId, logoId } = req.params;
+    const userId = req.user?.id || req.auth?.userId;
+    const { status } = req.body;
+
+    if (!status || !['selected', 'generated'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'status must be "selected" or "generated"' });
+    }
+
+    // Verify brand ownership
+    const { data: brand, error: brandErr } = await supabaseAdmin
+      .from('brands')
+      .select('id')
+      .eq('id', brandId)
+      .eq('user_id', userId)
+      .neq('status', 'deleted')
+      .single();
+
+    if (brandErr || !brand) {
+      return res.status(404).json({ success: false, error: 'Brand not found' });
+    }
+
+    // Update is_selected on the brand_assets record
+    const isSelected = status === 'selected';
+
+    const { error: updateErr } = await supabaseAdmin
+      .from('brand_assets')
+      .update({ is_selected: isSelected })
+      .eq('id', logoId)
+      .eq('brand_id', brandId)
+      .eq('asset_type', 'logo');
+
+    if (updateErr) {
+      throw updateErr;
+    }
+
+    return res.json({ success: true, data: { logoId, isSelected } });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// POST /api/v1/brands/:brandId/logos/upload -- Alias for upload-logo (client compatibility)
+brandRoutes.post(
+  '/:brandId/logos/upload',
+  validate({ params: brandIdParamsSchema }),
+  brandController.uploadLogo
+);
+
 // POST /api/v1/brands/:brandId/generate/mockups -- Queue mockup generation
 brandRoutes.post(
   '/:brandId/generate/mockups',
