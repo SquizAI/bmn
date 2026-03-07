@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Plus, Sparkles, AlertCircle } from 'lucide-react';
+import { Plus, Sparkles, AlertCircle, Palette, Image as ImageIcon, Package, Layers, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { BrandCard } from '@/components/brand/BrandCard';
@@ -76,7 +76,59 @@ export default function DashboardPage() {
         /* Brand grid */
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {brands.map((brand) => (
-            <BrandCard key={brand.id} brand={brand} />
+            <div key={brand.id} className="flex flex-col gap-2">
+              <BrandCard brand={brand} />
+
+              {/* Draft brands: continue in wizard */}
+              {brand.status === 'draft' && brand.wizardStep !== 'complete' && (
+                <Link to={ROUTES.WIZARD}>
+                  <Card variant="interactive" padding="sm">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-warning">Continue in Wizard</span>
+                      <ArrowRight className="h-4 w-4 text-warning" />
+                    </div>
+                  </Card>
+                </Link>
+              )}
+
+              {/* Quick actions for active/complete brands */}
+              {(brand.status === 'active' || brand.wizardStep === 'complete') && (
+                <div className="grid grid-cols-4 gap-1">
+                  <Link
+                    to={ROUTES.DASHBOARD_BRAND_IDENTITY(brand.id)}
+                    className="flex flex-col items-center gap-1 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-colors"
+                    title="Edit Identity"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    <span className="text-[10px]">Identity</span>
+                  </Link>
+                  <Link
+                    to={ROUTES.DASHBOARD_BRAND_LOGOS(brand.id)}
+                    className="flex flex-col items-center gap-1 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-colors"
+                    title="View Logos"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span className="text-[10px]">Logos</span>
+                  </Link>
+                  <Link
+                    to={ROUTES.DASHBOARD_BRAND_PRODUCTS(brand.id)}
+                    className="flex flex-col items-center gap-1 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-colors"
+                    title="Products"
+                  >
+                    <Package className="h-3.5 w-3.5" />
+                    <span className="text-[10px]">Products</span>
+                  </Link>
+                  <Link
+                    to={ROUTES.DASHBOARD_BRAND_MOCKUPS(brand.id)}
+                    className="flex flex-col items-center gap-1 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text transition-colors"
+                    title="Mockups"
+                  >
+                    <Layers className="h-3.5 w-3.5" />
+                    <span className="text-[10px]">Mockups</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

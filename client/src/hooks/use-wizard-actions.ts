@@ -56,6 +56,7 @@ interface SelectProductsPayload {
 
 interface GenerateMockupsPayload {
   brandId: string;
+  productSkus?: string[];
 }
 
 interface ApproveMockupsPayload {
@@ -260,6 +261,7 @@ export function useDispatchMockupGeneration() {
     mutationFn: (payload: GenerateMockupsPayload) =>
       apiClient.post<DispatchJobResponse>(
         `/api/v1/wizard/${payload.brandId}/generate-mockups`,
+        payload.productSkus ? { productSkus: payload.productSkus } : undefined,
       ),
     onSuccess: (data) => {
       setActiveJob(data.jobId);

@@ -193,11 +193,11 @@ function EmptyState() {
       </div>
 
       <h2 className="text-3xl font-bold tracking-tight text-text">
-        Start building your brand
+        Start the Brand Wizard
       </h2>
       <p className="mt-3 max-w-md text-center text-[13px] leading-relaxed text-text-muted">
-        Our AI analyzes your social presence and generates a complete brand identity —
-        from visual design to product mockups — in minutes.
+        Our guided wizard analyzes your social presence and walks you through building
+        a complete brand -- identity, logos, products, and mockups -- step by step.
       </p>
 
       <div className="mt-10 flex flex-col items-center gap-4">
@@ -207,11 +207,11 @@ function EmptyState() {
           </Button>
         </Link>
 
-        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-8 text-center">
+        <div className="mt-6 grid grid-cols-3 gap-8 text-center">
           {[
-            { value: '2min', label: 'Avg. creation time' },
-            { value: '7', label: 'AI-powered steps' },
-            { value: '100%', label: 'Customizable' },
+            { value: 'Discover', label: 'Analyze your audience' },
+            { value: 'Design', label: 'Identity, logos & colors' },
+            { value: 'Launch', label: 'Products & mockups' },
           ].map((stat) => (
             <div key={stat.label}>
               <p className="text-lg font-bold tracking-tight text-text">{stat.value}</p>

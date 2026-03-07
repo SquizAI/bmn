@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useMutation } from '@tanstack/react-query';
@@ -13,6 +13,8 @@ import {
   TrendingUp,
   Copy,
   Check,
+  ShoppingBag,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -273,6 +275,65 @@ export default function CompletionPage() {
             Go to Dashboard
           </Button>
         </motion.div>
+
+        {/* What's Next action cards */}
+        {brandId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="w-full max-w-xl"
+          >
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-text-secondary">
+              What's Next
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Link to={ROUTES.DASHBOARD_BRAND_DETAIL(brandId)}>
+                <Card variant="interactive" padding="md">
+                  <div className="flex flex-col items-center gap-2 py-2 text-center">
+                    <div className="rounded-lg bg-primary-light p-2">
+                      <Palette className="h-5 w-5 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium text-text">View Your Brand</span>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link to={ROUTES.DASHBOARD_BRAND_LOGOS(brandId)}>
+                <Card variant="interactive" padding="md">
+                  <div className="flex flex-col items-center gap-2 py-2 text-center">
+                    <div className="rounded-lg bg-accent/10 p-2">
+                      <ImageIcon className="h-5 w-5 text-accent" />
+                    </div>
+                    <span className="text-sm font-medium text-text">Edit Your Logos</span>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link to={ROUTES.DASHBOARD_PRODUCTS}>
+                <Card variant="interactive" padding="md">
+                  <div className="flex flex-col items-center gap-2 py-2 text-center">
+                    <div className="rounded-lg bg-success/10 p-2">
+                      <ShoppingBag className="h-5 w-5 text-success" />
+                    </div>
+                    <span className="text-sm font-medium text-text">Browse Products</span>
+                  </div>
+                </Card>
+              </Link>
+
+              <Link to={ROUTES.DASHBOARD_STOREFRONT}>
+                <Card variant="interactive" padding="md">
+                  <div className="flex flex-col items-center gap-2 py-2 text-center">
+                    <div className="rounded-lg bg-info/10 p-2">
+                      <Store className="h-5 w-5 text-info" />
+                    </div>
+                    <span className="text-sm font-medium text-text">Build Storefront</span>
+                  </div>
+                </Card>
+              </Link>
+            </div>
+          </motion.div>
+        )}
       </motion.div>
     </>
   );

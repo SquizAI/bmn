@@ -12,6 +12,8 @@ import {
   Printer,
   Loader2,
   Package,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
@@ -122,7 +124,8 @@ export default function MockupReviewPage() {
   const generation = useGenerationProgress(activeJobId);
   const { data: mockupDetails } = useMockupDetails(brandId);
 
-  const [hasStartedGeneration, setHasStartedGeneration] = useState(mockups.length > 0);
+  const storedSkus = useWizardStore((s) => s.products.selectedSkus);
+  const [mockupSkus, setMockupSkus] = useState<Set<string>>(new Set(storedSkus));
   const [viewMode, setViewMode] = useState<ViewMode>('gallery');
   const [editingMockupId, setEditingMockupId] = useState<string | null>(null);
   const [comparingMockupId, setComparingMockupId] = useState<string | null>(null);
@@ -132,13 +135,25 @@ export default function MockupReviewPage() {
   const selectedLogo = logos.find((l) => l.id === selectedLogoId);
   const logoUrl = selectedLogo?.url || '';
 
-  // Auto-start generation if no mockups exist
-  useEffect(() => {
-    if (mockups.length === 0 && !hasStartedGeneration && brandId) {
-      setHasStartedGeneration(true);
-      dispatchMockups.mutate({ brandId });
-    }
-  }, [mockups.length, hasStartedGeneration, brandId, dispatchMockups]);
+  const toggleMockupSku = useCallback((sku: string) => {
+    setMockupSkus((prev) => {
+      const next = new Set(prev);
+      if (next.has(sku)) {
+        next.delete(sku);
+      } else {
+        next.add(sku);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleStartGeneration = useCallback(() => {
+    if (!brandId || mockupSkus.size === 0) return;
+    dispatchMockups.mutate({ brandId, productSkus: Array.from(mockupSkus) });
+  }, [brandId, mockupSkus, dispatchMockups]);
+
+  // Determine if we're in pre-generation state (no mockups and no active job)
+  const showPreGeneration = mockups.length === 0 && !activeJobId;
 
   // When generation completes, parse results
   useEffect(() => {
@@ -530,13 +545,65 @@ export default function MockupReviewPage() {
         </div>
       )}
 
-      {/* Empty state during initial loading */}
-      {!hasMockups && !isGenerating && (
-        <Card variant="outlined" padding="lg" className="text-center">
-          <CardTitle>Generating Mockups</CardTitle>
-          <CardDescription className="mt-2">
-            Your product mockups are being generated. This may take a moment.
+      {/* Pre-generation: product selection for mockups */}
+      {showPreGeneration && (
+        <Card variant="outlined" padding="lg">
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Select Products for Mockups
+          </CardTitle>
+          <CardDescription className="mt-1">
+            Choose which products to generate mockups for. Each mockup uses one credit.
           </CardDescription>
+
+          {storedSkus.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              {storedSkus.map((sku) => (
+                <label
+                  key={sku}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors',
+                    mockupSkus.has(sku)
+                      ? 'border-primary bg-primary-light/30'
+                      : 'border-border hover:bg-surface-hover',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                      mockupSkus.has(sku)
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-border',
+                    )}
+                  >
+                    {mockupSkus.has(sku) && <Check className="h-3 w-3" />}
+                  </div>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={mockupSkus.has(sku)}
+                    onChange={() => toggleMockupSku(sku)}
+                  />
+                  <span className="text-sm font-medium text-text">{sku}</span>
+                </label>
+              ))}
+
+              <Button
+                size="lg"
+                className="mt-4 w-full"
+                onClick={handleStartGeneration}
+                disabled={mockupSkus.size === 0}
+                loading={dispatchMockups.isPending}
+                leftIcon={<Sparkles className="h-5 w-5" />}
+              >
+                Generate {mockupSkus.size} Mockup{mockupSkus.size !== 1 ? 's' : ''}
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 text-center text-sm text-text-muted">
+              No products selected. Go back to select products first.
+            </div>
+          )}
         </Card>
       )}
 

@@ -10,6 +10,9 @@ import {
   TrendingUp,
   Type,
   Pencil,
+  Sparkles,
+  ShoppingBag,
+  Layers,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle } from '@/components/ui/card';
@@ -264,7 +267,7 @@ export default function BrandDetailPage() {
       )}
 
       {/* Logo Gallery */}
-      {logoImages.length > 0 && (
+      {logoImages.length > 0 ? (
         <Card variant="outlined" padding="lg">
           <div className="flex items-center gap-2 mb-4">
             <ImageIcon className="h-5 w-5 text-primary" />
@@ -280,10 +283,29 @@ export default function BrandDetailPage() {
           </div>
           <ImageGallery images={logoImages} columns={4} />
         </Card>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card variant="outlined" padding="lg">
+            <div className="flex items-center gap-4 py-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Sparkles className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-text">Generate your first logos</p>
+                <p className="mt-0.5 text-sm text-text-muted">
+                  Use AI to create unique logo designs based on your brand identity.
+                </p>
+              </div>
+              <Link to={ROUTES.DASHBOARD_BRAND_LOGOS(brand.id)}>
+                <Button leftIcon={<Sparkles className="h-4 w-4" />}>Generate Logos</Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       {/* Mockups Gallery */}
-      {mockupImages.length > 0 && (
+      {mockupImages.length > 0 ? (
         <Card variant="outlined" padding="lg">
           <div className="flex items-center gap-2 mb-4">
             <Package className="h-5 w-5 text-primary" />
@@ -300,6 +322,49 @@ export default function BrandDetailPage() {
           </div>
           <ImageGallery images={mockupImages} columns={3} />
         </Card>
+      ) : products.length > 0 ? (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card variant="outlined" padding="lg">
+            <div className="flex items-center gap-4 py-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Layers className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-text">
+                  Generate mockups for your {products.length} product{products.length !== 1 ? 's' : ''}
+                </p>
+                <p className="mt-0.5 text-sm text-text-muted">
+                  See your brand applied to real products with AI-generated mockups.
+                </p>
+              </div>
+              <Link to={ROUTES.DASHBOARD_BRAND_MOCKUPS(brand.id)}>
+                <Button leftIcon={<Layers className="h-4 w-4" />}>Generate Mockups</Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
+      ) : null}
+
+      {/* Products empty state */}
+      {products.length === 0 && projections.length === 0 && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+          <Card variant="outlined" padding="lg">
+            <div className="flex items-center gap-4 py-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <ShoppingBag className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-text">Add products to your brand</p>
+                <p className="mt-0.5 text-sm text-text-muted">
+                  Browse the product catalog and link items to start building your product line.
+                </p>
+              </div>
+              <Link to={ROUTES.DASHBOARD_PRODUCTS}>
+                <Button leftIcon={<ShoppingBag className="h-4 w-4" />}>Browse Products</Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
       )}
 
       {/* Profit Projections / Products */}

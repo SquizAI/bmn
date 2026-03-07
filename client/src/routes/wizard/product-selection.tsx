@@ -362,8 +362,8 @@ export default function ProductSelectionPage() {
       {/* Selection summary bar */}
       {selectedSkus.size > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-primary-light px-5 py-3"
           aria-live="polite"
         >
@@ -510,7 +510,7 @@ export default function ProductSelectionPage() {
                 const commissionRate = 25; // Default commission rate for TruvaNutra
                 const commissionAmount = product.suggestedRetail * (commissionRate / 100);
                 return (
-                  <motion.div key={product.sku} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                  <motion.div key={product.sku} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                     <Card
                       variant="interactive"
                       padding="none"
@@ -518,6 +518,7 @@ export default function ProductSelectionPage() {
                         'overflow-hidden transition-all',
                         isSelected && 'ring-2 ring-accent border-accent',
                       )}
+                      onClick={() => toggleProduct(product.sku)}
                     >
                       <div className="relative">
                         {product.imageUrl ? (
@@ -580,7 +581,7 @@ export default function ProductSelectionPage() {
                         {/* Add to Store button */}
                         <button
                           type="button"
-                          onClick={() => toggleProduct(product.sku)}
+                          onClick={(e) => { e.stopPropagation(); toggleProduct(product.sku); }}
                           className={cn(
                             'mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all',
                             isSelected
@@ -616,7 +617,7 @@ export default function ProductSelectionPage() {
           {(productsData?.items || []).map((product) => {
             const isSelected = selectedSkus.has(product.sku);
             return (
-              <motion.div key={product.sku} layout>
+              <motion.div key={product.sku}>
                 <Card
                   variant="interactive"
                   padding="none"

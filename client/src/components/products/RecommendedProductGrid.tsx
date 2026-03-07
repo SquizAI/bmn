@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
 import { Sparkles, Grid3X3, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -130,8 +129,7 @@ export function RecommendedProductGrid({
           {topPicks.length > 0 && activeCategory === 'all' && (
             <h3 className="mb-3 text-sm font-semibold text-text">More Products</h3>
           )}
-          <motion.div
-            layout
+          <div
             className={cn(
               viewMode === 'grid'
                 ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
@@ -147,7 +145,7 @@ export function RecommendedProductGrid({
                 onViewDetail={onViewDetail}
               />
             ))}
-          </motion.div>
+          </div>
         </div>
       )}
 

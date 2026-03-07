@@ -61,12 +61,14 @@ export function ProductRecommendationCard({
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: product.rank * 0.05 }}
+      transition={{ delay: Math.min(product.rank * 0.05, 0.2) }}
+      onClick={() => onToggle(product.sku)}
+      role="button"
+      tabIndex={0}
       className={cn(
-        'group relative overflow-hidden rounded-xl border-2 bg-surface transition-all duration-200',
+        'group relative cursor-pointer overflow-hidden rounded-xl border-2 bg-surface transition-all duration-200',
         isSelected
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-border hover:border-border-hover',
@@ -89,11 +91,7 @@ export function ProductRecommendationCard({
       )}
 
       {/* Product image */}
-      <button
-        type="button"
-        onClick={() => onToggle(product.sku)}
-        className="w-full text-left"
-      >
+      <div className="w-full">
         <div className="relative">
           {product.imageUrl ? (
             <img
@@ -122,7 +120,7 @@ export function ProductRecommendationCard({
             {product.confidenceScore}% match
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Card content */}
       <div className="p-4">
@@ -174,7 +172,7 @@ export function ProductRecommendationCard({
         <div className="mt-3 flex gap-2">
           <button
             type="button"
-            onClick={() => onToggle(product.sku)}
+            onClick={(e) => { e.stopPropagation(); onToggle(product.sku); }}
             className={cn(
               'flex-1 rounded-lg px-3 py-2.5 sm:py-2 text-xs font-semibold transition-all',
               isSelected
@@ -187,7 +185,7 @@ export function ProductRecommendationCard({
           {onViewDetail && (
             <button
               type="button"
-              onClick={() => onViewDetail(product.sku)}
+              onClick={(e) => { e.stopPropagation(); onViewDetail(product.sku); }}
               className="rounded-lg p-2.5 sm:p-2 text-text-muted transition-colors hover:bg-surface-hover hover:text-text"
             >
               <Info className="h-4 w-4" />
