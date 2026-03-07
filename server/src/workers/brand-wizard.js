@@ -121,9 +121,19 @@ export function initBrandWizardWorker(io) {
           completed_at: new Date().toISOString(),
         }).eq('bullmq_job_id', job.id);
 
-        // Deduct credits
-        await supabaseAdmin.rpc('deduct_credits', {
+        // Deduct credits (map wizard step to credit_type)
+        const stepCreditType = {
+          'social-analysis': 'analysis',
+          'brand-identity': 'analysis',
+          'logo-generation': 'logo',
+          'logo-refinement': 'logo',
+          'mockup-generation': 'mockup',
+          'mockup-review': 'mockup',
+          'bundle-composition': 'bundle',
+        }[step] || 'analysis';
+        await supabaseAdmin.rpc('deduct_credit', {
           p_user_id: userId,
+          p_credit_type: stepCreditType,
           p_amount: creditCost,
         });
 

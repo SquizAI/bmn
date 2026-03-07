@@ -127,10 +127,14 @@ const checkCredits = sdkTool(
     const costs = { logo: 1, mockup: 1, bundle: 2, text_image: 1, video: 5 };
     const requiredCredits = costs[operationType] * quantity;
 
+    // Map operationType to credit_type column (text_image uses mockup credits)
+    const creditType = operationType === 'text_image' ? 'mockup' : operationType;
+
     const { data, error } = await supabaseAdmin
       .from('generation_credits')
       .select('credits_remaining')
       .eq('user_id', userId)
+      .eq('credit_type', creditType)
       .single();
 
     if (error) {
@@ -159,13 +163,15 @@ const deductCredit = sdkTool(
   'Deduct generation credits after a successful generation. Call AFTER the generation tool returns successfully, not before.',
   {
     userId: z.string().uuid().describe('The user UUID'),
+    creditType: z.enum(['logo', 'mockup', 'bundle', 'video', 'analysis']).describe('Type of credit to deduct'),
     amount: z.number().int().min(1).describe('Number of credits to deduct'),
     reason: z.string().describe('What the credits were used for (e.g., "4 logo generations")'),
     brandId: z.string().uuid().describe('The brand UUID for audit trail'),
   },
-  async ({ userId, amount, reason, brandId }) => {
-    const { data, error } = await supabaseAdmin.rpc('deduct_credits', {
+  async ({ userId, creditType, amount, reason, brandId }) => {
+    const { data, error } = await supabaseAdmin.rpc('deduct_credit', {
       p_user_id: userId,
+      p_credit_type: creditType,
       p_amount: amount,
     });
 
