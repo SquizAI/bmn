@@ -9,7 +9,6 @@
 //   - STEP_TO_SKILLS mapping covers all wizard steps
 
 import { describe, it, expect, vi, beforeAll } from 'vitest';
-import { z } from 'zod';
 
 // ── Set env vars before any imports ─────────────────────────────────────
 // Some handlers (brand-generator, name-generator, mockup-renderer) read
@@ -441,7 +440,7 @@ describe('Skill Registry Tests', () => {
         const skill = skills[skillName];
         const toolEntries = Object.entries(skill.tools);
 
-        for (const [key, tool] of toolEntries) {
+        for (const [_key, tool] of toolEntries) {
           // description
           expect(typeof tool.description).toBe('string');
           expect(tool.description.length).toBeGreaterThan(5);
@@ -472,7 +471,7 @@ describe('Skill Registry Tests', () => {
     };
 
     it('should cover all 9 wizard steps', () => {
-      const expectedSteps = Object.keys(EXPECTED_MAPPING);
+      const _expectedSteps = Object.keys(EXPECTED_MAPPING);
       // The getAgentDefinitions function returns agents for a given step.
       // We verify the function exists and returns empty objects for unknown steps.
       expect(typeof registryModule.getAgentDefinitions).toBe('function');
@@ -879,7 +878,7 @@ describe('Config Validation Tests', () => {
       expect(totalBudget).toBeGreaterThan(0);
 
       // Log for documentation purposes
-      const budgetReport = SKILL_NAMES.map((name) => ({
+      const _budgetReport = SKILL_NAMES.map((name) => ({
         skill: name,
         budget: skillConfigs[name].maxBudgetUsd,
       }));

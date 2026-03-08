@@ -196,7 +196,7 @@ describe('recraftClient', () => {
         runWithTimers(() =>
           recraftClient.generateVector({ prompt: 'No image' })
         )
-      ).rejects.toThrow('Recraft V4 returned no image in response');
+      ).rejects.toThrow('Recraft V4 (FAL) returned no image');
     });
 
     it('should throw when images array is undefined', async () => {
@@ -206,7 +206,7 @@ describe('recraftClient', () => {
         runWithTimers(() =>
           recraftClient.generateVector({ prompt: 'No images key' })
         )
-      ).rejects.toThrow('Recraft V4 returned no image in response');
+      ).rejects.toThrow('Recraft V4 (FAL) returned no image');
     });
 
     it('should default contentType to image/svg+xml when not provided', async () => {
@@ -306,7 +306,7 @@ describe('recraftClient', () => {
         runWithTimers(() =>
           recraftClient.vectorize({ imageUrl: 'https://example.com/empty.png' })
         )
-      ).rejects.toThrow('Recraft vectorize returned no image in response');
+      ).rejects.toThrow('Recraft vectorize (FAL) returned no image');
     });
   });
 });

@@ -12,7 +12,7 @@
 
 import { Worker } from 'bullmq';
 import * as Sentry from '@sentry/node';
-import { redis, getBullRedisConfig } from '../lib/redis.js';
+import { getBullRedisConfig } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';

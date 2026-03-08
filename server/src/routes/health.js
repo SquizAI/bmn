@@ -1,7 +1,8 @@
 // server/src/routes/health.js
 
 import { Router } from 'express';
-import { redis } from '../lib/redis.js';
+import Redis from 'ioredis';
+import { getBullRedisConfig } from '../lib/redis.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
 import { Queue } from 'bullmq';
@@ -34,9 +35,11 @@ healthRoute.get('/', async (_req, res) => {
   };
 
   // Check 2: Redis
+  let testRedis;
   try {
     const redisStart = Date.now();
-    const pong = await redis.ping();
+    testRedis = new Redis(getBullRedisConfig());
+    const pong = await testRedis.ping();
     checks.redis = {
       status: pong === 'PONG' ? 'up' : 'down',
       responseTime: Date.now() - redisStart,
@@ -48,6 +51,10 @@ healthRoute.get('/', async (_req, res) => {
       error: err.message,
     };
     overallStatus = 'degraded';
+  } finally {
+    if (testRedis) {
+      testRedis.disconnect();
+    }
   }
 
   // Check 3: Supabase
@@ -79,13 +86,7 @@ healthRoute.get('/', async (_req, res) => {
   try {
     const bullStart = Date.now();
     const testQueue = new Queue('health-check', {
-      connection: {
-        host: redis.options.host,
-        port: redis.options.port,
-        password: redis.options.password,
-        db: redis.options.db,
-        maxRetriesPerRequest: null,
-      },
+      connection: getBullRedisConfig(),
     });
 
     await testQueue.getJobCounts();

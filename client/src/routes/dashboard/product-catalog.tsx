@@ -125,7 +125,7 @@ export default function ProductCatalogPage() {
   // Brand data for "Add to Brand" functionality
   const { data: brands } = useBrands();
   const activeBrand = useBrandStore((s) => s.activeBrand);
-  const addProduct = useAddProductToBrand();
+  const { mutate: addProductMutate } = useAddProductToBrand();
   const addToast = useUIStore((s) => s.addToast);
 
   const handleAddToBrand = useCallback((product: Product) => {
@@ -136,7 +136,7 @@ export default function ProductCatalogPage() {
       return;
     }
     const productId = product.id || product.sku;
-    addProduct.mutate(
+    addProductMutate(
       { brandId, productId },
       {
         onSuccess: () => addToast({ type: 'success', title: `${product.name} added to brand` }),
@@ -148,7 +148,7 @@ export default function ProductCatalogPage() {
         },
       },
     );
-  }, [activeBrand, brands, addProduct, addToast]);
+  }, [activeBrand, brands, addProductMutate, addToast]);
 
   // Data
   const { data: productsData, isLoading } = useBrowseProducts({

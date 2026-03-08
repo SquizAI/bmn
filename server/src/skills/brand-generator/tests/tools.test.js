@@ -185,7 +185,7 @@ describe('GenerateTypographyInput schema', () => {
   });
 
   it('should reject missing primary fontFamily', () => {
-    const { fontFamily, ...rest } = validInput.primary;
+    const { fontFamily: _fontFamily, ...rest } = validInput.primary;
     const result = GenerateTypographyInput.safeParse({
       ...validInput,
       primary: rest,
@@ -194,13 +194,13 @@ describe('GenerateTypographyInput schema', () => {
   });
 
   it('should reject missing secondary', () => {
-    const { secondary, ...rest } = validInput;
+    const { secondary: _secondary, ...rest } = validInput;
     const result = GenerateTypographyInput.safeParse(rest);
     expect(result.success).toBe(false);
   });
 
   it('should reject missing pairingRationale', () => {
-    const { pairingRationale, ...rest } = validInput;
+    const { pairingRationale: _pairingRationale, ...rest } = validInput;
     const result = GenerateTypographyInput.safeParse(rest);
     expect(result.success).toBe(false);
   });

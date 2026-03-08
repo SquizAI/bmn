@@ -5,7 +5,7 @@
 // calculatePostingFrequency, analyzeHashtagStrategy, detectContentFormats),
 // and ensures the tools object has all required entries.
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

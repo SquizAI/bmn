@@ -55,7 +55,7 @@ describe('ComposeLogoPromptInput schema', () => {
   });
 
   it('should accept input without colors (optional)', () => {
-    const { colors, ...rest } = validInput;
+    const { colors: _colors, ...rest } = validInput;
     const result = ComposeLogoPromptInput.safeParse(rest);
     expect(result.success).toBe(true);
   });

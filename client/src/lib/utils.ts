@@ -97,7 +97,7 @@ export function proxyImageUrl(url: string | null | undefined): string | null {
       (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
     );
     if (!needsProxy) return url;
-    const base = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '';
+    const base = import.meta.env.VITE_API_URL || '';
     return `${base}/api/v1/proxy/image?url=${encodeURIComponent(url)}`;
   } catch {
     return url;

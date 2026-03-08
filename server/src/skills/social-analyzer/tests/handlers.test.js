@@ -4,7 +4,7 @@
 // delegates to the correct tool execute method and returns the expected
 // shape. Mocks external SDKs (Apify, Google AI, model router).
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 

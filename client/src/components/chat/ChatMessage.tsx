@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { motion } from 'motion/react';
 import { Bot, User } from 'lucide-react';
 import ReactMarkdown, { type Components } from 'react-markdown';

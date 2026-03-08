@@ -23,6 +23,7 @@
 #   SENTRY_DSN         - Sentry DSN for error tracking
 #   POSTHOG_API_KEY    - PostHog analytics key
 #   APIFY_API_TOKEN    - Apify token for social media scraping
+#   RECRAFT_API_KEY    - Recraft API key for vector logo generation
 #   FIRECRAWL_API_KEY  - Firecrawl key for web scraping
 
 name: Deploy
@@ -47,7 +48,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME || 'deploy' }}
           key: ${{ secrets.DO_SSH_KEY }}
           script_stop: true
-          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,BFL_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,STRIPE_WEBHOOK_SECRET,SENTRY_DSN,POSTHOG_API_KEY,APIFY_API_TOKEN,FIRECRAWL_API_KEY,REDIS_PASSWORD,RESUME_TOKEN_SECRET,RESEND_API_KEY,CORS_ORIGINS,VITE_STRIPE_PUBLISHABLE_KEY
+          envs: ANTHROPIC_API_KEY,OPENAI_API_KEY,GOOGLE_API_KEY,FAL_API_KEY,BFL_API_KEY,RECRAFT_API_KEY,IDEOGRAM_API_KEY,SUPABASE_URL,SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,STRIPE_SECRET_KEY,STRIPE_PUBLISHABLE_KEY,STRIPE_WEBHOOK_SECRET,SENTRY_DSN,POSTHOG_API_KEY,APIFY_API_TOKEN,FIRECRAWL_API_KEY,REDIS_PASSWORD,RESUME_TOKEN_SECRET,RESEND_API_KEY,CORS_ORIGINS,VITE_STRIPE_PUBLISHABLE_KEY
           script: |
             cd /opt/bmn
             echo "=== Fixing permissions ==="
@@ -77,6 +78,7 @@ jobs:
             inject_secret "GOOGLE_API_KEY" "$GOOGLE_API_KEY"
             inject_secret "FAL_API_KEY" "$FAL_API_KEY"
             inject_secret "BFL_API_KEY" "$BFL_API_KEY"
+            inject_secret "RECRAFT_API_KEY" "$RECRAFT_API_KEY"
             inject_secret "IDEOGRAM_API_KEY" "$IDEOGRAM_API_KEY"
             inject_secret "SUPABASE_URL" "$SUPABASE_URL"
             inject_secret "SUPABASE_ANON_KEY" "$SUPABASE_ANON_KEY"
@@ -105,6 +107,7 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           FAL_API_KEY: ${{ secrets.FAL_API_KEY }}
           BFL_API_KEY: ${{ secrets.BFL_API_KEY }}
+          RECRAFT_API_KEY: ${{ secrets.RECRAFT_API_KEY }}
           IDEOGRAM_API_KEY: ${{ secrets.IDEOGRAM_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

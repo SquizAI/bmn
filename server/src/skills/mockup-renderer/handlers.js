@@ -112,7 +112,7 @@ async function withRetry(fn, policy = {}) {
  * @param {string} [input.quality='hd']
  * @returns {Promise<{ success: boolean, imageUrl: string|null, revisedPrompt: string|null, model: string, error: string|null }>}
  */
-export async function generateProductMockup({ prompt, productSku, productName, logoUrl, size, quality }) {
+export async function generateProductMockup({ prompt, productSku, productName, logoUrl: _logoUrl, size, quality }) {
   logger.info({ productSku, productName, size }, 'Generating product mockup via GPT Image 1.5');
 
   const openai = await getOpenAIClient();
@@ -201,7 +201,7 @@ function toIdeogramAspectRatio(ratio) {
  * @param {string} [input.styleType='realistic']
  * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
  */
-export async function generateTextOnProduct({ prompt, brandText, productSku, productName, aspectRatio, styleType }) {
+export async function generateTextOnProduct({ prompt, brandText, productSku, productName: _productName, aspectRatio, styleType }) {
   logger.info({ productSku, brandText, styleType }, 'Generating text-on-product via Ideogram v3');
 
   // Skip Ideogram if no API key is configured
@@ -468,7 +468,7 @@ async function fallbackBundleToGPTImage(prompt, bundleName, productDescriptions)
  * @param {{ prompt: string, model: string, productName: string|null }} input.metadata
  * @returns {Promise<{ success: boolean, permanentUrl: string|null, thumbnailUrl: string|null, error: string|null }>}
  */
-export async function uploadMockupAsset({ imageSource, brandId, assetType, productSku, bundleName, metadata }) {
+export async function uploadMockupAsset({ imageSource, brandId, assetType, productSku, bundleName, metadata: _metadata }) {
   logger.info({ brandId, assetType, productSku, bundleName }, 'Uploading mockup to storage');
 
   const supabase = getSupabase();

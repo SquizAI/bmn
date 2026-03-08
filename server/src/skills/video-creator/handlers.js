@@ -200,7 +200,7 @@ export async function generateProductVideo({ prompt, durationSec = 8, aspectRati
  * @param {import('zod').infer<import('./tools.js').UploadVideoAssetInput>} input
  * @returns {Promise<import('zod').infer<import('./tools.js').UploadVideoAssetOutput>>}
  */
-export async function uploadVideoAsset({ videoUrl, brandId, videoType, metadata }) {
+export async function uploadVideoAsset({ videoUrl, brandId, videoType, metadata: _metadata }) {
   logger.info({ brandId, videoType }, 'Uploading video to storage');
 
   try {

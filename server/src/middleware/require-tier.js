@@ -13,7 +13,7 @@
  * @param {string} feature
  * @returns {import('express').RequestHandler}
  */
-export function requireFeature(feature) {
+export function requireFeature(_feature) {
   return (req, res, next) => {
     // TODO: Check user subscription tier for feature access
     // For now, pass through — tier gating will be implemented with Stripe billing

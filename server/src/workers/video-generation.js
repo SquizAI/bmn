@@ -1,7 +1,7 @@
 // server/src/workers/video-generation.js
 
 import { Worker } from 'bullmq';
-import { redis, getBullRedisConfig } from '../lib/redis.js';
+import { getBullRedisConfig } from '../lib/redis.js';
 import { QUEUE_CONFIGS } from '../queues/index.js';
 import { createJobLogger } from './job-logger.js';
 import { logger } from '../lib/logger.js';

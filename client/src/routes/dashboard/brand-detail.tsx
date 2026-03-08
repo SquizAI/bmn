@@ -31,7 +31,7 @@ import { formatCurrency, capitalize, cn } from '@/lib/utils';
 export default function BrandDetailPage() {
   const { brandId } = useParams<{ brandId: string }>();
   const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
-  const { data: brand, isLoading, error } = useBrandDetail(brandId);
+  const { data: brand, isLoading, error, refetch } = useBrandDetail(brandId);
 
   // Sync active brand context when viewing this brand
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function BrandDetailPage() {
           {!is404 && (
             <Button
               variant="outline"
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
             >
               Retry
             </Button>

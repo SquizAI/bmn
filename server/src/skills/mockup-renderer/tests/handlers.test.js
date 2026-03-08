@@ -283,7 +283,7 @@ describe('uploadMockupAsset', () => {
   });
 
   it('should use bundleName for identifier when productSku is null', () => {
-    const brandId = '550e8400-e29b-41d4-a716-446655440000';
+    const _brandId = '550e8400-e29b-41d4-a716-446655440000';
     const bundleName = 'Starter Kit';
     const productSku = null;
     const identifier = productSku || bundleName?.replace(/\s+/g, '-') || 'asset';

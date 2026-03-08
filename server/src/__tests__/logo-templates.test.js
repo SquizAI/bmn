@@ -30,9 +30,9 @@ describe('resolveLogoTemplate', () => {
     expect(result.prompts).toHaveLength(3);
   });
 
-  it('should default to 4 prompts when count is not specified', () => {
+  it('should default to 1 prompt when count is not specified', () => {
     const result = resolveLogoTemplate({ brandName: 'Test', logoStyle: 'bold' });
-    expect(result.prompts).toHaveLength(4);
+    expect(result.prompts).toHaveLength(1);
   });
 
   it('should return 1 prompt when count is 1', () => {
@@ -257,7 +257,7 @@ describe('resolveLogoTemplate', () => {
       count: 1,
     });
 
-    expect(result.basePrompt).toContain('Brand vision: Empowering creators worldwide');
+    expect(result.basePrompt).toContain('Brand essence: Empowering creators worldwide');
   });
 
   it('should include industry in base prompt when provided', () => {

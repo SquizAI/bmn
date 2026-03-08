@@ -6,7 +6,7 @@ import { WIZARD_STEPS, WIZARD_PHASES, ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, X, MessageSquare } from 'lucide-react';
 import { useUIStore } from '@/stores/ui-store';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { ErrorBoundary, RouteErrorFallback } from '@/components/ui/error-boundary';
 import { apiClient } from '@/lib/api';
 
 const ChatSidebar = lazy(() =>
@@ -255,7 +255,7 @@ export default function WizardLayout() {
       <div className="mx-auto flex max-w-(--bmn-max-width-wizard) gap-6 px-4 py-6 sm:px-6 sm:py-8 md:px-10 md:py-12 lg:max-w-7xl">
         {/* Main wizard content */}
         <main className="min-w-0 flex-1">
-          <ErrorBoundary>
+          <ErrorBoundary fallbackRender={RouteErrorFallback}>
             <Outlet />
           </ErrorBoundary>
         </main>
