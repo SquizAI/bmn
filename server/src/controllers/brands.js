@@ -491,39 +491,58 @@ export async function generateLogos(req, res, next) {
     const identity = ws['brand-identity'] || {};
     const directions = identity.directions || [];
     const selectedDir = directions.find((d) => d.id === identity.selectedDirectionId) || directions[0];
+    const brandData = selectedDir?.brand || selectedDir || {};
+    const visualId = brandData.visual_identity || {};
 
-    const wizardColors = (selectedDir?.colorPalette || identity.colorPalette || [])
+    // ── Colors: extract from visual_identity.color_palette (nested object with .hex) ──
+    const colorPaletteObj = visualId.color_palette || {};
+    const wizardColors = ['primary', 'secondary', 'accent_1', 'accent_2', 'neutral']
+      .map((key) => colorPaletteObj[key]?.hex)
+      .filter(Boolean);
+    // Also check flat array format (legacy)
+    const flatColors = (selectedDir?.colorPalette || identity.colorPalette || [])
       .map((c) => (typeof c === 'string' ? c : c.hex))
       .filter(Boolean);
-
-    // Allow req.body.colorPalette to override wizard_state colors
     const requestColors = req.body.colorPalette;
     const colorPalette = (Array.isArray(requestColors) && requestColors.length > 0)
       ? requestColors
-      : wizardColors;
+      : (wizardColors.length > 0 ? wizardColors : flatColors);
 
-    // Extract industry/niche from social analysis or identity data
+    // ── Industry/niche ──
     const socialAnalysis = ws['social-analysis'] || {};
     const rawIndustry = socialAnalysis.niche || socialAnalysis.industry
       || selectedDir?.industry || identity.industry || '';
-    // Coerce to string -- AI sometimes stores niche/industry as an object
     const industry = typeof rawIndustry === 'string'
       ? rawIndustry
       : (rawIndustry?.name || rawIndustry?.primaryNiche?.name || rawIndustry?.label || '');
 
-    // Coerce logoStyle to a valid enum value
+    // ── Logo style ──
     const VALID_LOGO_STYLES = ['minimal', 'bold', 'vintage', 'modern', 'playful'];
-    const rawStyle = req.body.style || selectedDir?.logoStyle?.style || selectedDir?.logoStyle || identity.logoStyle || 'modern';
+    const rawStyle = req.body.style || visualId.logo?.style || selectedDir?.logoStyle?.style || selectedDir?.logoStyle || identity.logoStyle || 'modern';
     const styleStr = typeof rawStyle === 'string' ? rawStyle.toLowerCase().trim() : 'modern';
     const logoStyle = VALID_LOGO_STYLES.includes(styleStr) ? styleStr : 'modern';
 
-    // Truncate brandVision to fit schema max (2000 chars)
-    const rawVision = selectedDir?.vision || identity.vision || '';
+    // ── Brand vision (full, rich data) ──
+    const rawVision = brandData.brand_essence || brandData.vision || selectedDir?.vision || identity.vision || '';
     const brandVision = typeof rawVision === 'string' ? rawVision.slice(0, 2000) : '';
 
-    // Coerce archetype to string
-    const rawArchetype = selectedDir?.archetype?.name || selectedDir?.archetype || identity.archetype || '';
+    // ── Archetype ──
+    const rawArchetype = brandData.archetype?.name || selectedDir?.archetype?.name || selectedDir?.archetype || identity.archetype || '';
     const archetype = typeof rawArchetype === 'string' ? rawArchetype.slice(0, 200) : '';
+
+    // ── Logo concept from visual identity (the AI-generated description of what the logo should be) ──
+    const logoConcept = visualId.logo?.concept || '';
+
+    // ── Brand personality traits ──
+    const personality = brandData.personality || {};
+    const personalityTraits = (personality.traits || []).join(', ');
+    const brandVoiceTone = personality.brand_voice?.tone || brandData.archetype?.tone || '';
+
+    // ── Tagline ──
+    const tagline = brandData.tagline || ws['brand-name']?.tagline || '';
+
+    // ── Typography hints ──
+    const primaryFont = visualId.typography?.primary_typeface?.name || identity.fonts?.primary || '';
 
     const result = await dispatchJob('logo-generation', {
       userId,
@@ -537,6 +556,11 @@ export async function generateLogos(req, res, next) {
       brandVision,
       archetype,
       industry: industry.slice(0, 200),
+      logoConcept: logoConcept.slice(0, 500),
+      tagline: tagline.slice(0, 200),
+      personalityTraits: personalityTraits.slice(0, 300),
+      brandVoiceTone: brandVoiceTone.slice(0, 200),
+      primaryFont: primaryFont.slice(0, 100),
       count: (req.body.variations?.length > 0 ? req.body.variations.length : null) || req.body.count || 1,
       variations: (Array.isArray(req.body.variations) && req.body.variations.length > 0) ? req.body.variations : undefined,
       isRefinement: !!req.body.refinementNotes,

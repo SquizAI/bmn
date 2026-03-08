@@ -216,9 +216,14 @@ export function resolveLogoTemplate({
   brandVision,
   industry,
   colorPalette = [],
-  count = 4,
+  count = 1,
   variations,
   refinementNotes,
+  logoConcept,
+  tagline,
+  personalityTraits,
+  brandVoiceTone,
+  primaryFont,
 }) {
   const style = STYLE_PARAMS[logoStyle] || STYLE_PARAMS.modern;
   const archetypeKey = archetype?.toLowerCase().replace(/\s+/g, '-');
@@ -230,17 +235,38 @@ export function resolveLogoTemplate({
     `Brand name: "${brandName}".`,
   ];
 
-  if (brandVision) {
-    baseParts.push(`Brand vision: ${brandVision}.`);
+  // The AI-generated logo concept is the most specific guidance — use it first
+  if (logoConcept) {
+    baseParts.push(`Logo concept: ${logoConcept}`);
   }
 
-  if (traits) {
+  if (tagline) {
+    baseParts.push(`Brand tagline: "${tagline}".`);
+  }
+
+  if (brandVision) {
+    baseParts.push(`Brand essence: ${brandVision}.`);
+  }
+
+  // Use actual brand personality traits if provided, fall back to archetype defaults
+  if (personalityTraits) {
+    baseParts.push(`Brand personality: ${personalityTraits}.`);
+  } else if (traits) {
     baseParts.push(`Brand personality: ${traits.adjectives.slice(0, 3).join(', ')}.`);
+  }
+
+  if (brandVoiceTone) {
+    baseParts.push(`Tone: ${brandVoiceTone}.`);
+  } else if (traits) {
     baseParts.push(`Mood: ${traits.mood}.`);
   }
 
   if (industry) {
     baseParts.push(`Industry: ${industry}.`);
+  }
+
+  if (primaryFont) {
+    baseParts.push(`Typography style inspired by: ${primaryFont}.`);
   }
 
   baseParts.push(style.promptFragment);
