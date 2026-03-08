@@ -19,6 +19,7 @@ import { initAnalyticsWorker } from './analytics-worker.js';
 import { initSocialAnalysisWorker } from './social-analysis-worker.js';
 import { initStorefrontAnalyticsWorker } from './storefront-analytics.js';
 import { initStorefrontContactWorker } from './storefront-contact.js';
+import { initStorefrontGenerationWorker } from './storefront-generation.js';
 import { initDeadLetterWorker } from './dead-letter.js';
 
 /** @type {import('bullmq').Worker[]} */
@@ -109,6 +110,7 @@ export function initWorkers(io) {
     { worker: initSocialAnalysisWorker(io), queueName: 'social-analysis' },
     { worker: initStorefrontAnalyticsWorker(io), queueName: 'storefront-analytics' },
     { worker: initStorefrontContactWorker(io), queueName: 'storefront-contact' },
+    { worker: initStorefrontGenerationWorker(io), queueName: 'storefront-generation' },
   ];
 
   // Attach dead-letter forwarding to each worker

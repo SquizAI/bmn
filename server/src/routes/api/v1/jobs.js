@@ -23,6 +23,7 @@ const USER_FACING_QUEUES = [
   'content-gen',
   'image-upload',
   'print-export',
+  'storefront-generation',
 ];
 
 const jobIdParamSchema = z.object({

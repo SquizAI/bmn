@@ -81,6 +81,23 @@ services:
       - bmn-internal
       - bmn-external
 
+  # ── Storefront SPA ───────────────────────────────────────────
+  storefront:
+    build:
+      context: .
+      dockerfile: client-storefront/Dockerfile
+      args:
+        VITE_API_URL: ${API_URL:-https://api.prznl.com}
+    container_name: bmn-storefront
+    expose:
+      - "80"
+    depends_on:
+      - server
+    restart: always
+    networks:
+      - bmn-internal
+      - bmn-external
+
   # ── Redis Commander (disabled in prod by default) ──────────
   # Uncomment to enable Redis admin UI on port 8381
   # redis-commander:

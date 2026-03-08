@@ -98,7 +98,7 @@ export function useCreateStorefront() {
 export function useGenerateStorefront() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { brandId: string; template: 'bold' | 'story' | 'conversion' }) =>
+    mutationFn: (data: { brandId: string; themeId: string }) =>
       apiClient.post('/api/v1/storefronts/generate', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.storefronts }),
   });

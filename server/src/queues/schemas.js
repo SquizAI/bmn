@@ -220,6 +220,36 @@ export const AnalyticsJobSchema = z.object({
 });
 
 /**
+ * Storefront Generation job -- AI-powered one-click storefront content creation.
+ * Uses Claude Haiku 4.5 to generate all section content, testimonials, and FAQs.
+ */
+export const StorefrontGenerationJobSchema = z.object({
+  userId: z.string().uuid(),
+  brandId: z.string().uuid(),
+  storefrontId: z.string().uuid(),
+  themeId: z.string().uuid().nullable().optional(),
+  template: z.enum(['bold', 'story', 'conversion']),
+  brandIdentity: z.object({
+    name: z.string().min(1),
+    tagline: z.string().optional(),
+    mission: z.string().optional(),
+    vision: z.string().optional(),
+    voiceTone: z.string().optional(),
+    personalityTraits: z.array(z.string()).optional(),
+    colors: z.array(z.string()).optional(),
+    industry: z.string().optional(),
+    targetAudience: z.string().optional(),
+    products: z.array(z.object({
+      name: z.string(),
+      category: z.string().optional(),
+      description: z.string().optional(),
+      retailPrice: z.number().optional(),
+    })).optional(),
+    logoUrl: z.string().optional(),
+  }),
+});
+
+/**
  * Dead Letter job -- permanently failed jobs forwarded from other queues.
  * Contains the original job data plus failure metadata for inspection and manual retry.
  */
@@ -269,5 +299,6 @@ export const JOB_SCHEMAS = {
   'content-gen': ContentGenJobSchema,
   'email-campaign': EmailCampaignJobSchema,
   'analytics': AnalyticsJobSchema,
+  'storefront-generation': StorefrontGenerationJobSchema,
   'dead-letter': DeadLetterJobSchema,
 };

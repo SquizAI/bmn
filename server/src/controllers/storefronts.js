@@ -3,6 +3,7 @@
 
 import { supabaseAdmin } from '../lib/supabase.js';
 import { logger } from '../lib/logger.js';
+import { dispatchJob } from '../queues/dispatch.js';
 
 // ── Default content generators ──────────────────────────────────────────────
 
@@ -417,7 +418,7 @@ function generateTestimonials(brandName, products, template) {
  * @param {string} template
  * @returns {Array<{question: string, answer: string}>}
  */
-function generateBrandFaqs(brandName, products, template) {
+function generateBrandFaqs(brandName, products, _template) {
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
   const categoryList = categories.slice(0, 3).join(', ') || 'health & wellness';
   const productCount = products.length;
@@ -681,7 +682,7 @@ export async function createStorefront(req, res, next) {
 /**
  * POST /api/v1/storefronts/generate
  * AI-powered one-click storefront generation.
- * Fetches brand data + products, picks optimal theme, generates all content, auto-publishes.
+ * Gathers brand data, creates storefront record, dispatches BullMQ job for AI content generation.
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
@@ -746,7 +747,7 @@ export async function generateStorefront(req, res, next) {
       if (preferred) selectedTheme = preferred;
     }
 
-    // 5. Extract brand identity
+    // 5. Extract brand identity from wizard state
     const ws = brand.wizard_state || {};
     const identityState = ws['brand-identity'];
     const selectedDir = identityState?.directions?.find(
@@ -754,25 +755,43 @@ export async function generateStorefront(req, res, next) {
     ) || identityState?.directions?.[0] || null;
 
     const brandIdentity = {
+      name: brand.name,
       logoUrl: selectedDir?.logoUrl || '',
       colors: selectedDir?.colorPalette || [],
-      fonts: selectedDir?.fonts || {},
       tagline: selectedDir?.tagline || ws['social-analysis']?.taglineSuggestions?.[0] || '',
       mission: selectedDir?.mission || ws['brand-identity']?.missionStatement || '',
+      vision: selectedDir?.vision || '',
+      voiceTone: selectedDir?.voiceTone || ws['brand-identity']?.voiceTone || 'professional yet approachable',
+      personalityTraits: selectedDir?.personalityTraits || ws['brand-identity']?.personalityTraits || [],
+      industry: ws['social-analysis']?.industry || '',
+      targetAudience: selectedDir?.targetAudience || ws['brand-identity']?.targetAudience || '',
     };
 
-    // Get logo from brand assets
+    // Get logo from brand assets (selected logo or most recent)
     const { data: logoAsset } = await supabaseAdmin
       .from('brand_assets')
       .select('url')
       .eq('brand_id', brandId)
       .eq('asset_type', 'logo')
-      .order('created_at', { ascending: false })
+      .eq('is_selected', true)
       .limit(1)
       .single();
 
     if (logoAsset?.url) {
       brandIdentity.logoUrl = logoAsset.url;
+    } else {
+      // Fallback to most recent logo
+      const { data: fallbackLogo } = await supabaseAdmin
+        .from('brand_assets')
+        .select('url')
+        .eq('brand_id', brandId)
+        .eq('asset_type', 'logo')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (fallbackLogo?.url) {
+        brandIdentity.logoUrl = fallbackLogo.url;
+      }
     }
 
     // 6. Fetch brand's linked products
@@ -785,7 +804,15 @@ export async function generateStorefront(req, res, next) {
       .map((bp) => bp.products)
       .filter(Boolean);
 
-    // 7. Create storefront row
+    // Add products to brand identity for AI context
+    brandIdentity.products = products.map((p) => ({
+      name: p.name,
+      category: p.category || '',
+      description: p.description || '',
+      retailPrice: p.retail_price || undefined,
+    }));
+
+    // 7. Create storefront record (status: draft — worker will publish)
     const { data: storefront, error: createErr } = await supabaseAdmin
       .from('storefronts')
       .insert({
@@ -793,78 +820,35 @@ export async function generateStorefront(req, res, next) {
         user_id: userId,
         slug,
         theme_id: selectedTheme?.id || null,
-        status: 'published',
-        published_at: new Date().toISOString(),
-        settings: { generatedTemplate: template },
+        status: 'draft',
+        settings: { generatedTemplate: template, aiGeneration: 'pending' },
       })
       .select('*')
       .single();
 
     if (createErr) throw createErr;
 
-    // 8. Generate template-specific section content
-    const templateDef = TEMPLATES[template];
-    const contentMap = generateTemplateContent(template, brand.name, brandIdentity, products);
-
-    const sections = templateDef.sections.map((def) => ({
-      storefront_id: storefront.id,
-      section_type: def.type,
-      title: null,
-      content: contentMap[def.type] || {},
-      sort_order: def.sort_order,
-      is_visible: true,
-      settings: {},
-    }));
-
-    if (sections.length > 0) {
-      const { error: sectErr } = await supabaseAdmin
-        .from('storefront_sections')
-        .insert(sections);
-      if (sectErr) logger.warn({ err: sectErr }, 'Failed to create generated sections');
-    }
-
-    // 9. Generate product-aware testimonials
-    const testimonials = generateTestimonials(brand.name, products, template).map((t, i) => ({
-      storefront_id: storefront.id,
-      quote: t.quote,
-      author_name: t.author_name,
-      author_title: t.author_title,
-      sort_order: i,
-      is_visible: true,
-    }));
-
-    const { error: testErr } = await supabaseAdmin
-      .from('storefront_testimonials')
-      .insert(testimonials);
-    if (testErr) logger.warn({ err: testErr }, 'Failed to create generated testimonials');
-
-    // 10. Generate brand-specific FAQs
-    const faqs = generateBrandFaqs(brand.name, products, template).map((f, i) => ({
-      storefront_id: storefront.id,
-      question: f.question,
-      answer: f.answer,
-      sort_order: i,
-      is_visible: true,
-    }));
-
-    const { error: faqErr } = await supabaseAdmin
-      .from('storefront_faqs')
-      .insert(faqs);
-    if (faqErr) logger.warn({ err: faqErr }, 'Failed to create generated FAQs');
+    // 8. Dispatch BullMQ job for AI content generation
+    const { jobId } = await dispatchJob('storefront-generation', {
+      userId,
+      brandId,
+      storefrontId: storefront.id,
+      themeId: selectedTheme?.id || null,
+      template,
+      brandIdentity,
+    });
 
     logger.info(
-      { storefrontId: storefront.id, brandId, slug, template },
-      'Storefront generated and auto-published',
+      { storefrontId: storefront.id, brandId, slug, template, jobId },
+      'Storefront generation job dispatched',
     );
 
-    return res.status(201).json({
+    return res.status(202).json({
       success: true,
       data: {
-        ...toStorefrontResponse(storefront),
-        template,
-        sectionCount: sections.length,
-        testimonialCount: testimonials.length,
-        faqCount: faqs.length,
+        jobId,
+        storefrontId: storefront.id,
+        slug,
       },
     });
   } catch (err) {

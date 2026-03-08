@@ -1,0 +1,14 @@
+# caddy/Dockerfile
+#
+# Custom Caddy build with Cloudflare DNS plugin for wildcard TLS certificates.
+# The official caddy:2-alpine image does NOT include DNS challenge providers.
+# We use the caddy builder image to compile Caddy with the cloudflare module.
+
+FROM caddy:2-builder AS builder
+
+RUN xcaddy build \
+    --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

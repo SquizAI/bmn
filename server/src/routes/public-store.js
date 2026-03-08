@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import * as publicStoreController from '../controllers/public-store.js';
 import { validate } from '../middleware/validate.js';
+import { serveStorePreview } from '../controllers/store-preview.js';
 import {
   storeSlugParamsSchema,
   productIdParamsSchema,
@@ -17,6 +18,12 @@ import {
 } from '../validation/storefronts.js';
 
 export const publicStoreRoutes = Router();
+
+// GET /api/v1/store/:slug/preview -- Server-rendered preview page for dashboard iframe
+publicStoreRoutes.get(
+  '/:slug/preview',
+  serveStorePreview,
+);
 
 // GET /api/v1/store/:slug -- Get full published storefront data (single request)
 publicStoreRoutes.get(

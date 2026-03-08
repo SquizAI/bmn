@@ -1,14 +1,21 @@
-# Caddy reverse proxy with automatic HTTPS
+# Caddy reverse proxy with automatic HTTPS + Cloudflare DNS for wildcard certs
 # Used with: docker compose -f docker-compose.prod.yml -f docker-compose.caddy.yml up -d
+#
+# Requires CLOUDFLARE_API_TOKEN in .env.production for wildcard TLS on *.brandmenow.store
+# See docs/dns-setup.md for setup instructions.
 
 services:
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
     container_name: bmn-caddy
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - bmn-caddy-data:/data
@@ -16,6 +23,7 @@ services:
     depends_on:
       - client
       - server
+      - storefront
     restart: always
     networks:
       - bmn-external

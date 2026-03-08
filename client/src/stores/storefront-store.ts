@@ -57,40 +57,24 @@ export interface Faq {
   isVisible: boolean;
 }
 
-export type ActiveTab = 'editor' | 'testimonials' | 'faqs' | 'analytics' | 'settings';
 export type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
 
 // ── Store ───────────────────────────────────────────────────────────────────
 
-interface StorefrontBuilderState {
+interface StorefrontState {
   storefront: Storefront | null;
   sections: StorefrontSection[];
   testimonials: Testimonial[];
   faqs: Faq[];
   theme: StorefrontTheme | null;
-  selectedSectionId: string | null;
-  isDirty: boolean;
-  isSaving: boolean;
-  isPreviewOpen: boolean;
   previewDevice: PreviewDevice;
-  activeTab: ActiveTab;
 
   setStorefront: (storefront: Storefront) => void;
   setSections: (sections: StorefrontSection[]) => void;
   setTestimonials: (testimonials: Testimonial[]) => void;
   setFaqs: (faqs: Faq[]) => void;
   setTheme: (theme: StorefrontTheme | null) => void;
-  selectSection: (id: string | null) => void;
-  updateSectionContent: (id: string, content: Record<string, unknown>) => void;
-  toggleSectionVisibility: (id: string) => void;
-  reorderSections: (fromIndex: number, toIndex: number) => void;
-  addSection: (section: StorefrontSection) => void;
-  removeSection: (id: string) => void;
-  setDirty: (dirty: boolean) => void;
-  setSaving: (saving: boolean) => void;
-  togglePreview: () => void;
   setPreviewDevice: (device: PreviewDevice) => void;
-  setActiveTab: (tab: ActiveTab) => void;
   reset: () => void;
 }
 
@@ -100,15 +84,10 @@ const initialState = {
   testimonials: [] as Testimonial[],
   faqs: [] as Faq[],
   theme: null as StorefrontTheme | null,
-  selectedSectionId: null as string | null,
-  isDirty: false,
-  isSaving: false,
-  isPreviewOpen: false,
   previewDevice: 'desktop' as PreviewDevice,
-  activeTab: 'editor' as ActiveTab,
 };
 
-export const useStorefrontStore = create<StorefrontBuilderState>()(
+export const useStorefrontStore = create<StorefrontState>()(
   devtools(
     (set) => ({
       ...initialState,
@@ -128,77 +107,10 @@ export const useStorefrontStore = create<StorefrontBuilderState>()(
 
       setTheme: (theme) => set({ theme }, false, 'setTheme'),
 
-      selectSection: (id) => set({ selectedSectionId: id }, false, 'selectSection'),
-
-      updateSectionContent: (id, content) =>
-        set(
-          (state) => ({
-            sections: state.sections.map((s) =>
-              s.id === id ? { ...s, content: { ...s.content, ...content } } : s,
-            ),
-            isDirty: true,
-          }),
-          false,
-          'updateSectionContent',
-        ),
-
-      toggleSectionVisibility: (id) =>
-        set(
-          (state) => ({
-            sections: state.sections.map((s) =>
-              s.id === id ? { ...s, isVisible: !s.isVisible } : s,
-            ),
-            isDirty: true,
-          }),
-          false,
-          'toggleSectionVisibility',
-        ),
-
-      reorderSections: (fromIndex, toIndex) =>
-        set(
-          (state) => {
-            const updated = [...state.sections];
-            const [moved] = updated.splice(fromIndex, 1);
-            updated.splice(toIndex, 0, moved);
-            return {
-              sections: updated.map((s, i) => ({ ...s, sortOrder: i })),
-              isDirty: true,
-            };
-          },
-          false,
-          'reorderSections',
-        ),
-
-      addSection: (section) =>
-        set(
-          (state) => ({
-            sections: [...state.sections, section].sort((a, b) => a.sortOrder - b.sortOrder),
-            isDirty: true,
-          }),
-          false,
-          'addSection',
-        ),
-
-      removeSection: (id) =>
-        set(
-          (state) => ({
-            sections: state.sections
-              .filter((s) => s.id !== id)
-              .map((s, i) => ({ ...s, sortOrder: i })),
-            selectedSectionId: state.selectedSectionId === id ? null : state.selectedSectionId,
-            isDirty: true,
-          }),
-          false,
-          'removeSection',
-        ),
-
-      setDirty: (dirty) => set({ isDirty: dirty }, false, 'setDirty'),
-      setSaving: (saving) => set({ isSaving: saving }, false, 'setSaving'),
-      togglePreview: () => set((s) => ({ isPreviewOpen: !s.isPreviewOpen }), false, 'togglePreview'),
       setPreviewDevice: (device) => set({ previewDevice: device }, false, 'setPreviewDevice'),
-      setActiveTab: (tab) => set({ activeTab: tab }, false, 'setActiveTab'),
+
       reset: () => set(initialState, false, 'reset'),
     }),
-    { name: 'StorefrontBuilderStore' },
+    { name: 'StorefrontStore' },
   ),
 );

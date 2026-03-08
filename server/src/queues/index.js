@@ -1,7 +1,7 @@
 // server/src/queues/index.js
 
 import { Queue } from 'bullmq';
-import { redis, getBullRedisConfig } from '../lib/redis.js';
+import { getBullRedisConfig } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -258,6 +258,22 @@ export const QUEUE_CONFIGS = {
     cleanup: {
       removeOnComplete: { count: 200, age: 86_400 },
       removeOnFail: { count: 100, age: 604_800 },
+    },
+  },
+
+  'storefront-generation': {
+    name: 'storefront-generation',
+    concurrency: 3,
+    timeout: 120_000,       // 2 minutes
+    priority: 1,            // Highest -- user is actively waiting
+    retry: {
+      attempts: 2,
+      backoffDelay: 5_000,
+      backoffType: 'exponential',
+    },
+    cleanup: {
+      removeOnComplete: { count: 200, age: 86_400 },
+      removeOnFail: { count: 200, age: 604_800 },
     },
   },
 
