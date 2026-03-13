@@ -38,6 +38,8 @@ export function initLogoGenerationWorker(io) {
       } = job.data;
 
       const jobLog = createJobLogger(job, 'logo-generation');
+      const room = `brand:${brandId}`;
+      const jobRoom = `job:${job.id}`;
       const userRoom = `user:${userId}`;
       const logos = [];
 
@@ -46,7 +48,7 @@ export function initLogoGenerationWorker(io) {
       try {
         // ── Step 1: Resolve template + compose prompts (5-10%) ──────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 5, message: 'Building logo templates...', timestamp: Date.now(),
         });
@@ -74,7 +76,7 @@ export function initLogoGenerationWorker(io) {
           'Template resolved'
         );
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 10,
           message: `Generating ${template.prompts.length} logo variations: ${template.prompts.map((p) => p.label).join(', ')}`,
@@ -90,7 +92,7 @@ export function initLogoGenerationWorker(io) {
           template.prompts.map(async (prompt, index) => {
             const logoNumber = index + 1;
 
-            io.to(userRoom).emit('job:progress', {
+            io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',
               progress: Math.round(10 + (index * progressPerLogo)),
               message: `Generating ${prompt.label} (${logoNumber}/${template.prompts.length})...`,
@@ -103,7 +105,7 @@ export function initLogoGenerationWorker(io) {
               colors: template.recraftParams.colors,
             });
 
-            io.to(userRoom).emit('job:progress', {
+            io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
               jobId: job.id, brandId, status: 'generating',
               progress: Math.round(10 + ((index + 1) * progressPerLogo)),
               message: `${prompt.label} generated!`,
@@ -119,7 +121,7 @@ export function initLogoGenerationWorker(io) {
 
         // ── Step 3: Vectorize any non-SVG results (70-80%) ──────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'vectorizing',
           progress: 70, message: 'Converting to vector format...', timestamp: Date.now(),
         });
@@ -164,7 +166,7 @@ export function initLogoGenerationWorker(io) {
 
         // ── Step 4: Upload to storage (80-90%) ──────────────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'uploading',
           progress: 80, message: 'Uploading logos to storage...', timestamp: Date.now(),
         });
@@ -235,7 +237,7 @@ export function initLogoGenerationWorker(io) {
 
         // ── Step 5: Save to brand_assets (90-95%) ───────────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'saving',
           progress: 90, message: 'Saving logo records...', timestamp: Date.now(),
         });
@@ -295,7 +297,7 @@ export function initLogoGenerationWorker(io) {
         await job.updateProgress(100);
 
         // Emit: complete
-        io.to(userRoom).emit('job:complete', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:complete', {
           jobId: job.id,
           brandId,
           status: 'complete',
@@ -317,7 +319,7 @@ export function initLogoGenerationWorker(io) {
           jobLog.error({ err: dbErr }, 'Failed to update generation_jobs on failure');
         });
 
-        io.to(userRoom).emit('job:failed', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:failed', {
           jobId: job.id, brandId,
           error: error.message,
           retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),

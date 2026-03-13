@@ -89,7 +89,7 @@ export interface Product {
 export interface CartItem {
   productId: string;
   quantity: number;
-  price: number;
+  priceCents: number;
 }
 
 export interface Cart {
@@ -131,7 +131,12 @@ export function getCart(slug: string, sessionId: string) {
 export function createCheckout(slug: string, sessionId: string, email: string) {
   return request<{ checkoutUrl: string }>(`${API_BASE}/${slug}/checkout`, {
     method: 'POST',
-    body: JSON.stringify({ sessionId, email }),
+    body: JSON.stringify({
+      sessionId,
+      email,
+      successUrl: `${window.location.origin}/store/${slug}/checkout/success`,
+      cancelUrl: `${window.location.origin}/store/${slug}`,
+    }),
   });
 }
 

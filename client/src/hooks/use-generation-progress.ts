@@ -44,7 +44,7 @@ export interface GenerationProgress {
 }
 
 /** How long (ms) without a Socket.io event before activating the polling fallback. */
-const SOCKET_SILENCE_THRESHOLD = 10_000;
+const SOCKET_SILENCE_THRESHOLD = 5_000;
 
 /** Polling interval (ms) for the HTTP fallback. */
 const POLL_INTERVAL = 5_000;
@@ -110,8 +110,12 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
 
     setStatus('pending');
     setMessage('Starting...');
-    // Immediately enable polling as fallback while socket connects
-    setShouldPoll(true);
+    // Delay enabling polling fallback by 2s to give the socket time to connect
+    const pollDelayTimer = setTimeout(() => {
+      if (!cancelled && !isTerminalRef.current) {
+        setShouldPoll(true);
+      }
+    }, 2_000);
 
     const markSocketActivity = () => {
       lastSocketEventRef.current = Date.now();
@@ -199,6 +203,7 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
 
     return () => {
       cancelled = true;
+      clearTimeout(pollDelayTimer);
       if (attachedSocket) {
         detachListeners(attachedSocket);
       }

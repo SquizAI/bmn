@@ -42,7 +42,7 @@ async function socketAuthMiddleware(socket, next) {
 }
 
 /**
- * Admin-only auth middleware. Requires admin role in app_metadata.
+ * Admin-only auth middleware. Requires admin or super_admin role in profiles table.
  *
  * @param {import('socket.io').Socket} socket
  * @param {Function} next
@@ -61,7 +61,14 @@ async function adminAuthMiddleware(socket, next) {
       return next(new Error('Invalid token'));
     }
 
-    if (user.app_metadata?.role !== 'admin') {
+    // Query profiles table for role (not JWT app_metadata)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
       return next(new Error('Admin access required'));
     }
 

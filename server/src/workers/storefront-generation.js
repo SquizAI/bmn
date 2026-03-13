@@ -30,6 +30,8 @@ export function initStorefrontGenerationWorker(io) {
     async (job) => {
       const { userId, brandId, storefrontId, themeId, brandIdentity, template } = job.data;
       const jobLog = createJobLogger(job, 'storefront-generation');
+      const room = `brand:${brandId}`;
+      const jobRoom = `job:${job.id}`;
       const userRoom = `user:${userId}`;
 
       jobLog.info({ storefrontId, brandId, template }, 'Storefront generation started');
@@ -37,13 +39,22 @@ export function initStorefrontGenerationWorker(io) {
       try {
         // ── Step 1: Generate content via AI (0-50%) ─────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id,
           brandId,
           status: 'generating',
           progress: 20,
           message: 'Generating storefront content...',
           timestamp: Date.now(),
+        });
+        io.of('/wizard').to(userRoom).emit('job:progress', {
+          jobId: job.id, brandId, status: 'generating',
+          progress: 20, message: 'Generating storefront content...', timestamp: Date.now(),
+        });
+        // Also emit on default namespace for dashboard updates
+        io.to(userRoom).emit('job:progress', {
+          jobId: job.id, brandId, status: 'generating',
+          progress: 20, message: 'Generating storefront content...', timestamp: Date.now(),
         });
         await job.updateProgress(20);
 
@@ -56,13 +67,21 @@ export function initStorefrontGenerationWorker(io) {
 
         // ── Step 2: Write sections to DB (50-80%) ───────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id,
           brandId,
           status: 'writing',
           progress: 60,
           message: 'Writing sections...',
           timestamp: Date.now(),
+        });
+        io.of('/wizard').to(userRoom).emit('job:progress', {
+          jobId: job.id, brandId, status: 'writing',
+          progress: 60, message: 'Writing sections...', timestamp: Date.now(),
+        });
+        io.to(userRoom).emit('job:progress', {
+          jobId: job.id, brandId, status: 'writing',
+          progress: 60, message: 'Writing sections...', timestamp: Date.now(),
         });
         await job.updateProgress(60);
 
@@ -278,13 +297,17 @@ export function initStorefrontGenerationWorker(io) {
 
         // ── Step 5: Publish storefront (80-100%) ────────────────────
 
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
+          jobId: job.id, brandId, status: 'publishing',
+          progress: 90, message: 'Publishing storefront...', timestamp: Date.now(),
+        });
+        io.of('/wizard').to(userRoom).emit('job:progress', {
+          jobId: job.id, brandId, status: 'publishing',
+          progress: 90, message: 'Publishing storefront...', timestamp: Date.now(),
+        });
         io.to(userRoom).emit('job:progress', {
-          jobId: job.id,
-          brandId,
-          status: 'publishing',
-          progress: 90,
-          message: 'Publishing storefront...',
-          timestamp: Date.now(),
+          jobId: job.id, brandId, status: 'publishing',
+          progress: 90, message: 'Publishing storefront...', timestamp: Date.now(),
         });
         await job.updateProgress(90);
 
@@ -322,16 +345,23 @@ export function initStorefrontGenerationWorker(io) {
 
         // ── Emit completion ─────────────────────────────────────────
 
-        io.to(userRoom).emit('job:complete', {
-          jobId: job.id,
-          brandId,
-          status: 'complete',
-          progress: 100,
+        io.of('/wizard').to(jobRoom).to(room).emit('job:complete', {
+          jobId: job.id, brandId, status: 'complete', progress: 100,
           message: 'Storefront generated and published!',
-          result: {
-            storefrontId,
-            slug: updatedStorefront?.slug || null,
-          },
+          result: { storefrontId, slug: updatedStorefront?.slug || null },
+          timestamp: Date.now(),
+        });
+        io.of('/wizard').to(userRoom).emit('job:complete', {
+          jobId: job.id, brandId, status: 'complete', progress: 100,
+          message: 'Storefront generated and published!',
+          result: { storefrontId, slug: updatedStorefront?.slug || null },
+          timestamp: Date.now(),
+        });
+        // Also emit on default namespace for dashboard updates
+        io.to(userRoom).emit('job:complete', {
+          jobId: job.id, brandId, status: 'complete', progress: 100,
+          message: 'Storefront generated and published!',
+          result: { storefrontId, slug: updatedStorefront?.slug || null },
           timestamp: Date.now(),
         });
 
@@ -354,9 +384,21 @@ export function initStorefrontGenerationWorker(io) {
       } catch (error) {
         jobLog.error({ err: error }, 'Storefront generation failed');
 
+        io.of('/wizard').to(jobRoom).to(room).emit('job:failed', {
+          jobId: job.id, brandId,
+          error: error.message,
+          retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),
+          timestamp: Date.now(),
+        });
+        io.of('/wizard').to(userRoom).emit('job:failed', {
+          jobId: job.id, brandId,
+          error: error.message,
+          retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),
+          timestamp: Date.now(),
+        });
+        // Also emit on default namespace for dashboard updates
         io.to(userRoom).emit('job:failed', {
-          jobId: job.id,
-          brandId,
+          jobId: job.id, brandId,
           error: error.message,
           retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),
           timestamp: Date.now(),

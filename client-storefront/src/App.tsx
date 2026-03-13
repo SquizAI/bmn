@@ -4,6 +4,7 @@ import { useStoreData } from '@/hooks/use-store-data';
 import { useCartState, CartProvider } from '@/hooks/use-cart';
 import { usePageView } from '@/hooks/use-analytics';
 import { applyTheme } from '@/lib/theme';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { StorefrontLayout } from '@/components/layout/StorefrontLayout';
 import { HomePage } from '@/components/HomePage';
 import { ProductPage } from '@/components/product/ProductPage';
@@ -50,32 +51,34 @@ export function App() {
   }
 
   return (
-    <CartProvider value={cartCtx}>
-      <BrowserRouter>
-        <StorefrontLayout store={store.data} products={store.products}>
-          <Routes>
-            <Route
-              index
-              element={
-                <HomePage
-                  store={store.data}
-                  products={store.products}
-                  filterByCategory={store.filterByCategory}
-                />
-              }
-            />
-            <Route
-              path="products/:productId"
-              element={<ProductPage slug={slug} products={store.products} />}
-            />
-            <Route
-              path="checkout/success"
-              element={<CheckoutPage />}
-            />
-          </Routes>
-        </StorefrontLayout>
-      </BrowserRouter>
-    </CartProvider>
+    <ErrorBoundary>
+      <CartProvider value={cartCtx}>
+        <BrowserRouter>
+          <StorefrontLayout store={store.data} products={store.products}>
+            <Routes>
+              <Route
+                index
+                element={
+                  <HomePage
+                    store={store.data}
+                    products={store.products}
+                    filterByCategory={store.filterByCategory}
+                  />
+                }
+              />
+              <Route
+                path="products/:productId"
+                element={<ProductPage slug={slug} products={store.products} />}
+              />
+              <Route
+                path="checkout/success"
+                element={<CheckoutPage />}
+              />
+            </Routes>
+          </StorefrontLayout>
+        </BrowserRouter>
+      </CartProvider>
+    </ErrorBoundary>
   );
 }
 

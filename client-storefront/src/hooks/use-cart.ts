@@ -75,7 +75,7 @@ export function useCartState(slug: string): CartContext {
         ? s.items.map((i) =>
             i.productId === product.id ? { ...i, quantity: i.quantity + quantity } : i,
           )
-        : [...s.items, { productId: product.id, quantity, price: product.priceCents }];
+        : [...s.items, { productId: product.id, quantity, priceCents: product.priceCents }];
       return { ...s, items: newItems, isOpen: true };
     });
   }, []);

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { supabaseAdmin } from '../../../../lib/supabase.js';
 import { logger } from '../../../../lib/logger.js';
 import { validate } from '../../../../middleware/validate.js';
-import { RecommendationRequestSchema } from '../../../../../shared/schemas/products.js';
+import { RecommendationRequestSchema } from '../../../../../../shared/schemas/products.js';
 
 export const recommendationsRouter = Router();
 

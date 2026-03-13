@@ -173,24 +173,8 @@ export async function generateProductMockup({ prompt, productSku, productName, l
 // ── generateTextOnProduct ────────────────────────────────────────
 
 /**
- * Map user-facing aspect ratio strings to Ideogram API format.
- * @param {string} ratio - e.g. '1:1', '4:3'
- * @returns {string} Ideogram format e.g. 'ASPECT_1_1'
- */
-function toIdeogramAspectRatio(ratio) {
-  const map = {
-    '1:1': 'ASPECT_1_1',
-    '4:3': 'ASPECT_4_3',
-    '3:4': 'ASPECT_3_4',
-    '16:9': 'ASPECT_16_9',
-    '9:16': 'ASPECT_9_16',
-  };
-  return map[ratio] || 'ASPECT_1_1';
-}
-
-/**
- * Generate a text-on-product image via Ideogram v3.
- * Falls back to GPT Image 1.5 if Ideogram fails after retries.
+ * Generate a text-on-product image via Gemini 3 Pro Image.
+ * Falls back to GPT Image 1.5 if Gemini fails after retries.
  *
  * @param {Object} input
  * @param {string} input.prompt
@@ -201,75 +185,18 @@ function toIdeogramAspectRatio(ratio) {
  * @param {string} [input.styleType='realistic']
  * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
  */
-export async function generateTextOnProduct({ prompt, brandText, productSku, productName: _productName, aspectRatio, styleType }) {
-  logger.info({ productSku, brandText, styleType }, 'Generating text-on-product via Ideogram v3');
+export async function generateTextOnProduct({ prompt, brandText, productSku, productName: _productName, aspectRatio: _aspectRatio, styleType: _styleType }) {
+  logger.info({ productSku, brandText }, 'Generating text-on-product via Gemini 3 Pro Image');
 
-  // Skip Ideogram if no API key is configured
-  if (!process.env.IDEOGRAM_API_KEY) {
-    logger.info({ productSku }, 'No Ideogram API key — using Gemini/GPT fallback');
-    return await fallbackToGPTImage(prompt, productSku);
+  if (!process.env.GOOGLE_API_KEY) {
+    logger.info({ productSku }, 'No Google API key — falling back to GPT Image 1.5');
+    return await fallbackTextToGPTImage(prompt, productSku);
   }
 
   try {
-    const response = await withRetry(
-      () => fetch('https://api.ideogram.ai/generate', {
-        method: 'POST',
-        headers: {
-          'Api-Key': process.env.IDEOGRAM_API_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image_request: {
-            prompt,
-            aspect_ratio: toIdeogramAspectRatio(aspectRatio || '1:1'),
-            model: 'V_3',
-            style_type: (styleType || 'realistic').toUpperCase(),
-            magic_prompt_option: 'AUTO',
-          },
-        }),
-      }),
-    );
-
-    if (!response.ok) {
-      const errBody = await response.text();
-      logger.error({ status: response.status, body: errBody }, 'Ideogram API failed');
-      return await fallbackToGPTImage(prompt, productSku);
-    }
-
-    const data = await response.json();
-    const imageUrl = data.data?.[0]?.url || null;
-
-    if (!imageUrl) {
-      logger.warn({ productSku }, 'No image URL in Ideogram response');
-      return await fallbackToGPTImage(prompt, productSku);
-    }
-
-    return {
-      success: true,
-      imageUrl,
-      model: 'ideogram-v3',
-      error: null,
-    };
-  } catch (err) {
-    logger.error({ err, productSku }, 'Ideogram v3 generation failed after retries');
-    return await fallbackToGPTImage(prompt, productSku);
-  }
-}
-
-/**
- * Fallback chain: Gemini 3.1 Flash Image → GPT Image 1.5.
- *
- * @param {string} prompt
- * @param {string} productSku
- * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
- */
-async function fallbackToGPTImage(prompt, productSku) {
-  // Try Gemini 3.1 Flash Image first via REST API (fast, high-volume)
-  if (process.env.GOOGLE_API_KEY) {
-    try {
-      logger.info({ productSku }, 'Trying Gemini 3.1 Flash Image fallback');
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${process.env.GOOGLE_API_KEY}`,
+    const geminiRes = await withRetry(
+      () => fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${process.env.GOOGLE_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -278,33 +205,54 @@ async function fallbackToGPTImage(prompt, productSku) {
             generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
           }),
         },
-      );
-      if (geminiRes.ok) {
-        const geminiData = await geminiRes.json();
-        const parts = geminiData.candidates?.[0]?.content?.parts || [];
-        const imagePart = parts.find((p) => p.inlineData?.mimeType?.startsWith('image/'));
-        if (imagePart?.inlineData?.data) {
-          const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
-          const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
-          return { success: true, imageUrl, model: 'gemini-3.1-flash-image', error: null };
-        }
-        logger.warn({ productSku }, 'Gemini returned no image, falling through to GPT Image 1.5');
-      } else {
-        const errBody = await geminiRes.text();
-        logger.warn({ status: geminiRes.status, body: errBody.slice(0, 200), productSku }, 'Gemini REST API failed');
-      }
-    } catch (err) {
-      logger.warn({ err: err.message, productSku }, 'Gemini fallback failed');
-    }
-  }
+      ),
+    );
 
-  // Final fallback: GPT Image 1.5
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      logger.error({ status: geminiRes.status, body: errBody.slice(0, 200), productSku }, 'Gemini 3 Pro Image API failed');
+      return await fallbackTextToGPTImage(prompt, productSku);
+    }
+
+    const geminiData = await geminiRes.json();
+    const parts = geminiData.candidates?.[0]?.content?.parts || [];
+    const imagePart = parts.find((p) => p.inlineData?.mimeType?.startsWith('image/'));
+
+    if (!imagePart?.inlineData?.data) {
+      logger.warn({ productSku }, 'Gemini 3 Pro Image returned no image, falling back to GPT Image 1.5');
+      return await fallbackTextToGPTImage(prompt, productSku);
+    }
+
+    const imageBuffer = Buffer.from(imagePart.inlineData.data, 'base64');
+    const imageUrl = await uploadToStorage(imageBuffer, 'mockups', productSku);
+
+    return {
+      success: true,
+      imageUrl,
+      model: 'gemini-3-pro-image-preview',
+      error: null,
+    };
+  } catch (err) {
+    logger.error({ err, productSku }, 'Gemini 3 Pro Image generation failed after retries');
+    return await fallbackTextToGPTImage(prompt, productSku);
+  }
+}
+
+/**
+ * Fallback: GPT Image 1.5 for text-on-product when Gemini fails.
+ *
+ * @param {string} prompt
+ * @param {string} productSku
+ * @returns {Promise<{ success: boolean, imageUrl: string|null, model: string, error: string|null }>}
+ */
+async function fallbackTextToGPTImage(prompt, productSku) {
   const openai = await getOpenAIClient();
   if (!openai) {
     return { success: false, imageUrl: null, model: 'gpt-image-1.5', error: 'No image generation API available' };
   }
 
   try {
+    logger.info({ productSku }, 'Falling back to GPT Image 1.5 for text-on-product');
     const result = await openai.images.generate({
       model: 'gpt-image-1.5',
       prompt,

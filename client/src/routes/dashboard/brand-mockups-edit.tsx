@@ -100,14 +100,14 @@ export default function BrandMockupsEditPage() {
   const genProgress = useGenerationProgress(jobId);
 
   // Reset generation state when complete
-  if (genProgress.isComplete && jobId) {
-    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.brand(brandId!) });
+  if (brandId && genProgress.isComplete && jobId) {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.brand(brandId) });
     setJobId(null);
     setGenerating(false);
     genProgress.reset();
   }
 
-  if (genProgress.isError && jobId) {
+  if (brandId && genProgress.isError && jobId) {
     addToast({ type: 'error', title: genProgress.error || 'Mockup generation failed' });
     setJobId(null);
     setGenerating(false);

@@ -133,6 +133,8 @@ export function initPrintExportWorker(io) {
     async (job) => {
       const { userId, brandId, productId, templateId, format } = job.data;
       const jobLog = createJobLogger(job, 'print-export');
+      const room = `brand:${brandId}`;
+      const jobRoom = `job:${job.id}`;
       const userRoom = `user:${userId}`;
 
       jobLog.info({ productId, templateId, format }, 'Print export started');
@@ -140,7 +142,7 @@ export function initPrintExportWorker(io) {
       try {
         // ── Step 1: Load brand, product, template, logo (0-15%) ─────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'loading',
           progress: 5, message: 'Loading brand and template data...', timestamp: Date.now(),
         });
@@ -190,7 +192,7 @@ export function initPrintExportWorker(io) {
 
         const logoUrl = logoAssets?.[0]?.url || null;
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'loading',
           progress: 15, message: 'Brand data loaded, composing print artwork...', timestamp: Date.now(),
         });
@@ -206,7 +208,7 @@ export function initPrintExportWorker(io) {
 
         // ── Step 2: Compose print-ready prompt (15-25%) ─────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 20, message: 'Building print-ready artwork prompt...', timestamp: Date.now(),
         });
@@ -217,7 +219,7 @@ export function initPrintExportWorker(io) {
 
         jobLog.info({ promptLength: prompt.length, imageSize }, 'Print prompt composed');
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'composing',
           progress: 25, message: 'Prompt ready, generating artwork...', timestamp: Date.now(),
         });
@@ -225,7 +227,7 @@ export function initPrintExportWorker(io) {
 
         // ── Step 3: Generate via GPT Image 1.5 (25-65%) ─────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'generating',
           progress: 30,
           message: `Generating print-ready ${product.name} artwork via GPT Image...`,
@@ -250,7 +252,7 @@ export function initPrintExportWorker(io) {
 
         jobLog.info({ imageSize }, 'Print artwork generated via GPT Image');
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'generating',
           progress: 65, message: 'Artwork generated, uploading...', timestamp: Date.now(),
         });
@@ -258,7 +260,7 @@ export function initPrintExportWorker(io) {
 
         // ── Step 4: Dispatch image-upload to Supabase Storage (65-80%) ──
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'uploading',
           progress: 70, message: 'Uploading print-ready artwork to storage...', timestamp: Date.now(),
         });
@@ -287,7 +289,7 @@ export function initPrintExportWorker(io) {
 
         jobLog.info({ uploadJobId: uploadResult.jobId }, 'Image upload dispatched');
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'uploading',
           progress: 80, message: 'Upload dispatched, saving record...', timestamp: Date.now(),
         });
@@ -295,7 +297,7 @@ export function initPrintExportWorker(io) {
 
         // ── Step 5: Save brand_asset with print_ready type (80-95%) ─────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'saving',
           progress: 85, message: 'Saving print export record...', timestamp: Date.now(),
         });
@@ -342,7 +344,7 @@ export function initPrintExportWorker(io) {
 
         // ── Step 6: Update generation_jobs (95-100%) ────────────────────
 
-        io.to(userRoom).emit('job:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:progress', {
           jobId: job.id, brandId, status: 'finalizing',
           progress: 95, message: 'Finalizing print export...', timestamp: Date.now(),
         });
@@ -374,7 +376,7 @@ export function initPrintExportWorker(io) {
 
         await job.updateProgress(100);
 
-        io.to(userRoom).emit('job:complete', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:complete', {
           jobId: job.id,
           brandId,
           status: 'complete',
@@ -401,7 +403,7 @@ export function initPrintExportWorker(io) {
           jobLog.error({ err: dbErr }, 'Failed to update generation_jobs on failure');
         });
 
-        io.to(userRoom).emit('job:failed', {
+        io.of('/wizard').to(jobRoom).to(room).emit('job:failed', {
           jobId: job.id, brandId,
           error: error.message,
           retriesLeft: (queueConfig.retry.attempts - job.attemptsMade),

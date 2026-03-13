@@ -702,19 +702,31 @@ function compileDossier(taskResults, scrapedData) {
 // ------ Emit Helpers ------
 
 /**
- * Emit a Socket.io progress event.
+ * Emit a Socket.io progress event on the /wizard namespace.
+ * Emits to both the job room and brand room, plus the user room as fallback.
  *
  * @param {import('socket.io').Server|null} io
  * @param {string} userId
+ * @param {string} brandId
  * @param {string} jobId
  * @param {string} phase
  * @param {number} progress
  * @param {string} message
  * @param {Object} [data]
  */
-function emitProgress(io, userId, jobId, phase, progress, message, data) {
+function emitProgress(io, userId, brandId, jobId, phase, progress, message, data) {
   if (!io) return;
-  io.to(`user:${userId}`).emit('generation:progress', {
+  const room = `brand:${brandId}`;
+  const jobRoom = `job:${jobId}`;
+  io.of('/wizard').to(jobRoom).to(room).emit('generation:progress', {
+    jobId,
+    phase,
+    progress,
+    message,
+    ...(data && { data }),
+  });
+  // Also emit to user room for cases where client isn't in a brand room
+  io.of('/wizard').to(`user:${userId}`).emit('generation:progress', {
     jobId,
     phase,
     progress,
@@ -724,32 +736,46 @@ function emitProgress(io, userId, jobId, phase, progress, message, data) {
 }
 
 /**
- * Emit a Socket.io completion event.
+ * Emit a Socket.io completion event on the /wizard namespace.
  *
  * @param {import('socket.io').Server|null} io
  * @param {string} userId
+ * @param {string} brandId
  * @param {string} jobId
  * @param {Object} dossier
  */
-function emitComplete(io, userId, jobId, dossier) {
+function emitComplete(io, userId, brandId, jobId, dossier) {
   if (!io) return;
-  io.to(`user:${userId}`).emit('generation:complete', {
+  const room = `brand:${brandId}`;
+  const jobRoom = `job:${jobId}`;
+  io.of('/wizard').to(jobRoom).to(room).emit('generation:complete', {
+    jobId,
+    result: dossier,
+  });
+  io.of('/wizard').to(`user:${userId}`).emit('generation:complete', {
     jobId,
     result: dossier,
   });
 }
 
 /**
- * Emit a Socket.io error event.
+ * Emit a Socket.io error event on the /wizard namespace.
  *
  * @param {import('socket.io').Server|null} io
  * @param {string} userId
+ * @param {string} brandId
  * @param {string} jobId
  * @param {string} errorMessage
  */
-function emitError(io, userId, jobId, errorMessage) {
+function emitError(io, userId, brandId, jobId, errorMessage) {
   if (!io) return;
-  io.to(`user:${userId}`).emit('generation:error', {
+  const room = `brand:${brandId}`;
+  const jobRoom = `job:${jobId}`;
+  io.of('/wizard').to(jobRoom).to(room).emit('generation:error', {
+    jobId,
+    error: errorMessage,
+  });
+  io.of('/wizard').to(`user:${userId}`).emit('generation:error', {
     jobId,
     error: errorMessage,
   });
@@ -791,18 +817,18 @@ export function initSocialAnalysisWorker(io) {
       const hasData = hasScrapedData(job.data);
 
       // ── Phase 1: Run tasks 1-5 in parallel ──
-      emitProgress(io, userId, job.id, 'scraping', 5, 'Starting parallel analysis...');
+      emitProgress(io, userId, brandId, job.id, 'scraping', 5, 'Starting parallel analysis...');
 
       const parallelPromises = PARALLEL_TASKS.map(async (taskDef) => {
         // Emit task start
-        emitProgress(io, userId, job.id, taskDef.phaseStart, taskDef.progressStart, taskDef.messageStart);
+        emitProgress(io, userId, brandId, job.id, taskDef.phaseStart, taskDef.progressStart, taskDef.messageStart);
 
         try {
           const result = await runSubTask(taskDef, dataContext, hasData, jobLog);
 
           // Emit task completion with partial data
           emitProgress(
-            io, userId, job.id,
+            io, userId, brandId, job.id,
             taskDef.phaseComplete,
             taskDef.progressEnd,
             taskDef.messageComplete,
@@ -823,7 +849,7 @@ export function initSocialAnalysisWorker(io) {
 
           // Emit task completion with fallback notice
           emitProgress(
-            io, userId, job.id,
+            io, userId, brandId, job.id,
             taskDef.phaseComplete,
             taskDef.progressEnd,
             `${taskDef.name} used fallback data`,
@@ -862,13 +888,13 @@ export function initSocialAnalysisWorker(io) {
       if (failureCount >= MAX_ALLOWED_FAILURES) {
         const errorMsg = `Social analysis failed: ${failureCount}/${PARALLEL_TASKS.length} sub-tasks failed`;
         jobLog.error({ failureCount, brandId }, errorMsg);
-        emitError(io, userId, job.id, 'Analysis encountered too many errors. Please try again.');
+        emitError(io, userId, brandId, job.id, 'Analysis encountered too many errors. Please try again.');
         throw new Error(errorMsg);
       }
 
       // Update job progress
       await job.updateProgress(70);
-      emitProgress(io, userId, job.id, 'calculating-readiness', 75, 'Synthesizing results...');
+      emitProgress(io, userId, brandId, job.id, 'calculating-readiness', 75, 'Synthesizing results...');
 
       // ── Phase 2: Run the readiness synthesis (depends on tasks 1-5) ──
       const compiledSummary = JSON.stringify(
@@ -882,7 +908,7 @@ export function initSocialAnalysisWorker(io) {
 
       let readinessResult;
       try {
-        emitProgress(io, userId, job.id, READINESS_TASK.phaseStart, READINESS_TASK.progressStart, READINESS_TASK.messageStart);
+        emitProgress(io, userId, brandId, job.id, READINESS_TASK.phaseStart, READINESS_TASK.progressStart, READINESS_TASK.messageStart);
 
         const systemPrompt = READINESS_TASK.buildSystemPrompt();
         const userPrompt = READINESS_TASK.buildUserPrompt(compiledSummary);
@@ -920,7 +946,7 @@ export function initSocialAnalysisWorker(io) {
         readinessResult = { name: 'READINESS_SYNTHESIS', result: parsed, model: aiResult.model };
 
         emitProgress(
-          io, userId, job.id,
+          io, userId, brandId, job.id,
           READINESS_TASK.phaseComplete,
           READINESS_TASK.progressEnd,
           READINESS_TASK.messageComplete,
@@ -942,7 +968,7 @@ export function initSocialAnalysisWorker(io) {
         };
 
         emitProgress(
-          io, userId, job.id,
+          io, userId, brandId, job.id,
           READINESS_TASK.phaseComplete,
           READINESS_TASK.progressEnd,
           'Readiness score estimated',
@@ -1014,8 +1040,8 @@ export function initSocialAnalysisWorker(io) {
       const totalDurationMs = Date.now() - overallStart;
 
       // Emit final completion
-      emitProgress(io, userId, job.id, 'complete', 100, 'Analysis complete!');
-      emitComplete(io, userId, job.id, dossier);
+      emitProgress(io, userId, brandId, job.id, 'complete', 100, 'Analysis complete!');
+      emitComplete(io, userId, brandId, job.id, dossier);
 
       jobLog.info(
         {
@@ -1062,8 +1088,9 @@ export function initSocialAnalysisWorker(io) {
 
     // Emit error to user
     const userId = job?.data?.userId;
+    const brandId = job?.data?.brandId;
     if (userId) {
-      emitError(io, userId, job?.id, 'Social analysis failed. Please try again.');
+      emitError(io, userId, brandId, job?.id, 'Social analysis failed. Please try again.');
     }
   });
 

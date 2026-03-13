@@ -373,8 +373,8 @@ describe('output schemas', () => {
   it('GenerateTextOnProductOutput should validate success response', () => {
     const result = GenerateTextOnProductOutput.safeParse({
       success: true,
-      imageUrl: 'https://api.ideogram.ai/image/abc123.png',
-      model: 'ideogram-v3',
+      imageUrl: 'https://storage.supabase.co/brand-assets/mockups/text-product.png',
+      model: 'gemini-3-pro-image-preview',
       error: null,
     });
     assert.ok(result.success);

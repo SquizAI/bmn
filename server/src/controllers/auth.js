@@ -259,7 +259,7 @@ export async function completeOnboarding(req, res) {
       phone,
       full_name,
       onboarding_done: true,
-      terms_accepted_at: new Date().toISOString(),
+      tc_accepted_at: new Date().toISOString(),
     })
     .eq('id', userId)
     .select('*')

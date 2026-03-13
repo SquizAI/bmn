@@ -14,7 +14,7 @@ export const GenerateProductMockupInput = z.object({
 });
 
 export const GenerateTextOnProductInput = z.object({
-  prompt: z.string().min(20).max(1000).describe('Ideogram v3 prompt with text in quotes'),
+  prompt: z.string().min(20).max(1000).describe('Gemini 3 Pro Image prompt with text in quotes'),
   brandText: z.string().describe('Exact text to render on the product'),
   productSku: z.string(),
   productName: z.string(),
@@ -116,7 +116,7 @@ export const tools = [
   },
   {
     name: 'generateTextOnProduct',
-    description: 'Generate text-on-product image using Ideogram v3 (direct API). Best for packaging, labels, business cards, and any product where legible brand text is critical. Most reliable typography rendering. Cost: ~$0.05-0.08 per image.',
+    description: 'Generate text-on-product image using Gemini 3 Pro Image (Google AI direct API). Best for packaging, labels, business cards, and any product where legible brand text is critical. Reliable typography rendering. Cost: ~$0.03-0.06 per image.',
     inputSchema: GenerateTextOnProductInput,
     outputSchema: GenerateTextOnProductOutput,
   },

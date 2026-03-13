@@ -2,6 +2,10 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/auth-store';
+import { useBrandStore } from '@/stores/brand-store';
+import { useChatStore } from '@/stores/chat-store';
+import { useWizardStore } from '@/stores/wizard-store';
+import { useOrgStore } from '@/stores/org-store';
 import { ROUTES } from '@/lib/constants';
 
 /**
@@ -21,8 +25,12 @@ export function useAuth() {
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string) => {
-      const { error } = await supabase.auth.signUp({ email, password });
+    async (email: string, password: string, fullName?: string) => {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: fullName ? { data: { full_name: fullName } } : undefined,
+      });
       if (error) throw error;
       // Supabase may send a confirmation email; the user lands on callback
     },
@@ -42,6 +50,10 @@ export function useAuth() {
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     clear();
+    useBrandStore.getState().clearActiveBrand();
+    useChatStore.getState().clearMessages();
+    useWizardStore.getState().reset();
+    useOrgStore.getState().clear();
     navigate(ROUTES.LOGIN);
   }, [clear, navigate]);
 

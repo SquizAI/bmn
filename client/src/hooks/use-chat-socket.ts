@@ -25,6 +25,11 @@ export function useChatSocket() {
   useEffect(() => {
     if (!user) return;
 
+    if (!SOCKET_URL) {
+      console.warn('[ChatSocket] SOCKET_URL is empty, skipping connection');
+      return;
+    }
+
     let cancelled = false;
 
     (async () => {

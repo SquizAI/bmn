@@ -98,7 +98,7 @@ export function useBrandAssets(brandId: string | undefined, assetType: string) {
     queryKey: QUERY_KEYS.brandAssets(brandId ?? '', assetType),
     queryFn: () =>
       apiClient.get<unknown[]>(`/api/v1/brands/${brandId}/assets`, {
-        params: { type: assetType },
+        params: { asset_type: assetType },
       }),
     enabled: !!brandId,
   });

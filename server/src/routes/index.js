@@ -11,7 +11,7 @@ import { webhookRoutes } from './webhooks.js';
 import { healthRoute } from './health.js';
 import { packagingTemplateRoutes } from './packaging-templates.js';
 import { dashboardRoutes } from './api/v1/dashboard/index.js';
-import { analyticsRoutes } from './analytics.js';
+import { analyticsRoutes } from './api/v1/analytics/index.js';
 import { integrationRoutes } from './integrations.js';
 import { chatRoutes } from './chat.js';
 import { organizationRoutes } from './organizations.js';

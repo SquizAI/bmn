@@ -9,7 +9,7 @@ import * as handlers from './handlers.js';
  * Mockup Renderer skill module.
  *
  * Generates product mockups via GPT Image 1.5, text-on-product typography
- * via Ideogram v3, and bundle compositions via Gemini 3 Pro Image.
+ * via Gemini 3 Pro Image, and bundle compositions via Gemini 3 Pro Image.
  * All generated assets are uploaded to Supabase Storage.
  *
  * @type {import('../_shared/types.js').Skill}

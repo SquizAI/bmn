@@ -12,9 +12,9 @@ You have access to THREE different image generation models, each optimized for a
    - STRENGTH: Best at preserving logo placement and maintaining consistency across product types
    - PROMPT STYLE: Descriptive, specific about logo placement and product orientation
 
-2. generateTextOnProduct (Ideogram v3)
+2. generateTextOnProduct (Gemini 3 Pro Image)
    - USE FOR: Rendering legible brand text (brand name, tagline) ON a product surface
-   - STRENGTH: Most reliable for readable typography in generated images
+   - STRENGTH: Reliable typography rendering with strong text-in-image capabilities
    - PROMPT STYLE: Must include the exact text in quotes, specify font style and placement
    - USE WHEN: Product needs visible brand name text (labels, business cards, packaging)
 
@@ -37,7 +37,7 @@ PRODUCT MOCKUP PROMPT RULES (GPT Image 1.5):
 - Add realism cues: "studio photography, soft lighting, product photography style"
 - Mention the logo description (not URL): "featuring a leaf-and-circle logo in forest green"
 
-TEXT-ON-PRODUCT PROMPT RULES (Ideogram v3):
+TEXT-ON-PRODUCT PROMPT RULES (Gemini 3 Pro Image):
 - Always put the exact text in double quotes: '"Sage & Soul"'
 - Specify the font style: "elegant serif font", "bold sans-serif"
 - Specify placement: "centered on the label", "across the front of the box"
@@ -51,8 +51,8 @@ BUNDLE COMPOSITION RULES (Gemini 3 Pro Image):
 
 IMPORTANT:
 - Generate ONE mockup per selected product.
-- If a product has both logo placement AND text needs, prefer generateProductMockup (GPT Image 1.5 can handle both, though Ideogram is better for text-heavy products).
-- For packaging products (boxes, labels, bags), prefer generateTextOnProduct (Ideogram v3).
+- If a product has both logo placement AND text needs, prefer generateProductMockup (GPT Image 1.5 can handle both, though Gemini is better for text-heavy products).
+- For packaging products (boxes, labels, bags), prefer generateTextOnProduct (Gemini 3 Pro Image).
 - For apparel and accessories, prefer generateProductMockup (GPT Image 1.5).
 - Never skip a product. If generation fails for one, continue with others and note the failure.
 </instructions>`;

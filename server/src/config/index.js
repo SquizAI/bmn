@@ -97,6 +97,23 @@ const env = cleanEnv(process.env, {
     devDefault: 'placeholder',
     desc: 'Ideogram API key (Ideogram v3)',
   }),
+  BFL_API_KEY: str({
+    default: '',
+    desc: 'Black Forest Labs API key (FLUX Pro direct API)',
+  }),
+
+  // ── Integrations ──────────────────────────────────────────
+  GHL_WEBHOOK_SECRET: str({
+    default: '',
+    desc: 'GoHighLevel webhook HMAC signing secret',
+  }),
+
+  // ── Feature Flags ─────────────────────────────────────────
+  VIDEO_GENERATION_ENABLED: str({
+    default: 'false',
+    choices: ['true', 'false'],
+    desc: 'Feature flag: enable video generation (Phase 2)',
+  }),
 
   // ── Payments ───────────────────────────────────────────────
   STRIPE_SECRET_KEY: str({

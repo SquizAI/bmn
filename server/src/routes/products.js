@@ -4,8 +4,12 @@ import { Router } from 'express';
 import * as productController from '../controllers/products.js';
 import { validate } from '../middleware/validate.js';
 import { productQuerySchema, productIdParamsSchema } from '../validation/products.js';
+import { recommendationsRouter } from './api/v1/products/recommendations.js';
 
 export const productRoutes = Router();
+
+// ── Mounted sub-routers ─────────────────────────────────────────────────
+productRoutes.use('/recommendations', recommendationsRouter);
 
 // GET /api/v1/products -- List product catalog (with category filter, search)
 productRoutes.get('/', validate({ query: productQuerySchema }), productController.listProducts);

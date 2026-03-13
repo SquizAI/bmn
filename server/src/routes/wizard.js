@@ -13,8 +13,16 @@ import {
   personalityQuizSchema,
   customProductRequestSchema,
 } from '../validation/wizard.js';
+import { productSelectionRouter } from './api/v1/wizard/product-selection.js';
+import { mockupGenerationRouter } from './api/v1/wizard/mockup-generation.js';
+import { nameGenerationRoutes } from './api/v1/wizard/name-generation.js';
 
 export const wizardRoutes = Router();
+
+// ── Mounted sub-routers ─────────────────────────────────────────────────
+wizardRoutes.use('/product-selection', productSelectionRouter);
+wizardRoutes.use('/mockup-generation', mockupGenerationRouter);
+wizardRoutes.use('/name-generation', nameGenerationRoutes);
 
 // POST /api/v1/wizard/start -- Start a new wizard session
 wizardRoutes.post('/start', validate({ body: wizardStartSchema }), wizardController.startWizard);

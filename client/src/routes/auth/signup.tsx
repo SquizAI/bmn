@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, CheckCircle, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
@@ -11,6 +11,7 @@ import { ROUTES } from '@/lib/constants';
 
 const signupSchema = z
   .object({
+    fullName: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
     email: z.string().email('Please enter a valid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
@@ -38,7 +39,7 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupForm) => {
     try {
       setError(null);
-      await signUpWithEmail(data.email, data.password);
+      await signUpWithEmail(data.email, data.password, data.fullName);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign up failed. Please try again.');
@@ -153,6 +154,15 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+            <Input
+              label="Full Name"
+              type="text"
+              placeholder="Your full name"
+              leftAddon={<User className="h-4 w-4" />}
+              error={errors.fullName?.message}
+              required
+              {...register('fullName')}
+            />
             <Input
               label="Email"
               type="email"

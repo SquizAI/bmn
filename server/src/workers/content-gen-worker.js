@@ -87,12 +87,20 @@ export function initContentGenWorker(io) {
     async (job) => {
       const { brandId, userId, platform, contentType, topic, tone } = job.data;
       const jobLog = createJobLogger(job, 'content-gen');
+      const room = `brand:${brandId}`;
+      const jobRoom = `job:${job.id}`;
 
       jobLog.info({ brandId, platform, contentType }, 'Content generation started');
 
       // Emit progress (standard event names matching useGenerationProgress hook)
       if (io) {
-        io.to(`user:${userId}`).emit('generation:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('generation:progress', {
+          jobId: job.id,
+          status: 'processing',
+          progress: 10,
+          message: 'Fetching brand identity...',
+        });
+        io.of('/wizard').to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
           status: 'processing',
           progress: 10,
@@ -127,7 +135,13 @@ export function initContentGenWorker(io) {
 
       // Emit progress
       if (io) {
-        io.to(`user:${userId}`).emit('generation:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('generation:progress', {
+          jobId: job.id,
+          status: 'processing',
+          progress: 40,
+          message: 'Generating content with AI...',
+        });
+        io.of('/wizard').to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
           status: 'processing',
           progress: 40,
@@ -147,7 +161,13 @@ export function initContentGenWorker(io) {
 
       // Emit progress
       if (io) {
-        io.to(`user:${userId}`).emit('generation:progress', {
+        io.of('/wizard').to(jobRoom).to(room).emit('generation:progress', {
+          jobId: job.id,
+          status: 'processing',
+          progress: 80,
+          message: 'Formatting content...',
+        });
+        io.of('/wizard').to(`user:${userId}`).emit('generation:progress', {
           jobId: job.id,
           status: 'processing',
           progress: 80,
@@ -206,7 +226,11 @@ export function initContentGenWorker(io) {
       };
 
       if (io) {
-        io.to(`user:${userId}`).emit('generation:complete', {
+        io.of('/wizard').to(jobRoom).to(room).emit('generation:complete', {
+          jobId: job.id,
+          result: generatedContent,
+        });
+        io.of('/wizard').to(`user:${userId}`).emit('generation:complete', {
           jobId: job.id,
           result: generatedContent,
         });
@@ -236,8 +260,17 @@ export function initContentGenWorker(io) {
 
     // Emit error to user (standard event name matching useGenerationProgress hook)
     const userId = job?.data?.userId;
+    const brandId = job?.data?.brandId;
     if (userId && io) {
-      io.to(`user:${userId}`).emit('generation:error', {
+      const room = brandId ? `brand:${brandId}` : null;
+      const jobRoom = job?.id ? `job:${job.id}` : null;
+      if (jobRoom && room) {
+        io.of('/wizard').to(jobRoom).to(room).emit('generation:error', {
+          jobId: job?.id,
+          error: 'Content generation failed. Please try again.',
+        });
+      }
+      io.of('/wizard').to(`user:${userId}`).emit('generation:error', {
         jobId: job?.id,
         error: 'Content generation failed. Please try again.',
       });

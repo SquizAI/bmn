@@ -30,14 +30,11 @@ export const ROUTES = {
   WIZARD_BRAND_QUIZ: '/wizard/brand-quiz',
   WIZARD_BRAND_NAME: '/wizard/brand-name',
   WIZARD_BRAND_IDENTITY: '/wizard/brand-identity',
-  WIZARD_CUSTOMIZATION: '/wizard/customization',
   WIZARD_LOGO_GENERATION: '/wizard/logo-generation',
-  WIZARD_LOGO_REFINEMENT: '/wizard/logo-refinement',
   WIZARD_PRODUCT_SELECTION: '/wizard/product-selection',
   WIZARD_MOCKUP_REVIEW: '/wizard/mockup-review',
   WIZARD_BUNDLE_BUILDER: '/wizard/bundle-builder',
   WIZARD_PROFIT_CALCULATOR: '/wizard/profit-calculator',
-  WIZARD_CHECKOUT: '/wizard/checkout',
   WIZARD_COMPLETE: '/wizard/complete',
   ADMIN: '/admin',
   ADMIN_USERS: '/admin/users',
@@ -45,8 +42,6 @@ export const ROUTES = {
   ADMIN_JOBS: '/admin/jobs',
   ADMIN_TEMPLATES: '/admin/templates',
   ADMIN_PRODUCT_TIERS: '/admin/product-tiers',
-  ADMIN_MODERATION: '/admin/moderation',
-  ADMIN_HEALTH: '/admin/health',
   DASHBOARD_STOREFRONT: '/dashboard/storefront',
 } as const;
 

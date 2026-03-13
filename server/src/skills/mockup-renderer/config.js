@@ -15,7 +15,7 @@ export const skillConfig = {
   },
   models: {
     productMockup: 'gpt-image-1.5',
-    textOnProduct: 'ideogram-v3',
+    textOnProduct: 'gemini-3-pro-image-preview',
     bundleComposition: 'gemini-3-pro-image',
   },
 };
