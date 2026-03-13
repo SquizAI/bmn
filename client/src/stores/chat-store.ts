@@ -1,6 +1,39 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+// ── Friendly tool name mapping ──────────────────────────────────────
+
+const FRIENDLY_TOOL_NAMES: Record<string, string> = {
+  'mcp__bmn-chat-tools__listUserBrands': 'Looking up brands',
+  'mcp__bmn-chat-tools__getBrandIdentity': 'Reading brand identity',
+  'mcp__bmn-chat-tools__updateBrandIdentity': 'Updating brand identity',
+  'mcp__bmn-chat-tools__generateLogos': 'Generating logos',
+  'mcp__bmn-chat-tools__generateMockups': 'Generating mockups',
+  'ToolSearch': 'Searching tools',
+};
+
+/**
+ * Convert an internal tool name to a user-friendly display name.
+ * - Exact matches in FRIENDLY_TOOL_NAMES are returned directly.
+ * - Other `mcp__*__<name>` patterns extract the last segment and title-case it.
+ * - Everything else is returned as-is.
+ */
+function getFriendlyToolName(raw: string): string {
+  if (FRIENDLY_TOOL_NAMES[raw]) return FRIENDLY_TOOL_NAMES[raw];
+
+  // mcp__<server>__<toolName> → extract toolName and title-case it
+  const mcpMatch = raw.match(/^mcp__[^_]+__(.+)$/);
+  if (mcpMatch) {
+    const name = mcpMatch[1];
+    // camelCase → "Title Case"
+    return name
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/^./, (c) => c.toUpperCase());
+  }
+
+  return raw;
+}
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface ChatMessage {
@@ -140,26 +173,20 @@ export const useChatStore = create<ChatState>()(
           'finalizeStream',
         ),
 
-      setActiveTool: (tool) => set({ activeTool: tool }, false, 'setActiveTool'),
-
-      completeTool: (name) =>
+      setActiveTool: (tool) =>
         set(
-          (s) => {
-            // Add a tool result message
-            const toolMsg: ChatMessage = {
-              id: crypto.randomUUID(),
-              role: 'tool_result',
-              content: `Tool "${name}" completed`,
-              timestamp: new Date(),
-              toolName: name,
-              messageType: 'tool_result',
-              toolResult: { success: true, data: null },
-            };
-            return {
-              activeTool: null,
-              messages: [...s.messages, toolMsg],
-            };
+          {
+            activeTool: tool
+              ? { ...tool, name: getFriendlyToolName(tool.name) }
+              : null,
           },
+          false,
+          'setActiveTool',
+        ),
+
+      completeTool: (_name) =>
+        set(
+          { activeTool: null },
           false,
           'completeTool',
         ),
@@ -167,12 +194,17 @@ export const useChatStore = create<ChatState>()(
       failTool: (name, error) =>
         set(
           (s) => {
+            const friendly = getFriendlyToolName(name);
+            // Only surface a visible error message if there's a meaningful error
+            if (!error || error === 'undefined') {
+              return { activeTool: null };
+            }
             const toolMsg: ChatMessage = {
               id: crypto.randomUUID(),
               role: 'tool_result',
-              content: `Tool "${name}" failed: ${error}`,
+              content: `${friendly} failed: ${error}`,
               timestamp: new Date(),
-              toolName: name,
+              toolName: friendly,
               messageType: 'error',
               toolResult: { success: false, data: error },
             };

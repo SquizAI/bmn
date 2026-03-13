@@ -58,10 +58,34 @@ export default function WizardLayout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const addToast = useUIStore((s) => s.addToast);
   const setMeta = useWizardStore((s) => s.setMeta);
+  const resetWizard = useWizardStore((s) => s.reset);
+  const persistedBrandId = useWizardStore((s) => s.meta.brandId);
   const resumeAttempted = useRef(false);
+  const brandValidated = useRef(false);
 
   const currentStep = useWizardStore((s) => s.meta.currentStep);
   const location = useLocation();
+
+  // Validate persisted brand ID on mount — clear stale wizard state
+  useEffect(() => {
+    if (!persistedBrandId || brandValidated.current) return;
+    brandValidated.current = true;
+
+    apiClient
+      .get(`/api/v1/brands/${persistedBrandId}`)
+      .then((data: Record<string, unknown>) => {
+        // Brand exists but is archived/deleted — reset
+        if (data && (data as { status?: string }).status === 'archived' || (data as { status?: string }).status === 'deleted') {
+          resetWizard();
+          navigate('/wizard/onboarding', { replace: true });
+        }
+      })
+      .catch(() => {
+        // Brand not found (404) — reset wizard to fresh state
+        resetWizard();
+        navigate('/wizard/onboarding', { replace: true });
+      });
+  }, [persistedBrandId, resetWizard, navigate]);
 
   // Brand data for LiveBrandPreview sidebar
   const brandName = useWizardStore((s) => s.brand.name);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCurrentSocket } from '@/lib/socket';
+import { getWizardSocket, getCurrentWizardSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
 import type {
   CreatorDossier,
@@ -19,7 +19,7 @@ interface UseDossierReturn {
 }
 
 /**
- * Track dossier generation progress via Socket.io.
+ * Track dossier generation progress via Socket.io on the /wizard namespace.
  * Receives phased updates as the social analyzer processes data,
  * accumulating partial dossier data as each phase completes.
  */
@@ -48,12 +48,8 @@ export function useDossier(jobId: string | null): UseDossierReturn {
       return;
     }
 
-    const socket = getCurrentSocket();
-    if (!socket) return;
-
-    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
-    setPhase('scraping');
-    setMessage('Starting social analysis...');
+    let cancelled = false;
+    let attachedSocket: import('socket.io-client').Socket | null = null;
 
     const onProgress = (data: DossierProgressEvent | Record<string, unknown>) => {
       const progressData = data as DossierProgressEvent;
@@ -88,14 +84,19 @@ export function useDossier(jobId: string | null): UseDossierReturn {
       setMessage(data.error || 'Analysis failed');
     };
 
-    socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
-    socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
-    socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
+    function attachListeners(socket: import('socket.io-client').Socket) {
+      attachedSocket = socket;
+      socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
 
-    return () => {
+      socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
+      socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
+      socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
+    }
+
+    function detachListeners(socket: import('socket.io-client').Socket) {
       socket.off(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
       socket.off(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.GENERATION_ERROR, onError);
@@ -103,6 +104,35 @@ export function useDossier(jobId: string | null): UseDossierReturn {
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
       socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
+    }
+
+    setPhase('scraping');
+    setMessage('Starting social analysis...');
+
+    // Try sync first (fast path if wizard socket already connected)
+    const existingSocket = getCurrentWizardSocket();
+    if (existingSocket?.connected) {
+      attachListeners(existingSocket);
+    } else {
+      // Async path: await wizard socket connection, then attach
+      getWizardSocket()
+        .then((socket) => {
+          if (cancelled) return;
+          attachListeners(socket);
+        })
+        .catch((err) => {
+          console.error('[useDossier] Failed to connect wizard socket:', err);
+          setPhase('error');
+          setIsError(true);
+          setError('Failed to connect to server');
+        });
+    }
+
+    return () => {
+      cancelled = true;
+      if (attachedSocket) {
+        detachListeners(attachedSocket);
+      }
     };
   }, [jobId, reset]);
 

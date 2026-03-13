@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getCurrentSocket } from '@/lib/socket';
+import { getWizardSocket, getCurrentWizardSocket } from '@/lib/socket';
 import { SOCKET_EVENTS } from '@/lib/constants';
 import { normalizeDirections } from './use-brand-generation';
 import type { BrandDirection, BrandDirectionsResult } from './use-brand-generation';
@@ -66,12 +66,8 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
       return;
     }
 
-    const socket = getCurrentSocket();
-    if (!socket) return;
-
-    socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
-    setPhase('queued');
-    setMessage('Generating brand directions...');
+    let cancelled = false;
+    let attachedSocket: import('socket.io-client').Socket | null = null;
 
     const onProgress = (data: ProgressEvent | Record<string, unknown>) => {
       const progressData = data as ProgressEvent;
@@ -116,14 +112,19 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
       setMessage(data.error || 'Brand generation failed');
     };
 
-    socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
-    socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
-    socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
-    socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
+    function attachListeners(socket: import('socket.io-client').Socket) {
+      attachedSocket = socket;
+      socket.emit(SOCKET_EVENTS.JOIN_JOB, jobId);
 
-    return () => {
+      socket.on(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
+      socket.on(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.GENERATION_ERROR, onError);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_COMPLETE, onProgress);
+      socket.on(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
+      socket.on(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
+    }
+
+    function detachListeners(socket: import('socket.io-client').Socket) {
       socket.off(SOCKET_EVENTS.GENERATION_PROGRESS, onProgress);
       socket.off(SOCKET_EVENTS.GENERATION_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.GENERATION_ERROR, onError);
@@ -131,6 +132,35 @@ export function useBrandDirections(jobId: string | null): UseBrandDirectionsRetu
       socket.off(SOCKET_EVENTS.AGENT_COMPLETE, onComplete);
       socket.off(SOCKET_EVENTS.AGENT_TOOL_ERROR, onError);
       socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
+    }
+
+    setPhase('queued');
+    setMessage('Generating brand directions...');
+
+    // Try sync first (fast path if wizard socket already connected)
+    const existingSocket = getCurrentWizardSocket();
+    if (existingSocket?.connected) {
+      attachListeners(existingSocket);
+    } else {
+      // Async path: await wizard socket connection, then attach
+      getWizardSocket()
+        .then((socket) => {
+          if (cancelled) return;
+          attachListeners(socket);
+        })
+        .catch((err) => {
+          console.error('[useBrandDirections] Failed to connect wizard socket:', err);
+          setPhase('error');
+          setIsError(true);
+          setError('Failed to connect to server');
+        });
+    }
+
+    return () => {
+      cancelled = true;
+      if (attachedSocket) {
+        detachListeners(attachedSocket);
+      }
     };
   }, [jobId]);
 

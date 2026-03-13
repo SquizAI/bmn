@@ -12,7 +12,8 @@ import { config } from '../config/index.js';
  * - Images: self, Supabase Storage, R2, OpenAI, Fal, Ideogram
  * - Connect: self, Supabase, Socket.io, PostHog, Sentry, Stripe
  * - Fonts: self, Google Fonts
- * - Frames: DENY
+ * - Frames: self, app.prznl.com, api.prznl.com
+ * - Frame-Ancestors: self, app.prznl.com
  *
  * HSTS: 1 year, includeSubDomains, preload
  * Referrer: strict-origin-when-cross-origin
@@ -46,6 +47,7 @@ export function securityHeaders() {
               'https://oaidalleapiprodscus.blob.core.windows.net',
               'https://*.fal.ai',
               'https://api.ideogram.ai',
+              'https://images.unsplash.com',
             ],
             connectSrc: [
               "'self'",
@@ -64,7 +66,13 @@ export function securityHeaders() {
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
             frameSrc: [
-              "'none'",
+              "'self'",
+              'https://app.prznl.com',
+              'https://api.prznl.com',
+            ],
+            frameAncestors: [
+              "'self'",
+              'https://app.prznl.com',
             ],
             baseUri: ["'self'"],
             formAction: ["'self'"],
@@ -79,7 +87,7 @@ export function securityHeaders() {
       preload: true,
     },
     frameguard: {
-      action: 'deny',
+      action: 'sameorigin',
     },
     referrerPolicy: {
       policy: 'strict-origin-when-cross-origin',

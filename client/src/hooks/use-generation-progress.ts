@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getSocket, getCurrentSocket } from '@/lib/socket';
+import { getWizardSocket, getCurrentWizardSocket } from '@/lib/socket';
 import { apiClient } from '@/lib/api';
 import { SOCKET_EVENTS, QUERY_KEYS } from '@/lib/constants';
 
@@ -185,13 +185,13 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
       socket.emit(SOCKET_EVENTS.LEAVE_JOB, jobId);
     }
 
-    // Try sync first (fast path if socket already connected)
-    const existingSocket = getCurrentSocket();
+    // Try sync first (fast path if wizard socket already connected)
+    const existingSocket = getCurrentWizardSocket();
     if (existingSocket?.connected) {
       attachListeners(existingSocket);
     } else {
-      // Async path: await socket connection, attach when ready
-      getSocket()
+      // Async path: await wizard socket connection, attach when ready
+      getWizardSocket()
         .then((socket) => {
           if (cancelled || isTerminalRef.current) return;
           attachListeners(socket);
@@ -223,7 +223,7 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
         return;
       }
 
-      const socket = getCurrentSocket();
+      const socket = getCurrentWizardSocket();
       const socketDisconnected = !socket || !socket.connected;
       const silenceDuration = Date.now() - lastSocketEventRef.current;
       const isSilent = silenceDuration > SOCKET_SILENCE_THRESHOLD;
@@ -243,6 +243,9 @@ export function useGenerationProgress(jobId: string | null): GenerationProgress 
     enabled: Boolean(jobId) && shouldPoll && !isTerminalRef.current,
     refetchInterval: POLL_INTERVAL,
     refetchIntervalInBackground: false,
+    // Don't retry on 404 -- the endpoint may not exist yet.
+    // Socket.io is the primary channel; this is just a fallback.
+    retry: false,
     // Avoid stale cache interfering with fresh polls
     gcTime: 0,
     staleTime: 0,
