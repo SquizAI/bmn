@@ -17,30 +17,28 @@ prznl.com {
 # ─── Influencer Storefronts (wildcard subdomains) ──────────────────────
 # Requires custom Caddy build with Cloudflare DNS plugin for wildcard TLS.
 # See docs/dns-setup.md for build and DNS configuration instructions.
-
-*.brandmenow.store {
-    tls {
-        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    }
-
-    # API requests go to the server
-    @api path /api/*
-    handle @api {
-        reverse_proxy server:4847
-    }
-
-    # Socket.io also goes to server
-    @socketio path /socket.io/*
-    handle @socketio {
-        reverse_proxy server:4847
-    }
-
-    # Everything else goes to the storefront SPA
-    handle {
-        reverse_proxy storefront:80
-    }
-}
-
-brandmenow.store {
-    redir https://app.prznl.com{uri} permanent
-}
+# Uncomment below once CLOUDFLARE_API_TOKEN is set in .env.production:
+#
+# *.brandmenow.store {
+#     tls {
+#         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+#     }
+#
+#     @api path /api/*
+#     handle @api {
+#         reverse_proxy server:4847
+#     }
+#
+#     @socketio path /socket.io/*
+#     handle @socketio {
+#         reverse_proxy server:4847
+#     }
+#
+#     handle {
+#         reverse_proxy storefront:80
+#     }
+# }
+#
+# brandmenow.store {
+#     redir https://app.prznl.com{uri} permanent
+# }
