@@ -331,10 +331,9 @@ export const tools = {
       logger.info({ msg: 'Scraping YouTube channel', handle: cleanHandle, videoLimit });
 
       try {
-        const run = await client.actor('apify/youtube-channel-scraper').call({
-          channelUrls: [`https://www.youtube.com/@${cleanHandle}`],
-          maxResults: videoLimit,
-          maxResultsShorts: 0,
+        const run = await client.actor('johnvc/youtube-shorts-api').call({
+          channels: [`https://www.youtube.com/@${cleanHandle}`],
+          maxResultsShorts: videoLimit,
         });
 
         const { items } = await client.dataset(run.defaultDatasetId).listItems();
@@ -355,11 +354,11 @@ export const tools = {
             handle: cleanHandle,
             displayName: channelInfo,
             bio: firstItem.channelDescription || null,
-            followers: firstItem.channelSubscribers || firstItem.subscriberCount || 0,
+            followers: firstItem.channelSubscribers || firstItem.subscriberCount || firstItem.numberOfSubscribers || 0,
             following: null,
-            videosCount: firstItem.channelVideoCount || items.length,
-            isVerified: firstItem.channelVerified || false,
-            profilePicUrl: firstItem.channelAvatar || firstItem.channelThumbnail || null,
+            videosCount: firstItem.channelVideoCount || firstItem.channelTotalVideos || items.length,
+            isVerified: firstItem.channelVerified || firstItem.isChannelVerified || false,
+            profilePicUrl: firstItem.channelAvatar || firstItem.channelThumbnail || firstItem.channelAvatarUrl || null,
             channelId,
             videos: items.slice(0, videoLimit).map((video) => ({
               id: video.id || video.videoId || String(Math.random()),

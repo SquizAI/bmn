@@ -47,7 +47,7 @@ const ACTORS = {
   instagram: 'apify/instagram-profile-scraper',
   tiktok: 'clockworks/tiktok-profile-scraper',
   facebook: 'apify/facebook-pages-scraper',
-  youtube: 'apify/youtube-channel-scraper',
+  youtube: 'johnvc/youtube-shorts-api',
   twitter: 'apify/twitter-scraper',
 };
 
@@ -378,13 +378,12 @@ export async function scrapeYouTube(handle, videoLimit = 12) {
 
       const run = await client.actor(ACTORS.youtube).call(
         {
-          channelUrls: [`https://www.youtube.com/@${cleanHandle}`],
-          maxResults: videoLimit,
-          maxResultsShorts: 0,
+          channels: [`https://www.youtube.com/@${cleanHandle}`],
+          maxResultsShorts: videoLimit,
         },
         {
           timeout: 180,
-          memory: 512,
+          memory: 128,
         }
       );
 
@@ -687,11 +686,11 @@ function normalizeYouTube(items, handle) {
       handle,
       displayName: firstItem.channelName || firstItem.channelTitle || handle,
       bio: firstItem.channelDescription || '',
-      followerCount: firstItem.channelSubscribers || firstItem.subscriberCount || 0,
+      followerCount: firstItem.channelSubscribers || firstItem.subscriberCount || firstItem.numberOfSubscribers || 0,
       followingCount: 0, // YouTube channels don't "follow"
-      postCount: firstItem.channelVideoCount || items.length,
-      profilePicUrl: firstItem.channelAvatar || firstItem.channelThumbnail || '',
-      isVerified: firstItem.channelVerified || false,
+      postCount: firstItem.channelVideoCount || firstItem.channelTotalVideos || items.length,
+      profilePicUrl: firstItem.channelAvatar || firstItem.channelThumbnail || firstItem.channelAvatarUrl || '',
+      isVerified: firstItem.channelVerified || firstItem.isChannelVerified || false,
     },
     recentPosts,
     error: null,
